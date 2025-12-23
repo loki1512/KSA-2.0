@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Billing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 12px; }
+    input, select, button { padding: 8px; margin: 4px 0; width: 100%; }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    .item { border-bottom: 1px solid #ddd; padding: 6px 0; }
+    .right { text-align: right; }
+    .small { font-size: 0.9em; color: #555; }
+  </style>
+</head>
+
+<body>
+  <h3>Billing</h3>
+
+  <!-- ITEM ENTRY -->
+  <div>
+    <input id="itemName" placeholder="Item name" autofocus />
+    <div id="suggestions"
+     style="border:1px solid #ccc; display:none; position:relative; background:#fff;">
+    </div>
+
+    <div class="row">
+      <input id="qty" type="number" min="1" value="1" />
+      <input id="price" type="number" min="0" placeholder="Price ₹" />
+    </div>
+
+    <button id="discountToggleBtn" onclick="toggleDiscount()">
+  Add item discount
+</button>
+
+
+    <div id="discountBox" style="display:none;">
+      <div class="row">
+        <select id="itemDiscountType">
+          <option value="%">%</option>
+          <option value="₹">₹</option>
+        </select>
+        <input id="itemDiscountValue" type="number" min="0" placeholder="Discount" />
+      </div>
+    </div>
+
+    <button id="addItemBtn" onclick="addItem()">+ Add Item</button>
+
+  </div>
+
+  <hr />
+
+  <!-- ITEM LIST -->
+  <table width="100%" border="1" cellspacing="0" cellpadding="6">
+  <thead>
+    <tr>
+      <th>S.No</th>
+      <th>Item</th>
+      <th>MRP</th>
+      <th>Discount</th>
+      <th>Final Unit Price</th>
+      <th>Amount</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="items"></tbody>
+</table>
+
+
+  <h3 class="right">Subtotal: ₹ <span id="subtotal">0.00</span></h3>
+<button id="finaliseBtn" onclick="openFinalScreen()">
+  Finalise Bill
+</button>
+
+<!-- FINAL BILL SCREEN -->
+<div id="finalScreen" style="display:none; border-top:1px solid #ccc; margin-top:12px; padding-top:12px;">
+  <h3>Final Bill</h3>
+
+  <p>Subtotal: ₹ <span id="finalSubtotal">0.00</span></p>
+
+  <div class="row">
+    <select id="billDiscountType">
+      <option value="%">%</option>
+      <option value="₹">₹</option>
+    </select>
+    <input id="billDiscountValue" type="number" min="0" placeholder="Bill discount" />
+  </div>
+
+  <h3>
+    Final Amount: ₹ <span id="finalAmount">0.00</span>
+  </h3>
+
+  <button onclick="closeFinalScreen()">Back to Edit</button>
+</div>
+
+
+
+  <h4>Import catalogue</h4>
+<input type="file" id="catalogFile" />
+<button onclick="importCatalog()">Import</button>
+
+<p id="importResult"></p>
+
+  <script type="module" src="/static/app.js"></script>
+
+
+</body>
+
+</html>
