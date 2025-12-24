@@ -22,3 +22,11 @@ def apply_discount(amount, discount_type, discount_value):
         return round(max(amount - discount_value, 0), 2)
 
     return round(amount, 2)
+from datetime import datetime
+
+def generate_bill_no():
+    """
+    Generates bill number like: BILL-20250124-001
+    """
+    now = datetime.now()
+    return f"BILL-{now.strftime('%Y%m%d-%H%M%S')}"

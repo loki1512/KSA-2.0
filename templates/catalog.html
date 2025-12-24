@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Catalogue Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 12px; }
+    input, button { padding: 8px; margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 6px; }
+  </style>
+</head>
+
+<body>
+
+  <h3>Catalogue Management</h3>
+
+  <a href="/">← Back to Billing</a>
+
+  <hr />
+
+  <!-- ADD / EDIT FORM -->
+  <div>
+    <input id="catItemName" placeholder="Item name" />
+    <input id="catItemPrice" type="number" placeholder="Price ₹" />
+    <button id="saveCatItemBtn">Save Item</button>
+  </div>
+
+  <hr />
+  <input
+  id="catalogSearch"
+  placeholder="Search items..."
+  style="width:100%; padding:8px; margin:8px 0;"
+/>
+  <!-- ITEM LIST -->
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="catalogItems"></tbody>
+  </table>
+
+  <hr />
+
+  <!-- EXCEL IMPORT -->
+  <h4>Import from Excel</h4>
+  <input type="file" id="importFile" />
+  <button id="importBtn">Import</button>
+  <p id="importResult"></p>
+
+  <script src="/static/catalog.js"></script>
+</body>
+</html>

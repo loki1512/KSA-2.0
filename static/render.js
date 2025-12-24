@@ -19,7 +19,7 @@ export function render() {
         <td><strong>₹${i.final.toFixed(2)}</strong></td>
         <td>
           <button onclick="editItem(${idx})">✏️</button>
-          <button onclick="removeItem(${idx})">❌</button>
+          <button onclick="deleteItem(${idx})">❌</button>
         </td>
       </tr>
     `;
