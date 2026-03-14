@@ -1,60 +1,39 @@
 from flask import Blueprint, request, jsonify
 from extensions import db
-from models import Bill, BillItem
+from models import Bill, BillItem, Customer, Transaction
 from datetime import datetime
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text
 
 bills_bp = Blueprint("bills", __name__)
 
-# -----------------------------
-# CREATE BILL (EXISTING - UNCHANGED)
-# -----------------------------
+
+# --------------------------------
+# CREATE BILL
+# --------------------------------
 @bills_bp.route("/api/bills", methods=["POST"])
-
-
 def save_bill():
+
     data = request.get_json(force=True)
 
     bill_discount = data.get("billDiscount") or {}
+
+    customer = None
+    if data.get("customer_id"):
+        customer = db.session.get(Customer, data["customer_id"])
 
     bill = Bill(
         subtotal=data["subtotal"],
         final_amount=data["finalTotal"],
         bill_discount_type=bill_discount.get("type"),
         bill_discount_value=bill_discount.get("value"),
-        customer_name=data.get("customer_name"),
-        customer_phone=data.get("customer_phone"),
-        customer_address=data.get("customer_address"),
-        timestamp=datetime.utcnow()
+        timestamp=datetime.utcnow(),
+        customer=customer
     )
 
-    # ---- Insert Bill ----
-    try:
-        db.session.add(bill)
-        db.session.flush()
-
-    except IntegrityError:
-        db.session.rollback()
-
-        # Fix bill sequence
-        db.session.execute(text("""
-            SELECT setval(
-                pg_get_serial_sequence('bill','id'),
-                COALESCE((SELECT MAX(id) FROM bill),1)
-            );
-        """))
-        db.session.commit()
-
-        db.session.add(bill)
-        db.session.flush()
-
-    # ---- Insert Bill Items ----
+    # Add bill items
     for it in data["items"]:
         discount = it.get("discount") or {}
 
-        bill_item = BillItem(
-            bill_id=bill.id,
+        item = BillItem(
             item_name=it["name"],
             qty=it["qty"],
             unit_price=it["rate"],
@@ -63,24 +42,26 @@ def save_bill():
             final_item_amount=it["lineTotal"]
         )
 
-        try:
-            db.session.add(bill_item)
-            db.session.flush()
+        bill.items.append(item)
 
-        except IntegrityError:
-            db.session.rollback()
+    db.session.add(bill)
+    db.session.flush()
 
-            # Fix bill_item sequence
-            db.session.execute(text("""
-                SELECT setval(
-                    pg_get_serial_sequence('bill_item','id'),
-                    COALESCE((SELECT MAX(id) FROM bill_item),1)
-                );
-            """))
-            db.session.commit()
+    # Create SALE transaction
+    if customer:
+        txn = Transaction(
+            customer_id=customer.id,
+            transaction_type="SALE",
+            amount=bill.final_amount,
+            reference_type="bill",
+            reference_id=bill.id
+        )
+        db.session.add(txn)
 
-            db.session.add(bill_item)
-            db.session.flush()
+    #-- Deduct from wallet -----
+    if customer and customer.wallet :
+        customer.wallet.balance -= bill.final_amount
+        db.session.add(customer.wallet)
 
     db.session.commit()
 
@@ -90,40 +71,32 @@ def save_bill():
     }), 201
 
 
-# -----------------------------
-# LIST BILLS (NEW)
-# -----------------------------
+# --------------------------------
+# LIST BILLS
+# --------------------------------
 @bills_bp.route("/api/bills", methods=["GET"])
 def list_bills():
-    bills = (
-        Bill.query
-        .order_by(Bill.timestamp.desc())
-        .all()
-    )
+
+    bills = Bill.query.order_by(Bill.timestamp.desc()).all()
 
     return jsonify([
         {
             "id": bill.id,
             "timestamp": bill.timestamp.isoformat(),
             "final_amount": bill.final_amount,
-            "customer_name": bill.customer_name
+            "customer_name": bill.customer.name if bill.customer else None
         }
         for bill in bills
     ])
 
 
-# -----------------------------
-# BILL DETAILS (NEW)
-# -----------------------------
+# --------------------------------
+# BILL DETAILS
+# --------------------------------
 @bills_bp.route("/api/bills/<int:bill_id>", methods=["GET"])
 def get_bill(bill_id):
-    bill = Bill.query.get_or_404(bill_id)
 
-    items = (
-        BillItem.query
-        .filter_by(bill_id=bill.id)
-        .all()
-    )
+    bill = Bill.query.get_or_404(bill_id)
 
     return jsonify({
         "id": bill.id,
@@ -135,10 +108,11 @@ def get_bill(bill_id):
         "final_amount": bill.final_amount,
 
         "customer": {
-            "name": bill.customer_name,
-            "phone": bill.customer_phone,
-            "address": bill.customer_address
-        },
+            "id": bill.customer.id,
+            "name": bill.customer.name,
+            "phone": bill.customer.phone,
+            "address": bill.customer.address
+        } if bill.customer else None,
 
         "items": [
             {
@@ -149,50 +123,101 @@ def get_bill(bill_id):
                 "item_discount_value": i.item_discount_value,
                 "final_item_amount": i.final_item_amount
             }
-            for i in items
+            for i in bill.items
         ]
     })
 
-@bills_bp.route("/api/bills/<int:bill_id>", methods=["PUT"]) 
-def update_bill(bill_id): 
-    bill = Bill.query.get_or_404(bill_id) 
-    data = request.get_json(force=True) # Update bill details 
-    bill.subtotal = data["subtotal"] 
-    bill.final_amount = data["finalTotal"] 
-    bill_discount = data.get("billDiscount") or {} 
-    bill.bill_discount_type = bill_discount.get("type") 
-    bill.bill_discount_value = bill_discount.get("value") 
-    bill.customer_name = data.get("customer_name") 
-    bill.customer_phone = data.get("customer_phone") 
-    bill.customer_address = data.get("customer_address") 
-    # Remove existing items 
-    BillItem.query.filter_by(bill_id=bill.id).delete() 
-    # Add updated items 
-    for it in data["items"]: 
-        discount = it.get("discount") or {} 
-        db.session.add( 
-            BillItem( 
-                bill_id=bill.id, 
-                item_name=it["item_name"], 
-                qty=it["qty"], 
-                unit_price=it["unit_price"], 
-                item_discount_type=it["item_discount_type"], 
-                item_discount_value=it["item_discount_value"], 
-                final_item_amount=it["final_item_amount"] 
-            ) 
-        ) 
-    db.session.commit() 
-    return jsonify({"message": "Bill updated successfully"})
 
-@bills_bp.route("/api/bills/<int:bill_id>", methods=["DELETE"])
-def delete_bill(bill_id):
+# --------------------------------
+# UPDATE BILL
+# --------------------------------
+@bills_bp.route("/api/bills/<int:bill_id>", methods=["PUT"])
+def update_bill(bill_id):
+
     bill = Bill.query.get_or_404(bill_id)
 
-    # Delete associated items first
-    BillItem.query.filter_by(bill_id=bill.id).delete()
+    if bill.customer and bill.customer.wallet:
+        wallet_change = bill.final_amount
 
-    # Then delete the bill
-    db.session.delete(bill)
+    data = request.get_json(force=True)
+
+    bill.subtotal = data["subtotal"]
+    bill.final_amount = data["finalTotal"]
+
+    bill_discount = data.get("billDiscount") or {}
+
+    bill.bill_discount_type = bill_discount.get("type")
+    bill.bill_discount_value = bill_discount.get("value")
+
+    
+
+    # Replace items
+    bill.items.clear()
+
+    for it in data["items"]:
+        discount = it.get("discount") or {}
+
+        item = BillItem(
+            item_name=it["name"],
+            qty=it["qty"],
+            unit_price=it["rate"],
+            item_discount_type=discount.get("type"),
+            item_discount_value=discount.get("value"),
+            final_item_amount=it["lineTotal"]
+        )
+
+        bill.items.append(item)
+
+    # Update SALE transaction
+    txn = Transaction.query.filter_by(
+        reference_type="bill",
+        reference_id=bill.id
+    ).first()
+
+    if txn:
+        txn.amount = bill.final_amount
+        txn.customer_id = bill.customer_id
+        db.session.add(txn)
+    
+    #-- Adjust wallet balance if linked to a customer -----
+    if bill.customer and bill.customer.wallet:
+        new_wallet_change = bill.final_amount
+        wallet_diff = new_wallet_change - wallet_change
+        bill.customer.wallet.balance -= wallet_diff
+        db.session.add(bill.customer.wallet)
+
     db.session.commit()
 
-    return jsonify({"message": "Bill deleted successfully"}) ,200
+    return jsonify({"message": "Bill updated successfully"})
+
+
+# --------------------------------
+# DELETE BILL
+# --------------------------------
+@bills_bp.route("/api/bills/<int:bill_id>", methods=["DELETE"])
+def delete_bill(bill_id):
+
+    bill = Bill.query.get_or_404(bill_id)
+
+    # Create bill deletion transaction (negative SALE to offset original SALE)
+    if bill.customer:
+        txn = Transaction(
+            customer_id=bill.customer.id,
+            transaction_type="BILL_DELETION",
+            amount=-bill.final_amount,   # negative to offset original SALE
+            reference_type="bill",
+            reference_id=bill.id,
+            notes="Bill deleted"
+        )
+        db.session.add(txn)
+
+    db.session.delete(bill)
+    # Adjust wallet if linked to a customer
+    if bill.customer and bill.customer.wallet:
+        bill.customer.wallet.balance += bill.final_amount
+        db.session.add(bill.customer.wallet)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Bill deleted successfully"
+    }), 200

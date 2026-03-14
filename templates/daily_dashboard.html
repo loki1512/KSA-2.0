@@ -6,39 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/daily_dashboard.css">
-    <style>
-       
-    </style>
+    <link rel="stylesheet" href="/static/css/price_widget.css">
 </head>
 <body>
+
 <header class="site-header">
   <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
+    <h1>Manhatten Industries</h1>
     <span class="header-sub">Smart billing system</span>
   </div>
-
   <nav class="header-nav">
     <a href="/billing">+ New Bill</a>
     <a href="/catalog">Catalog</a>
     <a href="/bills">Bills</a>
+    <a href="/customers">Customers</a>
+    <a href="/transactions">Transactions</a>
     <a href="/logout" style="color:#dc2626;">Logout</a>
   </nav>
 </header>
 
 <div class="container">
+
+    <!-- GREETING HERO -->
     <div class="header">
-    <div class="greeting" id="greeting"></div>
-    <div class="subtitle">Store Performance Overview</div>
-    {% if selected_date and selected_date != today_iso %}
-    <div style="margin-top:6px; font-size:0.85rem; opacity:0.9;">
-        Viewing: {{ selected_date }} &mdash; <a href="/" style="color:white; text-decoration:underline;">Back to Today</a>
+        <div class="greeting" id="greeting"></div>
+        <div class="subtitle">Store Performance Overview</div>
+        {% if selected_date and selected_date != today_iso %}
+        <div class="date-viewing">
+            Viewing: {{ selected_date }} &mdash;
+            <a href="/">Back to Today</a>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
-</div>
 
-
-
-    <!-- KPI Section -->
+    <!-- KPI GRID -->
     <div class="kpi-grid">
         <a href="/bills" class="kpi-card link-card">
             <div class="kpi-label">Total Sales</div>
@@ -56,64 +57,147 @@
             <div class="kpi-label">Avg Bill</div>
             <div class="kpi-value">₹ {{ avg_bill }}</div>
         </div>
+        <a href="/customers" class="kpi-card link-card">
+            <div class="kpi-label">Customers</div>
+            <div class="kpi-value">{{ total_customers }}</div>
+        </a>
         <div class="kpi-card">
-    <div class="kpi-label">Customers</div>
-    <div class="kpi-value">{{ total_customers }}</div>
-</div>
-<div class="kpi-card">
-    <div class="kpi-label">New Today</div>
-    <div class="kpi-value">{{ new_customers }}</div>
-</div>
-
-<a href="/dashboard/monthly" class="kpi-card link-card tab-card">
-    <div class="kpi-label">View</div>
-    <div class="kpi-value">Monthly</div>
-</a>
-<a href="/dashboard/quarterly" class="kpi-card link-card tab-card">
-    <div class="kpi-label">View</div>
-    <div class="kpi-value">Quarterly</div>
-</a>
-<a href="/dashboard/yearly" class="kpi-card link-card tab-card">
-    <div class="kpi-label">View</div>
-    <div class="kpi-value">Yearly</div>
-</a>
-
-<a href="/billing" class="kpi-card link-card">
+            <div class="kpi-label">New Today</div>
+            <div class="kpi-value">{{ new_customers }}</div>
+        </div>
+        <a href="/dashboard/monthly" class="kpi-card link-card tab-card">
+            <div class="kpi-label">View</div>
+            <div class="kpi-value">Monthly</div>
+        </a>
+        <a href="/dashboard/quarterly" class="kpi-card link-card tab-card">
+            <div class="kpi-label">View</div>
+            <div class="kpi-value">Quarterly</div>
+        </a>
+        <a href="/dashboard/yearly" class="kpi-card link-card tab-card">
+            <div class="kpi-label">View</div>
+            <div class="kpi-value">Yearly</div>
+        </a>
+        <a href="/billing" class="kpi-card link-card">
             <div class="kpi-label">Quick Action</div>
             <div class="kpi-value">➕ New Bill</div>
         </a>
-
     </div>
 
+    <!-- CHART + TOP ITEMS -->
     <div class="layout">
-        <!-- Chart -->
         <div class="card">
-            <h3 style="font-size:0.95rem; margin-bottom:8px;">Hourly Sales</h3>
+            <h3>Hourly Sales</h3>
             <div class="chart-container">
                 <canvas id="hourlyChart"></canvas>
             </div>
         </div>
 
-        <!-- Top Items -->
         <div class="card">
-            <h3 style="font-size:0.95rem; margin-bottom:8px;">Top Items Today</h3>
+            <h3>Top Items Today</h3>
             <table>
-                <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>₹</th>
-                </tr>
-                {% for i in top_items %}
-                <tr>
-                    <td>{{ i.item_name }}</td>
-                    <td>{{ i.qty }}</td>
-                    <td>{{ i.amount }}</td>
-                </tr>
-                {% endfor %}
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qty</th>
+                        <th>₹</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in top_items %}
+                    <tr>
+                        <td>{{ i.item_name }}</td>
+                        <td>{{ i.qty }}</td>
+                        <td>{{ i.amount }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:24px;">No sales yet today</td></tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>
-</div>
+
+    <!-- QUICK PRICE EDITOR -->
+    <div class="card price-widget-card" id="priceWidget">
+        <div class="card-header" style="padding:14px 18px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+            <h3 style="font-size:13px; font-weight:700; color:var(--text-primary); text-transform:none; letter-spacing:0; border:none; padding:0; margin:0;">Quick Price Editor</h3>
+            <span class="pwe-hint">For frequently changing items</span>
+        </div>
+        <div class="pwe-search-wrap">
+            <span class="pwe-search-icon">🔍</span>
+            <input type="text" id="pweSearch" placeholder="Search item to update price…" autocomplete="off">
+            <div id="pweSuggestions" class="pwe-suggestions" style="display:none;"></div>
+        </div>
+        <div id="pweEditRow" class="pwe-edit-row" style="display:none;">
+            <div class="pwe-item-name" id="pweItemName"></div>
+            <div class="pwe-fields">
+                <div class="pwe-field">
+                    <label>Default ₹</label>
+                    <input type="number" id="pweDefaultPrice" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="pwe-field">
+                    <label>Max ₹</label>
+                    <input type="number" id="pweMaxPrice" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <div class="pwe-field">
+                    <label>Final ₹</label>
+                    <input type="number" id="pweFinalPrice" min="0" step="0.01" placeholder="0.00">
+                </div>
+                <button class="pwe-save-btn" id="pweSaveBtn" onclick="pweSave()">Update</button>
+            </div>
+            <div class="pwe-status" id="pweStatus"></div>
+        </div>
+        <div id="pweRecentList" class="pwe-recent"></div>
+    </div>
+
+    <!-- CUSTOMERS TODAY -->
+    <div class="card" id="new-customers">
+        <h3>Customers Today</h3>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Spent</th>
+                        <th>Ledger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customer_details %}
+                    <tr>
+                        <td>
+                            {% if c.customer_id %}
+                                <a href="/customers/{{ c.customer_id }}/ledger" class="cust-link">
+                                    {{ c.customer_name or 'Walk-in' }}
+                                </a>
+                            {% else %}
+                                {{ c.customer_name or 'Walk-in' }}
+                            {% endif %}
+                        </td>
+                        <td style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">
+                            {{ c.customer_phone or '—' }}
+                        </td>
+                        <td style="font-family:var(--font-mono); font-weight:600; color:var(--success); text-align:right;">
+                            ₹ {{ c.total_spent }}
+                        </td>
+                        <td style="text-align:center;">
+                            {% if c.customer_id %}
+                            <a href="/customers/{{ c.customer_id }}/ledger" class="ref-link">View</a>
+                            {% else %}
+                            <span style="color:var(--text-muted); font-size:12px;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:24px;">No customers yet today</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div><!-- /container -->
 
 <script>
 const ctx = document.getElementById('hourlyChart').getContext('2d');
@@ -125,60 +209,39 @@ new Chart(ctx, {
         datasets: [{
             label: 'Sales',
             data: {{ hour_sales|tojson }},
-            tension: 0.3
+            borderColor: '#3b5bdb',
+            backgroundColor: 'rgba(59,91,219,0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#3b5bdb'
         }]
     },
     options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
-        },
+        plugins: { legend: { display: false } },
         scales: {
-            x: {
-                ticks: { maxTicksLimit: 8 }
-            }
+            x: { ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+            y: { ticks: { font: { size: 11 } } }
         }
     }
 });
-</script>
-<div class="card" id="new-customers" style="margin: 0 12px 16px;">
-<h3>Customers Today</h3>
-<div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-<table>
-<tr><th>Name</th><th>Phone</th><th>Spent</th></tr>
-{% for c in customer_details %}
-<tr>
-<td>{{ c.customer_name or 'Walk-in' }}</td>
-<td>{{ c.customer_phone }}</td>
-<td>₹ {{ c.total_spent }}</td>
-</tr>
-{% endfor %}
-</table>
-</div>
-</div>
 
-
-<script>
 function updateGreeting() {
-    const now = new Date();
-    const hours = now.getHours();
-    let greet = "Good Evening";
-
-    if (hours < 12) greet = "Good Morning";
-    else if (hours < 17) greet = "Good Afternoon";
-
-    const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-    const dateStr = now.toLocaleDateString(undefined, options);
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    document.getElementById("greeting").innerText =
-    `${greet}, Manager 👋 — ${dateStr} ${timeStr}`;
-
+    const now   = new Date();
+    const h     = now.getHours();
+    const greet = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+    const dateStr = now.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'short', day:'numeric' });
+    const timeStr = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('greeting').innerText = `${greet}, Manager 👋 — ${dateStr} ${timeStr}`;
 }
 
 updateGreeting();
 setInterval(updateGreeting, 60000);
 </script>
+
+<script src="/static/js/price_widget.js"></script>
 </body>
 </html>

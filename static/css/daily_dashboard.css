@@ -363,3 +363,58 @@ td:nth-child(3) {
 
   th, td { padding: 8px 10px; }
 }
+
+/* ======================================================
+   DASHBOARD-SPECIFIC ADDITIONS
+   ====================================================== */
+
+/* Date viewing banner inside hero */
+.date-viewing {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.88;
+}
+
+.date-viewing a {
+  color: rgba(255,255,255,0.9);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.date-viewing a:hover { color: #fff; }
+
+/* Customer name links inside dashboard tables */
+.cust-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.cust-link:hover { text-decoration: underline; }
+
+/* Reference pill link (reused from transactions.css) */
+.ref-link {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 8px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ref-link:hover {
+  border-color: var(--accent);
+  background: #dde4fb;
+}
+
+/* Customers Today card — 4-column table tweaks */
+#new-customers th:nth-child(3),
+#new-customers td:nth-child(3) { text-align: right; }
+
+#new-customers th:nth-child(4),
+#new-customers td:nth-child(4) { text-align: center; }

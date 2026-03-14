@@ -5,91 +5,119 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/catalog.css">
 </head>
-
 <body>
 
-  <header class="site-header">
-    <div class="header-left">
-      <h1>Kumara Swami Agencies</h1>
-      <span class="header-sub">Smart billing system</span>
+<header class="site-header">
+  <div class="header-left">
+    <h1>Manhatten Industries</h1>
+    <span class="header-sub">Smart billing system</span>
+  </div>
+  <nav class="header-nav">
+    <a href="/">Dashboard</a>
+    <a href="/billing">+ New Bill</a>
+    <a href="/bills">Bills</a>
+    <a href="/logout" style="color:#dc2626;">Logout</a>
+  </nav>
+</header>
+
+<div class="page-wrap">
+
+  <a href="/">← Back to Dashboard</a>
+
+  <!-- ADD / EDIT FORM -->
+  <div class="card form-card">
+    <div class="card-header">
+      <h2 id="formTitle">Add Item</h2>
+      <button class="btn btn-ghost btn-sm" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">Cancel Edit</button>
     </div>
-    <nav class="header-nav">
-      <a href="/">Dashboard</a>
-      <a href="/billing">+ New Bill</a>
-      <a href="/catalog" class="active">Catalog</a>
-      <a href="/bills">Bills</a>
-      <a href="/logout" style="color:#dc2626;">Logout</a>
-    </nav>
-  </header>
+    <div class="card-body">
+      <input type="hidden" id="editingItemId">
 
-  <div class="page-wrap">
-
-    <a href="/">← Back to Billing</a>
-
-    <hr />
-
-    <!-- ADD / EDIT FORM -->
-    <div class="card form-card">
-      <div class="card-header">
-        <h2>Add / Edit Item</h2>
+      <div class="form-field" style="min-width:220px; flex:2;">
+        <label>Item Name <span class="required">*</span></label>
+        <input id="catItemName" type="text" placeholder="e.g. Rice 25kg" autocomplete="off">
       </div>
-      <div class="card-body">
-        <div class="form-field">
-          <label>Item Name</label>
-          <input id="catItemName" type="text" placeholder="e.g. Rice 1kg" />
-        </div>
-        <div class="form-field">
-          <label>Price (₹)</label>
-          <input id="catItemPrice" type="number" placeholder="0.00" />
-        </div>
-        <button id="saveCatItemBtn">Save Item</button>
+
+      <div class="form-field">
+        <label>Category</label>
+        <input id="catItemCategory" type="text" placeholder="e.g. Grains" autocomplete="off">
       </div>
+
+      <div class="form-field">
+        <label>Default Price (₹) <span class="required">*</span></label>
+        <input id="catItemDefaultPrice" type="number" min="0" step="0.01" placeholder="Cost / base price">
+      </div>
+
+      <div class="form-field">
+        <label>Max Price / MRP (₹)</label>
+        <input id="catItemMaxPrice" type="number" min="0" step="0.01" placeholder="Ceiling price">
+      </div>
+
+      <div class="form-field">
+        <label>Final / Selling Price (₹)</label>
+        <input id="catItemFinalPrice" type="number" min="0" step="0.01" placeholder="Overrides default">
+      </div>
+
+      <button id="saveCatItemBtn" onclick="saveCatalogItem()">Save Item</button>
     </div>
+  </div>
 
-    <hr />
-
-    <!-- SEARCH + ITEM LIST -->
-    <div class="card">
-      <div class="card-header">
-        <h2>Catalogue Items</h2>
-      </div>
-      <div class="card-body" style="padding-bottom:0;">
-        <div class="search-wrap">
-          <input id="catalogSearch" type="search" placeholder="Search items…" />
-        </div>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Price</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="catalogItems"></tbody>
-        </table>
-      </div>
+  <!-- SEARCH + ITEM LIST -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Catalogue Items</h2>
+      <span class="item-count" id="catItemCount">—</span>
     </div>
-
-    <hr />
-
-    <!-- EXCEL IMPORT -->
-    <div class="card import-card">
-      <div class="card-header">
-        <h2>Import from Excel</h2>
-      </div>
-      <div class="card-body">
-        <div class="import-row">
-          <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
-          <button id="importBtn">Import</button>
-        </div>
-        <p id="importResult"></p>
+    <div class="card-body" style="padding-bottom:0;">
+      <div class="search-wrap">
+        <input id="catalogSearch" type="search" placeholder="Search items by name or category…">
       </div>
     </div>
+    <div class="table-wrapper">
+      <table id="catalogTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th class="num">Default ₹</th>
+            <th class="num">Max ₹</th>
+            <th class="num">Final ₹</th>
+            <th class="num">Updated</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="catalogItems"></tbody>
+      </table>
+    </div>
+  </div>
 
-  </div><!-- /page-wrap -->
+  <!-- EXCEL IMPORT -->
+  <div class="card import-card">
+    <div class="card-header">
+      <h2>Import from Excel</h2>
+    </div>
+    <div class="card-body">
+      <div class="import-hint">
+        <strong>Excel column format (header row required):</strong>
+        <div class="col-chips">
+          <span class="chip required-chip">name *</span>
+          <span class="chip">category</span>
+          <span class="chip required-chip">default_price *</span>
+          <span class="chip">max_price</span>
+          <span class="chip">final_price</span>
+        </div>
+        <p class="hint-note">Columns marked <strong>*</strong> are required. Existing items (matched by name) will be updated. Optional columns may be omitted.</p>
+      </div>
+      <div class="import-row">
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv">
+        <button id="importBtn" onclick="importCatalog()">Import</button>
+      </div>
+      <p id="importResult"></p>
+    </div>
+  </div>
 
-  <script src="/static/catalog.js"></script>
+</div>
+
+<script src="/static/js/catalog.js"></script>
 </body>
 </html>

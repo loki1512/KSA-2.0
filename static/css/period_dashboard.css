@@ -193,3 +193,12 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Customer links inside period tables */
+.cust-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.cust-link:hover { text-decoration: underline; }

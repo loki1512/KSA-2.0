@@ -1,235 +1,459 @@
-/* ===== Reset ===== */
-* {
-  box-sizing: border-box;
+/* ===== BILL_DETAIL.CSS — Kumara Swami Agencies ===== */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #f0f2f7;
+  --surface: #ffffff;
+  --surface-2: #f8f9fc;
+  --border: #e2e5ed;
+
+  --text-primary: #0f1117;
+  --text-secondary: #5a6178;
+  --text-muted: #9399aa;
+
+  --accent: #3b5bdb;
+  --accent-hover: #2f4ac7;
+  --accent-light: #eef1fd;
+
+  --success: #0f9e6e;
+  --success-hover: #0d8a60;
+  --success-light: #e6f7f2;
+
+  --danger: #e03131;
+  --danger-hover: #c42b2b;
+  --danger-light: #fff0f0;
+
+  --whatsapp: #25d366;
+  --whatsapp-hover: #1fba58;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+
+  --font: 'Sora', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* ===== Page ===== */
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  background: #f3f4f6;
-  margin: 0;
-  padding: 20px;
-  color: #111827;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 24px 16px 48px;
 }
 
-/* ===== Site Header ===== */
-.site-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+/* ======================================================
+   INVOICE CARD
+   ====================================================== */
+#bill-print-area {
+  max-width: 680px;
+  margin: 0 auto;
 }
 
-/* Left side */
-.header-left h1 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.header-sub {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-/* Navigation */
-.header-nav a {
-  margin-left: 16px;
-  font-weight: 500;
-}
-
-/* Active page hint (optional later) */
-.header-nav a.active {
-  text-decoration: underline;
-}
-
-
-/* ===== Invoice Card ===== */
 .invoice {
-  max-width: 720px;            /* ⬅️ increased width */
-  margin: 0 auto 16px;
-  background: #ffffff;
-  padding: 24px;               /* more breathing room */
-  border-radius: 12px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
 }
 
-/* ===== Header ===== */
-header {
+/* ---- INVOICE HEADER ---- */
+.invoice > header {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b5bdb 100%);
+  color: #fff;
+  padding: 28px 32px 24px;
   text-align: center;
-  border-bottom: 1px dashed #e5e7eb;
-  padding-bottom: 14px;
-  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
 }
 
-header h2 {
+/* subtle bg decoration */
+.invoice > header::before {
+  content: '';
+  position: absolute;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  top: -80px; right: -60px;
+  pointer-events: none;
+}
+
+.invoice > header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  margin-bottom: 6px;
+}
+
+.invoice > header p {
+  font-size: 13px;
+  opacity: 0.82;
+  line-height: 1.6;
   margin: 0;
-  font-size: 1.5rem;
-  letter-spacing: 0.5px;
 }
 
-header p {
-  margin: 2px 0;
-  font-size: 0.9rem;
-  color: #6b7280;
+.invoice > header hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  margin: 14px 0;
 }
 
-/* ===== Customer ===== */
+.invoice > header h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+/* Bill # badge */
+.invoice > header p:nth-of-type(3) {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px;
+  padding: 3px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* Date */
+.invoice > header p:nth-of-type(4) {
+  font-size: 12px;
+  opacity: 0.70;
+  font-family: var(--font-mono);
+}
+
+/* ---- CUSTOMER SECTION ---- */
 .customer {
-  margin-bottom: 16px;
-  font-size: 0.95rem;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
 }
 
 .customer strong {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
   display: block;
   margin-bottom: 6px;
 }
 
-/* ===== Items Table ===== */
+.customer p {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.customer p:first-of-type {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Phone mono */
+.customer p:nth-of-type(2) {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* ---- ITEMS TABLE ---- */
 .items {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 16px;
-  font-size: 0.95rem;
+  font-size: 13px;
+}
+
+.items thead tr {
+  background: var(--surface-2);
+  border-bottom: 1.5px solid var(--border);
 }
 
 .items th {
-  padding: 10px 8px;
+  font-size: 10.5px;
   font-weight: 600;
-  border-bottom: 1px solid #e5e7eb;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  text-align: left;
   white-space: nowrap;
 }
 
+/* Right-align numeric columns */
+.items th:nth-child(2),
+.items th:nth-child(3),
+.items th:nth-child(4),
+.items th:nth-child(5),
+.items th:nth-child(6) { text-align: right; }
+
 .items td {
-  padding: 10px 8px;
-  border-bottom: 1px dashed #e5e7eb;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
 }
 
-/* Alignment */
-.items th,
-.items td {
+.items tbody tr:last-child td { border-bottom: none; }
+.items tbody tr:hover { background: var(--surface-2); }
+
+/* Item name */
+.items td:nth-child(1) { font-weight: 500; }
+
+/* Qty, MRP, Discount, Rate, Amount — right-aligned mono */
+.items td:nth-child(2),
+.items td:nth-child(3),
+.items td:nth-child(4),
+.items td:nth-child(5),
+.items td:nth-child(6) {
   text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
-.items th:first-child,
-.items td:first-child {
-  text-align: left;
-  width: 30%;
+/* Discount — warning colour if not dash */
+.items td:nth-child(4) { color: #d97706; }
+
+/* Final amount column — bold green */
+.items td:nth-child(6) {
+  font-weight: 700;
+  color: var(--success);
 }
 
-/* ===== Totals ===== */
+/* ---- TOTALS SECTION ---- */
 .totals {
-  border-top: 1px solid #e5e7eb;
-  padding-top: 14px;
-  font-size: 0.95rem;
+  padding: 16px 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  border-top: 1.5px solid var(--border);
+  background: var(--surface-2);
 }
 
 .totals p {
-  display: flex;
-  justify-content: space-between;
-  margin: 6px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
 }
 
-.totals .final {
+.totals p.final {
+  font-size: 18px;
   font-weight: 700;
-  font-size: 1.15rem;
-  margin-top: 8px;
-}
-
-/* ===== WhatsApp Button ===== */
-button {
-  display: block;
+  color: var(--text-primary);
+  padding-top: 8px;
+  border-top: 1.5px solid var(--border);
+  margin-top: 4px;
   width: 100%;
-  max-width: 720px;      /* match invoice width */
-  margin: 5px auto;
-  padding: 14px;
-  background: #22c55e;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
+  text-align: right;
+}
+
+/* ======================================================
+   ACTION BUTTONS
+   ====================================================== */
+.action-bar {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* All action bar buttons */
+.action-bar button,
+.action-bar a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: var(--font);
+  font-size: 13px;
   font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radius-xs);
+  border: none;
   cursor: pointer;
-  
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  text-decoration: none;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 140px;
 }
 
-button:hover {
-  background: #16a34a;
+.action-bar button:active { transform: scale(0.98); }
+
+/* WhatsApp — 1st button */
+.action-bar button:nth-child(1) {
+  background: var(--whatsapp); color: #fff;
+}
+.action-bar button:nth-child(1):hover {
+  background: var(--whatsapp-hover);
+  box-shadow: 0 4px 14px rgba(37,211,102,0.30);
 }
 
-/* ===== Mobile ===== */
-@media (max-width: 600px) {
+/* Print — 2nd button */
+.action-bar button:nth-child(2) {
+  background: var(--surface); color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+}
+.action-bar button:nth-child(2):hover {
+  background: var(--surface-2); color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+/* Back to Bills — 3rd button */
+.action-bar button:nth-child(3) {
+  background: var(--surface-2); color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+}
+.action-bar button:nth-child(3):hover {
+  background: var(--accent-light); color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Edit Bill — 4th button */
+.action-bar button:nth-child(4) {
+  background: var(--accent-light); color: var(--accent);
+  border: 1.5px solid var(--accent);
+}
+.action-bar button:nth-child(4):hover {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 4px 14px rgba(59,91,219,0.25);
+}
+
+/* Ledger — 5th child (button or anchor) */
+.action-bar button:nth-child(5),
+.action-bar a:nth-child(5) {
+  background: var(--surface-2); color: #3730a3;
+  border: 1.5px solid #c7d2fe;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; font-family: var(--font); font-size: 13px; font-weight: 600;
+  padding: 9px 18px; border-radius: var(--radius-xs);
+  text-decoration: none; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.action-bar button:nth-child(5):hover,
+.action-bar a:nth-child(5):hover {
+  background: #e0e7ff; border-color: #6366f1;
+}
+
+/* Delete — last child */
+.action-bar button:last-child,
+.btn-delete-danger {
+  background: var(--danger-light) !important;
+  color: var(--danger) !important;
+  border: 1.5px solid var(--danger) !important;
+}
+.action-bar button:last-child:hover,
+.btn-delete-danger:hover {
+  background: var(--danger) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(224,49,49,0.25);
+}
+
+/* ======================================================
+   PRINT STYLES
+   ====================================================== */
+@media print {
+  :root {
+    --bg: #fff;
+    --surface: #fff;
+    --surface-2: #fff;
+    --border: #ccc;
+  }
+
   body {
-    padding: 10px;
+    padding: 0;
+    background: #fff;
   }
 
+  /* Hide all action buttons */
+  .action-bar { display: none !important; }
+
+  /* Reset card to flat print layout */
   .invoice {
-    max-width: 100%;
-    padding: 14px;
-    margin: 0 auto 12px;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
   }
 
-  header h1 {
-    font-size: 1.1rem;
+  /* Header: white background for print */
+  .invoice > header {
+    background: #fff !important;
+    color: #000 !important;
+    border-bottom: 2px solid #000;
+    padding: 12px 0 10px;
   }
 
-  header h2 {
-    font-size: 1.15rem;
+  .invoice > header::before { display: none; }
+  .invoice > header h1 { font-size: 18px; color: #000; }
+  .invoice > header p  { color: #333; opacity: 1; }
+  .invoice > header h2 { color: #000; }
+
+  /* Bill badge: plain text */
+  .invoice > header p:nth-of-type(3) {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #000;
   }
 
-  header p {
-    font-size: 0.85rem;
-  }
+  /* Keep table borders crisp */
+  .items th,
+  .items td { border-color: #ccc; }
 
-  .items {
-    font-size: 0.85rem;
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+  /* Amounts in black for print */
+  .items td:nth-child(6),
+  .totals p.final { color: #000; }
+
+  .totals { background: #fff; }
+  .customer { background: #fff; }
+
+  /* Remove hover effects */
+  .items tbody tr:hover { background: transparent; }
+
+  page-break-inside: avoid;
+}
+
+/* ======================================================
+   RESPONSIVE
+   ====================================================== */
+@media (max-width: 600px) {
+  body { padding: 14px 10px 40px; }
+
+  .invoice > header { padding: 20px 18px 18px; }
+  .invoice > header h1 { font-size: 18px; }
+
+  .customer { padding: 14px 18px; }
 
   .items th,
-  .items td {
-    padding: 8px 6px;
-    white-space: nowrap;
-  }
+  .items td { padding: 8px 10px; font-size: 12px; }
 
-  .totals {
-    font-size: 0.9rem;
-  }
+  .totals { padding: 12px 18px 16px; }
+  .totals p.final { font-size: 16px; }
 
-  .totals .final {
-    font-size: 1.05rem;
-  }
-
-  button {
-    min-height: 44px;
-    font-size: 0.95rem;
-    padding: 12px;
-  }
-}
-
-/* ===== Print ===== */
-@media print {
-  body {
-    background: #ffffff;
-    padding: 0;
-  }
-
-  button {
-    display: none;
-    margin:5px;
-  }
-
-  .invoice {
-    max-width: 100%;
-    box-shadow: none;
-    border-radius: 0;
-    padding: 16px;
+  body > button {
+    flex: 1 1 calc(50% - 5px);
+    min-width: unset;
+    font-size: 12px;
+    padding: 10px 10px;
   }
 }

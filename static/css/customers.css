@@ -1,0 +1,66 @@
+/* customers.css — layered on bills.css */
+
+.mode-banner {
+  max-width: 960px;
+  margin: 0 auto 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--warning-light, #fffbeb);
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-xs);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #92400e;
+  margin-bottom: -4px;
+}
+
+.link-btn {
+  background: none; border: none;
+  color: var(--accent); font-size: 13px; font-weight: 600;
+  cursor: pointer; padding: 0; font-family: var(--font);
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* Table specifics */
+.td-name { font-weight: 500; }
+
+.mono  { font-family: var(--font-mono); font-size: 12px; }
+.muted { color: var(--text-muted); }
+.num   { text-align: right; font-family: var(--font-mono); font-size: 13px; }
+.empty { text-align: center; padding: 48px; color: var(--text-muted); }
+
+.amt-debit  { color: var(--danger);  font-weight: 700; }
+.amt-credit { color: var(--success); font-weight: 700; }
+
+.cust-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+.cust-link:hover { text-decoration: underline; }
+
+.actions-cell { text-align: center; white-space: nowrap; }
+
+.btn-view {
+  display: inline-block;
+  font-size: 12px; font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-xs);
+  text-decoration: none;
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid transparent;
+  transition: background 0.15s;
+}
+.btn-view:hover { background: var(--accent); color: #fff; }
+
+/* Type badges — reused from transactions */
+.type-badge {
+  display: inline-block;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 3px 8px; border-radius: 20px;
+}
+
+.type-regular     { background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border); }
+.type-premium     { background: #fef3c7; color: #92400e; }
+.type-electrician { background: var(--accent-light); color: var(--accent); }

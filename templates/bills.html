@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Kumara Swami Agencies | Bill History</title>
+  <title>Manhatten Industries | Bill History</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/bills.css">
 </head>
@@ -12,15 +12,15 @@
   <!-- SITE HEADER -->
   <header class="site-header">
     <div class="header-left">
-      <h1>Kumara Swami Agencies</h1>
+      <h1>Manhatten Industries</h1>
       <span class="header-sub">Smart billing system</span>
     </div>
 
     <nav class="header-nav">
       <a href="/">Dashboard</a>
       <a href="/billing">+ New Bill</a>
-      <a href="/catalog">Catalog</a>
-      <a href="/bills" class="active">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
       <a href="/logout" style="color:#dc2626;">Logout</a>
     </nav>
   </header>
@@ -82,8 +82,8 @@
         >
           <td>#{{ bill.id }}</td>
           <td>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</td>
-          <td>{{ bill.customer_name or 'Walk-in' }}</td>
-          <td>{{ bill.customer_phone or '-' }}</td>
+          <td>{{ bill.customer.name or 'Walk-in' }}</td>
+          <td>{{ bill.customer.phone or '-' }}</td>
           <td>₹{{ "%.2f"|format(bill.final_amount) }}</td>
           <td class="view-link">
             <a href="/bills/{{ bill.id }}">View</a>
@@ -108,6 +108,6 @@
 
 </div>
 
-<script src="/static/bills.js"></script>
+<script src="/static/js/bills.js"></script>
 </body>
 </html>

@@ -1,73 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bill #{{ bill.id }}</title>
   <link rel="stylesheet" href="/static/css/bill_detail.css">
-
-  <!-- PRINT STYLES (ADDED) -->
+  <link rel="stylesheet" href="/static/css/update_bill.css">
   <style>
     @media print {
-      body * {
-        visibility: hidden;
-      }
-
-      #bill-print-area,
-      #bill-print-area * {
-        visibility: visible;
-      }
-
-      #bill-print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-      }
-
-      button {
-        display: none;
-      }
+      body * { visibility: hidden; }
+      #bill-print-area, #bill-print-area * { visibility: visible; }
+      #bill-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+      .action-bar { display: none; }
     }
   </style>
 </head>
-
 <body>
 
-<!-- PRINTABLE AREA START -->
+<!-- ── PRINTABLE INVOICE ─────────────────────────────── -->
 <div id="bill-print-area">
-
   <div class="invoice">
 
-    <header style="text-align:center; margin-bottom:15px;">
-  <h1 style="margin:0;">Kumara Swami Agencies</h1>
-  <p style="margin:2px 0;">
-    Near SBI ATM, Ravindra Nagar<br>
-    Galiveedu – 516267
-  </p>
-  <p style="margin:2px 0;">📞 9490608943</p>
-
-  <hr style="margin:10px 0;">
-
-  <h2 style="margin:5px 0;">Invoice</h2>
-  <p style="margin:2px 0;">Bill #{{ bill.id }}</p>
-  <p style="margin:2px 0;">{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</p>
-</header>
+    <header>
+      <h1>Manhatten Industries</h1>
+      <p>Near SBI ATM, Ravindra Nagar<br></p>
+      <p>📞 9490608943</p>
+      <hr>
+      <h2>Invoice</h2>
+      <p>Bill #{{ bill.id }}</p>
+      <p>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</p>
+    </header>
 
     <section class="customer">
-      <strong>Customer:</strong>
-      <p>{{ bill.customer_name or 'Walk-in' }}</p>
-      {% if bill.customer_phone %}
-        <p>{{ bill.customer_phone }}</p>
-      {% endif %}
-      {% if bill.customer_address %}
-        <p>{{ bill.customer_address }}</p>
+      <strong>Customer</strong>
+      {% if bill.customer %}
+        <p>{{ bill.customer.name }}</p>
+        {% if bill.customer.phone %}
+          <p>{{ bill.customer.phone }}</p>
+        {% endif %}
+        {% if bill.customer.address %}
+          <p>{{ bill.customer.address }}{% if bill.customer.village %}, {{ bill.customer.village }}{% endif %}</p>
+        {% endif %}
+      {% else %}
+        <p>Walk-in Customer</p>
       {% endif %}
     </section>
 
     <table class="items">
       <thead>
         <tr>
+          <th>#</th>
           <th>Item</th>
           <th>Qty</th>
           <th>MRP</th>
@@ -79,25 +61,22 @@
       <tbody>
         {% for i in items %}
         <tr>
+          <td>{{ loop.index }}</td>
           <td>{{ i.item_name }}</td>
           <td>{{ i.qty }}</td>
 
-          {% set discount_value = i.item_discount_value or 0 %}
-          {% set discount =
-            discount_value
-            if i.item_discount_type == '₹'
-            else (i.unit_price * discount_value / 100)
-          %}
+          {% set dv = i.item_discount_value or 0 %}
+          {% set discount = dv if i.item_discount_type == '₹' else (i.unit_price * dv / 100) %}
 
           <td>₹{{ "%.2f"|format(i.unit_price) }}</td>
 
           <td>
             {% if i.item_discount_type == '₹' %}
-              ₹{{ "%.2f"|format(i.item_discount_value) }}
+              ₹{{ "%.2f"|format(dv) }}
             {% elif i.item_discount_type == '%' %}
-              {{ "%.2f"|format(i.item_discount_value) }}%
+              {{ "%.2f"|format(dv) }}%
             {% else %}
-              -
+              —
             {% endif %}
           </td>
 
@@ -111,91 +90,57 @@
     <section class="totals">
       <p>Subtotal: ₹{{ "%.2f"|format(bill.subtotal) }}</p>
       {% if bill.bill_discount_value %}
-        <p>Discount: {{ bill.bill_discount_type }} {{ bill.bill_discount_value }}</p>
+        <p>Discount: {{ bill.bill_discount_type }}{{ "%.2f"|format(bill.bill_discount_value) }}</p>
       {% endif %}
-      <p class="final">Final: ₹{{ "%.2f"|format(bill.final_amount) }}</p>
+      <p class="final">Total: ₹{{ "%.2f"|format(bill.final_amount) }}</p>
     </section>
 
   </div>
-
 </div>
-<!-- PRINTABLE AREA END -->
+<!-- ── END PRINTABLE ──────────────────────────────────── -->
 
-<!-- EXISTING BUTTON -->
-<button onclick="sendWhatsApp()">
-  📲 Send Bill on WhatsApp
-</button>
-
-<!-- NEW PRINT BUTTON (ADDED) -->
-<button onclick="printBill()">
-  🖨️ Print Bill
-</button>
-
-<button onclick="window.location='/bills'">
-  🔙 Back to Bills
-</button>
-<button onclick="window.location='/bills/edit/{{ bill.id }}'">
-  ✏️ Edit Bill
-</button>
-<button onclick="deleteBill({{ bill.id }})" style="background-color:#e74c3c; color:white;">
-  🗑️ Delete Bill
-</button>
-
-</body>
+<!-- ── ACTION BUTTONS ────────────────────────────────── -->
+<div class="action-bar">
+  <button onclick="sendWhatsApp()">📲 WhatsApp</button>
+  <button onclick="window.print()">🖨️ Print</button>
+  <button onclick="window.location='/bills'">🔙 Bills</button>
+  <button onclick="window.location='/bills/edit/{{ bill.id }}'">✏️ Edit</button>
+  {% if bill.customer %}
+  <button onclick="window.location='/customers/{{ bill.customer.id }}/ledger'">📒 Ledger</button>
+  {% endif %}
+  <button onclick="deleteBill({{ bill.id }})" class="btn-delete-danger">🗑️ Delete</button>
+</div>
 
 <script>
   function sendWhatsApp() {
-    const phone = "{{ bill.customer_phone }}";
-    console.log("phone:", phone);
+    const phone = "{{ bill.customer.phone if bill.customer else '' }}";
+    if (!phone) { alert("No phone number on this bill."); return; }
+    if (phone.length < 10) { alert("Invalid phone number."); return; }
 
-    if (!phone) {
-      alert("Customer phone number is not available.");
-      return;
-    }
-    if (phone.length < 10) {
-      alert("Invalid phone number.");
-      return;
-    }
-
-    const bill_link = "https://ksa-2-0.onrender.com/invoice/{{ bill.id }}";
+    const link    = "https://ksa-2-0.onrender.com/invoice/{{ bill.id }}";
+    const name    = "{{ bill.customer.name if bill.customer else 'Customer' }}";
+    const amount  = "₹{{ '%.2f'|format(bill.final_amount) }}";
 
     const message = encodeURIComponent(
-      ` *KS Agencies*\n\n` +
-      `Hello *{{ bill.customer_name or 'Customer' }}*,\n\n` +
+      `*KS Agencies*\n\nHello *${name}*,\n\n` +
       `Thank you for shopping with us.\n` +
-      `Your bill amount is *₹{{ "%.2f"|format(bill.final_amount) }}*.\n\n` +
-      `View your bill here:\n${bill_link}\n\n` +
-      `Thank you for your business !`
+      `Your bill amount is *${amount}*.\n\n` +
+      `View your bill here:\n${link}\n\n` +
+      `Thank you for your business!`
     );
 
-    const url = `https://wa.me/91${phone}?text=${message}`;
-    window.open(url, '_blank');
-  }
-
-  /* PRINT FUNCTION (ADDED) */
-  function printBill() {
-    window.print();
+    window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
   }
 
   function deleteBill(billId) {
-    if (confirm("Are you sure you want to delete this bill? This action cannot be undone.")) {
-      fetch(`/api/bills/${billId}`, {
-        method: 'DELETE'
+    if (!confirm("Delete this bill? This cannot be undone.")) return;
+    fetch(`/api/bills/${billId}`, { method: 'DELETE' })
+      .then(r => {
+        if (r.ok) { alert("Bill deleted."); window.location.href = '/bills'; }
+        else       { alert("Delete failed."); }
       })
-      .then(response => {
-        if (response.ok) {
-          alert("Bill deleted successfully.");
-          window.location.href = '/bills';
-        } else {
-          alert("Failed to delete the bill.");
-        }
-      })
-      .catch(error => {
-        console.error("Error deleting bill:", error);
-        alert("An error occurred while deleting the bill.");
-      });
-    }
+      .catch(() => alert("Request error."));
   }
 </script>
-
+</body>
 </html>

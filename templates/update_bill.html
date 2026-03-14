@@ -1,568 +1,781 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Edit Bill #{{ bill.id }}</title>
-
-<link rel="stylesheet" href="/static/css/bill_detail.css">
-
-<style>
-
-@media print {
-  body * { visibility:hidden; }
-  #bill-print-area, #bill-print-area * { visibility:visible; }
-
-  #bill-print-area{
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-  }
-
-  button{ display:none; }
-}
-
-/* MODALS */
-
-.modal{
-display:none;
-position:fixed;
-left:0;
-top:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.4);
-z-index:1000;
-}
-
-.modal-content{
-background:white;
-padding:20px;
-width:320px;
-margin:10% auto;
-border-radius:8px;
-}
-
-.modal-content input,
-.modal-content select{
-width:100%;
-margin-bottom:10px;
-padding:6px;
-}
-
-.actions button{
-margin-right:5px;
-}
-
-.bill-discount{
-
-display:flex;
-align-items:center;
-gap:8px;
-margin:10px 0;
-
-}
-
-.bill-discount label{
-font-weight:bold;
-min-width:70px;
-}
-
-.bill-discount select{
-padding:4px 6px;
-border:1px solid #ccc;
-border-radius:4px;
-background:white;
-}
-
-.bill-discount input{
-
-width:90px;
-padding:5px;
-
-border:1px solid #ccc;
-border-radius:4px;
-
-text-align:right;
-
-}
-
-</style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit Bill #{{ bill.id }}</title>
+  <link rel="stylesheet" href="/static/css/bill_detail.css">
+  <link rel="stylesheet" href="/static/css/update_bill.css">
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #bill-print-area, #bill-print-area * { visibility: visible; }
+      #bill-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+      .action-bar, .update-actions { display: none; }
+    }
+  </style>
 </head>
-
 <body>
 
+<!-- ── PRINTABLE INVOICE (live-rendered) ─────────────── -->
 <div id="bill-print-area">
+  <div class="invoice">
 
-<div class="invoice">
+    <header>
+      <h1>Kumara Swami Agencies</h1>
+      <p>Near SBI ATM, Ravindra Nagar<br>Galiveedu – 516267</p>
+      <p>📞 9490608943</p>
+      <hr>
+      <h2>Edit Bill</h2>
+      <p>Bill #{{ bill.id }}</p>
+      <p>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</p>
+    </header>
 
-<header style="text-align:center;margin-bottom:15px;">
+    <section class="customer">
+      <strong>Customer</strong>
+      {% if bill.customer %}
+        <p>{{ bill.customer.name }}</p>
+        {% if bill.customer.phone %}<p>{{ bill.customer.phone }}</p>{% endif %}
+        {% if bill.customer.address %}
+          <p>{{ bill.customer.address }}{% if bill.customer.village %}, {{ bill.customer.village }}{% endif %}</p>
+        {% endif %}
+      {% else %}
+        <p>Walk-in Customer</p>
+      {% endif %}
+    </section>
 
-<h1 style="margin:0;">Kumara Swami Agencies</h1>
+    <!-- ── ADD NEW ITEM ─────────────────────────────────── -->
+    <section class="add-item-section no-print">
+      <div class="add-item-header">Add Item</div>
 
-<p>
-Near SBI ATM, Ravindra Nagar<br>
-Galiveedu – 516267
-</p>
+      <div class="add-search-wrap" id="addSearchWrap">
+        <label>Item Name</label>
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="addItemName"
+            placeholder="Start typing to search…" autocomplete="off">
+          <button class="clear-btn" id="clearAddBtn" title="Clear">✕</button>
+        </div>
+        <div id="addSuggestions" class="suggestions-dropdown" style="display:none;">
+          <div id="addSuggestionList"></div>
+          <div class="suggestions-footer" id="addViewMore" style="display:none;">
+            <button class="link-btn" onclick="openAddModal()">View more results →</button>
+          </div>
+        </div>
+      </div>
 
-<p>📞 9490608943</p>
+      <div class="add-fields-row">
+        <div class="field-group">
+          <label>Qty</label>
+          <input type="number" id="addQty" min="0.01" step="0.01" value="1">
+        </div>
+        <div class="field-group">
+          <label>MRP (₹)</label>
+          <input type="number" id="addPrice" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field-group">
+          <label>Discount</label>
+          <div class="discount-inline">
+            <select id="addDiscountType">
+              <option value="">None</option>
+              <option value="%">%</option>
+              <option value="₹">₹</option>
+            </select>
+            <input type="number" id="addDiscountValue" min="0" step="0.01" placeholder="0">
+          </div>
+        </div>
+      </div>
 
-<hr>
+      <!-- Biller-only max price hint -->
+      <div id="addMaxPriceHint" class="max-price-hint" style="display:none;">
+        <span class="hint-icon">ℹ</span>
+        Max allowed: <strong id="addMaxPriceVal"></strong>
+      </div>
 
-<h2>Edit Bill</h2>
+      <div class="add-preview" id="addPreview"></div>
 
-<p>Bill #{{ bill.id }}</p>
+      <button class="btn-add-item" onclick="addNewItem()">+ Add to Bill</button>
+    </section>
 
-<p>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</p>
+    <!-- Items table (JS-rendered) -->
+    <table class="items">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>MRP</th>
+          <th>Discount</th>
+          <th>Rate</th>
+          <th>Amount</th>
+          <th class="no-print"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
 
-</header>
+    <!-- Totals -->
+    <section class="totals">
+      <div class="totals-inner">
+        <p>Subtotal: ₹<span id="subtotal">0.00</span></p>
 
+        <div class="bill-discount-row">
+          <label>Bill Discount</label>
+          <select id="billDiscountType">
+            <option value="">None</option>
+            <option value="%" {% if bill.bill_discount_type == "%" %}selected{% endif %}>%</option>
+            <option value="₹" {% if bill.bill_discount_type == "₹" %}selected{% endif %}>₹</option>
+          </select>
+          <input id="billDiscountValue" type="number" step="0.01" min="0"
+            value="{{ bill.bill_discount_value or 0 }}" placeholder="0">
+        </div>
 
-<section class="customer">
+        <p class="final">Total: ₹<span id="finalTotal">0.00</span></p>
+      </div>
+    </section>
 
-<strong>Customer:</strong>
-
-<p>{{ bill.customer_name or 'Walk-in' }}</p>
-
-{% if bill.customer_phone %}
-<p>{{ bill.customer_phone }}</p>
-{% endif %}
-
-{% if bill.customer_address %}
-<p>{{ bill.customer_address }}</p>
-{% endif %}
-
-</section>
-
-
-<table class="items">
-
-<thead>
-<tr>
-<th>Item</th>
-<th>Qty</th>
-<th>MRP</th>
-<th>Discount</th>
-<th>Rate</th>
-<th>Amount</th>
-<th>Actions</th>
-</tr>
-</thead>
-
-<tbody id="itemsBody">
-
-{% for i in items %}
-
-<tr>
-
-<td>{{ i.item_name }}</td>
-<td>{{ i.qty }}</td>
-
-<td>₹{{ "%.2f"|format(i.unit_price) }}</td>
-
-<td>
-{% if i.item_discount_type %}
-{{ i.item_discount_value }}{{ i.item_discount_type }}
-{% else %}
--
-{% endif %}
-</td>
-
-<td>₹{{ "%.2f"|format(i.unit_price) }}</td>
-<td>₹{{ "%.2f"|format(i.final_item_amount) }}</td>
-
-<td class="actions">
-
-<button onclick="openEditModal({{ loop.index0 }})">✏️</button>
-
-<button onclick="openDeleteModal({{ loop.index0 }})">🗑️</button>
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-
-
-<section class="totals">
-
-<p>
-Subtotal:
-₹<span id="subtotal">{{ "%.2f"|format(bill.subtotal) }}</span>
-</p>
-
-<p class="bill-discount">
-
-<label>Discount</label>
-
-<select id="billDiscountType">
-<option value="">None</option>
-<option value="%" {% if bill.bill_discount_type=="%" %}selected{% endif %}>%</option>
-<option value="₹" {% if bill.bill_discount_type=="₹" %}selected{% endif %}>₹</option>
-</select>
-
-<input
-id="billDiscountValue"
-type="number"
-step="0.01"
-value="{{ bill.bill_discount_value or 0 }}"
-placeholder="0"
-/>
-
-</p>
-
-<p class="final">
-
-Final:
-₹<span id="finalTotal">{{ "%.2f"|format(bill.final_amount) }}</span>
-
-</p>
-
-</section>
-
+  </div>
 </div>
+<!-- ── END PRINTABLE ──────────────────────────────────── -->
+
+<!-- ── ACTION BUTTONS ────────────────────────────────── -->
+<div class="action-bar update-actions">
+  <button onclick="saveBill()" class="btn-save">💾 Save Changes</button>
+  <button onclick="window.print()">🖨️ Print</button>
+  <button onclick="window.location='/bills/{{ bill.id }}'">← View Bill</button>
+  <button onclick="window.location='/bills'">🔙 Bills</button>
 </div>
 
-
-<button onclick="saveBill()">💾 Save Changes</button>
-
-<button onclick="printBill()">🖨️ Print</button>
-
-<button onclick="window.location='/bills'">🔙 Back</button>
-
-
-
-<!-- EDIT ITEM MODAL -->
-
-<div id="editModal" class="modal">
-
-<div class="modal-content">
-
-<h3>Edit Item</h3>
-
-<label>Item</label>
-<input id="editName" readonly>
-
-<label>Quantity</label>
-<input id="editQty" type="number">
-
-<label>MRP</label>
-<input id="editRate" type="number">
-
-<label>Discount Type</label>
-<select id="editDiscountType">
-<option value="">None</option>
-<option value="%">%</option>
-<option value="₹">₹</option>
-</select>
-
-<label>Discount Value</label>
-<input id="editDiscountValue" type="number">
-
-<p>Total: ₹<span id="editTotal">0</span></p>
-
-<button onclick="saveEdit()">Save</button>
-
-<button onclick="closeModal()">Cancel</button>
-
+<!-- ── ADD ITEM PRODUCT SEARCH MODAL ─────────────────── -->
+<div id="addProductModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Search Products</h3>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="addModalSearch"
+        placeholder="Type to search…" autocomplete="off">
+    </div>
+    <div id="addModalResultsList" class="modal-results"></div>
+  </div>
 </div>
 
+<!-- ── EDIT ITEM MODAL ────────────────────────────────── -->
+<div id="editModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Edit Item</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label>Item Name</label>
+        <input id="editName" type="text" readonly>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Quantity</label>
+          <input id="editQty" type="number" min="0.01" step="0.01">
+        </div>
+        <div class="field-group">
+          <label>MRP (₹)</label>
+          <input id="editRate" type="number" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <label>Discount Type</label>
+          <select id="editDiscountType">
+            <option value="">None</option>
+            <option value="%">% Percent</option>
+            <option value="₹">₹ Flat</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Discount Value</label>
+          <input id="editDiscountValue" type="number" min="0" step="0.01" placeholder="0">
+        </div>
+      </div>
+      <div class="edit-preview" id="editPreview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
 </div>
 
-
-
-<!-- DELETE MODAL -->
-
-<div id="deleteModal" class="modal">
-
-<div class="modal-content">
-
-<h3>Delete Item</h3>
-
-<p id="deleteText"></p>
-
-<button onclick="confirmDelete()">Delete</button>
-
-<button onclick="closeModal()">Cancel</button>
-
+<!-- ── DELETE CONFIRM MODAL ───────────────────────────── -->
+<div id="deleteModal" class="modal-overlay" style="display:none;">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Remove Item?</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Remove <strong id="deleteItemName"></strong> from this bill?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Remove</button>
+    </div>
+  </div>
 </div>
 
-</div>
-
-
+<!-- ── TOAST ──────────────────────────────────────────── -->
+<div id="toast" class="toast" style="display:none;"></div>
 
 <script>
+'use strict';
 
-const billId = {{ bill.id }};
-let items = {{ items_json | tojson | safe }};
+const billId   = {{ bill.id }};
+const customerId = {{ bill.customer.id if bill.customer else 'null' }};
+let items      = {{ items_json | tojson | safe }};
 let currentIndex = null;
 
+// ─── INIT ────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderItems();
+  setupDiscountListeners();
+  setupModalKeyboard();
+});
 
+// ─── RENDER TABLE ────────────────────────────────────
+function renderItems() {
+  const tbody   = document.getElementById('itemsBody');
+  tbody.innerHTML = '';
+  let subtotal  = 0;
 
-function calculateItemTotal(item){
+  items.forEach((item, i) => {
+    const amount = calcItemTotal(item);
+    subtotal    += amount;
 
-let discount = 0
+    const discLabel = item.item_discount_type
+      ? `${item.item_discount_value}${item.item_discount_type}`
+      : '—';
 
-if(item.item_discount_type === "%")
-discount = item.unit_price * item.item_discount_value / 100
+    const discount = item.item_discount_type === '₹'
+      ? (item.item_discount_value || 0)
+      : (item.item_discount_type === '%'
+          ? item.unit_price * (item.item_discount_value || 0) / 100
+          : 0);
 
-if(item.item_discount_type === "₹")
-discount = item.item_discount_value
+    const rate = item.unit_price - discount;
 
-let rate = item.unit_price - discount
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="sno">${i + 1}</td>
+      <td class="td-name">${esc(item.item_name)}</td>
+      <td class="num">${item.qty}</td>
+      <td class="num">₹${fmt(item.unit_price)}</td>
+      <td class="num td-discount">${discLabel}</td>
+      <td class="num">₹${fmt(rate)}</td>
+      <td class="num td-amount">₹${fmt(amount)}</td>
+      <td class="num no-print">
+        <button class="btn-icon edit" onclick="openEditModal(${i})" title="Edit">✏️</button>
+        <button class="btn-icon del"  onclick="openDeleteModal(${i})" title="Remove">🗑️</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
 
-return item.qty * rate
-
+  document.getElementById('subtotal').textContent = fmt(subtotal);
+  recalcTotal();
 }
 
-
-
-function renderItems(){
-
-let tbody = document.getElementById("itemsBody")
-
-tbody.innerHTML = ""
-
-let subtotal = 0
-
-items.forEach((item,index)=>{
-
-let amount = calculateItemTotal(item)
-
-subtotal += amount
-
-let discountLabel = "-"
-
-if(item.item_discount_type)
-discountLabel = item.item_discount_value + item.item_discount_type
-
-tbody.innerHTML += `
-<tr>
-
-<td>${item.item_name}</td>
-<td>${item.qty}</td>
-
-<td>₹${item.unit_price.toFixed(2)}</td>
-
-<td>${discountLabel}</td>
-
-<td>₹${item.unit_price.toFixed(2)}</td>
-
-<td>₹${amount.toFixed(2)}</td>
-
-<td>
-
-<button onclick="openEditModal(${index})">✏️</button>
-<button onclick="openDeleteModal(${index})">🗑️</button>
-
-</td>
-
-</tr>
-`
-
-})
-
-document.getElementById("subtotal").innerText = subtotal.toFixed(2)
-
-calculateBillTotals()
-
+function calcItemTotal(item) {
+  let discount = 0;
+  if (item.item_discount_type === '%')
+    discount = item.unit_price * (item.item_discount_value || 0) / 100;
+  if (item.item_discount_type === '₹')
+    discount = item.item_discount_value || 0;
+  return item.qty * Math.max(0, item.unit_price - discount);
 }
 
-
-
-function calculateBillTotals(){
-
-let subtotal = parseFloat(document.getElementById("subtotal").innerText)
-
-let type = document.getElementById("billDiscountType").value
-let value = parseFloat(document.getElementById("billDiscountValue").value) || 0
-
-let finalAmount = subtotal
-
-if(type === "%")
-finalAmount -= subtotal * value / 100
-
-if(type === "₹")
-finalAmount -= value
-
-document.getElementById("finalTotal").innerText = finalAmount.toFixed(2)
-
-return {subtotal, finalAmount}
-
+// ─── BILL TOTALS ─────────────────────────────────────
+function setupDiscountListeners() {
+  document.getElementById('billDiscountType').addEventListener('change', recalcTotal);
+  document.getElementById('billDiscountValue').addEventListener('input', recalcTotal);
 }
 
+function recalcTotal() {
+  const subtotal = items.reduce((s, it) => s + calcItemTotal(it), 0);
+  const type  = document.getElementById('billDiscountType').value;
+  const value = parseFloat(document.getElementById('billDiscountValue').value) || 0;
 
+  let final = subtotal;
+  if (type === '%') final -= subtotal * value / 100;
+  if (type === '₹') final -= value;
+  final = Math.max(0, final);
 
-function openEditModal(index){
-
-currentIndex = index
-
-let item = items[index]
-
-editName.value = item.item_name
-editQty.value = item.qty
-editRate.value = item.unit_price
-editDiscountType.value = item.item_discount_type || ""
-editDiscountValue.value = item.item_discount_value || 0
-
-updateEditTotal()
-
-document.getElementById("editModal").style.display = "block"
-
+  document.getElementById('subtotal').textContent  = fmt(subtotal);
+  document.getElementById('finalTotal').textContent = fmt(final);
+  return { subtotal, final };
 }
 
+// ─── EDIT MODAL ──────────────────────────────────────
+function openEditModal(index) {
+  currentIndex = index;
+  const item   = items[index];
 
+  document.getElementById('editName').value          = item.item_name;
+  document.getElementById('editQty').value           = item.qty;
+  document.getElementById('editRate').value          = item.unit_price;
+  document.getElementById('editDiscountType').value  = item.item_discount_type  || '';
+  document.getElementById('editDiscountValue').value = item.item_discount_value || '';
 
-function updateEditTotal(){
-
-let qty = parseFloat(editQty.value) || 0
-let rate = parseFloat(editRate.value) || 0
-let type = editDiscountType.value
-let value = parseFloat(editDiscountValue.value) || 0
-
-let total = qty * rate
-
-if(type === "%")
-total -= total * value / 100
-
-if(type === "₹")
-total -= value
-
-editTotal.innerText = total.toFixed(2)
-
+  updateEditPreview();
+  document.getElementById('editModal').style.display = 'flex';
+  document.getElementById('editQty').focus();
 }
 
+function updateEditPreview() {
+  const qty   = parseFloat(document.getElementById('editQty').value)           || 0;
+  const rate  = parseFloat(document.getElementById('editRate').value)           || 0;
+  const type  = document.getElementById('editDiscountType').value;
+  const val   = parseFloat(document.getElementById('editDiscountValue').value)  || 0;
+  const prev  = document.getElementById('editPreview');
 
+  let discount = 0;
+  if (type === '%') discount = rate * val / 100;
+  if (type === '₹') discount = val;
+  const finalRate = Math.max(0, rate - discount);
+  const total     = qty * finalRate;
 
-editQty.oninput = updateEditTotal
-editRate.oninput = updateEditTotal
-editDiscountType.onchange = updateEditTotal
-editDiscountValue.oninput = updateEditTotal
-
-
-
-function saveEdit(){
-
-let item = items[currentIndex]
-
-item.qty = parseFloat(editQty.value)
-item.unit_price = parseFloat(editRate.value)
-item.item_discount_type = editDiscountType.value
-item.item_discount_value = parseFloat(editDiscountValue.value) || 0
-
-closeModal()
-
-renderItems()
-
+  prev.textContent = `Unit price: ₹${fmt(finalRate)} · Line total: ₹${fmt(total)}`;
 }
 
+['editQty','editRate','editDiscountValue'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateEditPreview);
+});
+document.getElementById('editDiscountType').addEventListener('change', updateEditPreview);
 
+function saveEdit() {
+  const item  = items[currentIndex];
+  item.qty                 = parseFloat(document.getElementById('editQty').value)           || item.qty;
+  item.unit_price          = parseFloat(document.getElementById('editRate').value)          || item.unit_price;
+  item.item_discount_type  = document.getElementById('editDiscountType').value              || null;
+  item.item_discount_value = parseFloat(document.getElementById('editDiscountValue').value) || 0;
+  item.final_item_amount   = calcItemTotal(item);
 
-function openDeleteModal(index){
-
-currentIndex = index
-
-let item = items[index]
-
-deleteText.innerText = `Delete "${item.item_name}" (Qty ${item.qty}) ?`
-
-document.getElementById("deleteModal").style.display = "block"
-
+  closeModal();
+  renderItems();
+  showToast('Item updated', 'success');
 }
 
-
-
-function confirmDelete(){
-
-items.splice(currentIndex,1)
-
-closeModal()
-
-renderItems()
-
+// ─── DELETE MODAL ────────────────────────────────────
+function openDeleteModal(index) {
+  currentIndex = index;
+  document.getElementById('deleteItemName').textContent = items[index].item_name;
+  document.getElementById('deleteModal').style.display  = 'flex';
 }
 
-
-
-function closeModal(){
-
-document.getElementById("editModal").style.display="none"
-document.getElementById("deleteModal").style.display="none"
-
+function confirmDelete() {
+  items.splice(currentIndex, 1);
+  closeModal();
+  renderItems();
+  showToast('Item removed', 'success');
 }
 
-
-
-function saveBill(){
-
-let totals = calculateBillTotals()
-
-let discountType = document.getElementById("billDiscountType").value
-
-let discountValue = parseFloat(
-document.getElementById("billDiscountValue").value
-) || 0
-
-fetch(`/api/bills/${billId}`,{
-
-method:"PUT",
-
-headers:{ "Content-Type":"application/json" },
-
-body:JSON.stringify({
-
-subtotal: totals.subtotal,
-
-finalTotal: totals.finalAmount,
-
-billDiscount:{
-type: discountType,
-value: discountValue
-},
-
-items: items
-
-})
-
-})
-.then(r=>r.json())
-.then(data=>{
-alert(data.message)
-location.reload()
-})
-
+// ─── CLOSE MODALS ────────────────────────────────────
+function closeModal() {
+  document.getElementById('editModal').style.display   = 'none';
+  document.getElementById('deleteModal').style.display = 'none';
 }
 
+function setupModalKeyboard() {
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Enter' && document.getElementById('deleteModal').style.display === 'flex') {
+      if (document.activeElement?.textContent?.trim() !== 'Cancel') {
+        e.preventDefault(); confirmDelete();
+      }
+    }
+  });
 
+  // Enter in edit fields saves
+  ['editQty','editRate','editDiscountValue'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
+    });
+  });
 
-document
-.getElementById("billDiscountType")
-.addEventListener("change", calculateBillTotals)
-
-document
-.getElementById("billDiscountValue")
-.addEventListener("input", calculateBillTotals)
-
-
-
-function printBill(){
-window.print()
+  // Overlay click closes
+  ['editModal','deleteModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  });
 }
 
+// ─── SAVE BILL ───────────────────────────────────────
+async function saveBill() {
+  const { subtotal, final } = recalcTotal();
+  const type  = document.getElementById('billDiscountType').value;
+  const value = parseFloat(document.getElementById('billDiscountValue').value) || 0;
 
+  const payload = {
+    customer_id:  customerId,
+    subtotal:     subtotal,
+    finalTotal:   final,
+    billDiscount: value > 0 ? { type, value } : null,
+    items: items.map(it => ({
+      name:      it.item_name,
+      qty:       it.qty,
+      rate:      it.unit_price,
+      lineTotal: calcItemTotal(it),
+      discount:  it.item_discount_type
+        ? { type: it.item_discount_type, value: it.item_discount_value }
+        : null
+    }))
+  };
 
-renderItems()
+  const btn = document.querySelector('.btn-save');
+  btn.disabled    = true;
+  btn.textContent = 'Saving…';
 
+  try {
+    const res  = await fetch(`/api/bills/${billId}`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!res.ok) { showToast(data.message || 'Save failed', 'error'); return; }
+
+    showToast('Bill saved!', 'success');
+    setTimeout(() => window.location.href = `/bills/${billId}`, 1200);
+
+  } catch {
+    showToast('Request failed', 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '💾 Save Changes';
+  }
+}
+
+// ─── ADD ITEM — STATE ────────────────────────────────
+let addSearchDebounce   = null;
+let addModalDebounce    = null;
+let addSuggestionIndex  = -1;
+let addMaxPrice         = null;
+
+// ─── ADD ITEM — INIT ─────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  setupAddItemListeners();
+});
+
+function setupAddItemListeners() {
+  const input    = document.getElementById('addItemName');
+  const clearBtn = document.getElementById('clearAddBtn');
+
+  input.addEventListener('input', () => {
+    addSuggestionIndex = -1;
+    input.dataset.typed = input.value;
+    clearTimeout(addSearchDebounce);
+    const q = input.value.trim();
+    if (!q) { hideAddSuggestions(); return; }
+    addSearchDebounce = setTimeout(() => fetchAddSuggestions(q, false), 250);
+  });
+
+  input.addEventListener('keydown', e => {
+    const items = document.querySelectorAll('#addSuggestionList .suggestion-item');
+    const isOpen = document.getElementById('addSuggestions').style.display !== 'none';
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) return;
+      addSuggestionIndex = Math.min(addSuggestionIndex + 1, items.length - 1);
+      highlightAddSuggestion(items, addSuggestionIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) return;
+      addSuggestionIndex = Math.max(addSuggestionIndex - 1, -1);
+      highlightAddSuggestion(items, addSuggestionIndex);
+      if (addSuggestionIndex === -1) input.value = input.dataset.typed || '';
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isOpen && addSuggestionIndex >= 0 && items[addSuggestionIndex]) {
+        items[addSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      } else if (!isOpen || addSuggestionIndex === -1) {
+        addNewItem();
+      }
+    } else if (e.key === 'Tab' && isOpen && addSuggestionIndex >= 0) {
+      e.preventDefault();
+      items[addSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    } else if (e.key === 'Escape') {
+      hideAddSuggestions();
+    }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    document.getElementById('addPrice').value = '';
+    document.getElementById('addQty').value = 1;
+    document.getElementById('addDiscountValue').value = '';
+    document.getElementById('addDiscountType').value = '';
+    addMaxPrice = null;
+    document.getElementById('addMaxPriceHint').style.display = 'none';
+    document.getElementById('addPreview').textContent = '';
+    hideAddSuggestions();
+    input.focus();
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#addSearchWrap')) {
+      hideAddSuggestions();
+    }
+  });
+
+  // Live preview on qty/price/discount change
+  ['addQty','addPrice','addDiscountValue'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateAddPreview);
+  });
+  document.getElementById('addDiscountType').addEventListener('change', updateAddPreview);
+
+  // Enter flow: qty → price → discount → add
+  document.getElementById('addQty').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addPrice').focus(); }
+  });
+  document.getElementById('addPrice').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addDiscountValue').focus(); }
+  });
+  document.getElementById('addDiscountValue').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addNewItem(); }
+  });
+}
+
+function highlightAddSuggestion(items, index) {
+  items.forEach((el, i) => el.classList.toggle('keyboard-active', i === index));
+  if (index >= 0 && items[index]) {
+    const nameEl = items[index].querySelector('.suggestion-name');
+    if (nameEl) document.getElementById('addItemName').value = nameEl.textContent;
+    items[index].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+// ─── FETCH + RENDER SUGGESTIONS ──────────────────────
+async function fetchAddSuggestions(q, forModal) {
+  try {
+    const res   = await fetch(`/api/items/search?q=${encodeURIComponent(q)}`);
+    const data  = await res.json();
+    if (forModal) renderAddModalResults(data, q);
+    else          renderAddSuggestions(data);
+  } catch (e) { console.error('Item search error', e); }
+}
+
+function renderAddSuggestions(items) {
+  const list = document.getElementById('addSuggestionList');
+  const cont = document.getElementById('addSuggestions');
+  list.innerHTML = '';
+
+  if (!items.length) { hideAddSuggestions(); return; }
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.innerHTML = `
+      <span class="suggestion-name">${esc(item.name)}</span>
+      <span class="suggestion-price">₹${fmt(item.price)}</span>`;
+    div.addEventListener('mousedown', e => {
+      e.preventDefault();
+      selectAddItem(item);
+    });
+    list.appendChild(div);
+  });
+
+  document.getElementById('addViewMore').style.display =
+    items.length >= 10 ? 'block' : 'none';
+  cont.style.display = 'block';
+}
+
+function hideAddSuggestions() {
+  document.getElementById('addSuggestions').style.display = 'none';
+  addSuggestionIndex = -1;
+}
+
+function selectAddItem(item) {
+  document.getElementById('addItemName').value = item.name;
+  document.getElementById('addPrice').value    = item.price;
+  hideAddSuggestions();
+
+  // Show max price hint (biller-only)
+  addMaxPrice = item.max_price || null;
+  const hintEl = document.getElementById('addMaxPriceHint');
+  const valEl  = document.getElementById('addMaxPriceVal');
+  if (addMaxPrice) {
+    valEl.textContent    = `₹${fmt(addMaxPrice)}`;
+    hintEl.style.display = 'flex';
+  } else {
+    hintEl.style.display = 'none';
+  }
+
+  updateAddPreview();
+  document.getElementById('addQty').focus();
+}
+
+// ─── ADD PRODUCT MODAL ───────────────────────────────
+let addModalSuggIndex = -1;
+
+function openAddModal() {
+  hideAddSuggestions();
+  addModalSuggIndex = -1;
+  const modal  = document.getElementById('addProductModal');
+  const search = document.getElementById('addModalSearch');
+  modal.style.display = 'flex';
+  search.value = document.getElementById('addItemName').value.trim();
+  search.focus();
+
+  if (search.value) fetchAddSuggestions(search.value, true);
+  else renderAddModalResults([], '');
+
+  search.addEventListener('input', onAddModalSearch);
+  search.addEventListener('keydown', onAddModalKeydown);
+}
+
+function closeAddModal() {
+  const modal  = document.getElementById('addProductModal');
+  const search = document.getElementById('addModalSearch');
+  modal.style.display = 'none';
+  search.removeEventListener('input', onAddModalSearch);
+  search.removeEventListener('keydown', onAddModalKeydown);
+  addModalSuggIndex = -1;
+}
+
+function onAddModalSearch() {
+  clearTimeout(addModalDebounce);
+  const q = document.getElementById('addModalSearch').value.trim();
+  if (!q) { renderAddModalResults([], ''); return; }
+  addModalDebounce = setTimeout(() => fetchAddSuggestions(q, true), 250);
+}
+
+function onAddModalKeydown(e) {
+  const list  = document.getElementById('addModalResultsList');
+  const items = list.querySelectorAll('.modal-result-item:not(.empty)');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    addModalSuggIndex = Math.min(addModalSuggIndex + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('keyboard-active', i === addModalSuggIndex));
+    if (items[addModalSuggIndex]) items[addModalSuggIndex].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    addModalSuggIndex = Math.max(addModalSuggIndex - 1, -1);
+    items.forEach((el, i) => el.classList.toggle('keyboard-active', i === addModalSuggIndex));
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (addModalSuggIndex >= 0 && items[addModalSuggIndex]) items[addModalSuggIndex].click();
+  } else if (e.key === 'Escape') {
+    closeAddModal();
+  }
+}
+
+function renderAddModalResults(items, q) {
+  const list = document.getElementById('addModalResultsList');
+  list.innerHTML = '';
+
+  if (!items.length) {
+    const div = document.createElement('div');
+    div.className = 'modal-result-item empty';
+    div.textContent = q ? `No products found for "${q}"` : 'Start typing to search…';
+    list.appendChild(div);
+    return;
+  }
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'modal-result-item';
+    div.innerHTML = `
+      <span class="modal-item-name">${esc(item.name)}</span>
+      <span class="modal-item-price">₹${fmt(item.price)}</span>`;
+    div.addEventListener('click', () => {
+      selectAddItem(item);
+      closeAddModal();
+    });
+    list.appendChild(div);
+  });
+}
+
+// overlay click closes modal
+document.getElementById('addProductModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAddModal();
+});
+
+// ─── LIVE PREVIEW ────────────────────────────────────
+function updateAddPreview() {
+  const price   = parseFloat(document.getElementById('addPrice').value)         || 0;
+  const qty     = parseFloat(document.getElementById('addQty').value)            || 1;
+  const type    = document.getElementById('addDiscountType').value;
+  const val     = parseFloat(document.getElementById('addDiscountValue').value)  || 0;
+  const prev    = document.getElementById('addPreview');
+
+  if (!price) { prev.textContent = ''; return; }
+
+  let discount = 0;
+  if (type === '%') discount = price * val / 100;
+  if (type === '₹') discount = val;
+  const unit  = Math.max(0, price - discount);
+  const total = unit * qty;
+
+  prev.textContent = val > 0
+    ? `Save ₹${fmt(discount)} per unit · Unit ₹${fmt(unit)} · Total ₹${fmt(total)}`
+    : `Unit ₹${fmt(unit)} · Total ₹${fmt(total)}`;
+}
+
+// ─── ADD NEW ITEM TO BILL ────────────────────────────
+function addNewItem() {
+  const name     = document.getElementById('addItemName').value.trim();
+  const qty      = parseFloat(document.getElementById('addQty').value);
+  const price    = parseFloat(document.getElementById('addPrice').value);
+  const dtype    = document.getElementById('addDiscountType').value   || null;
+  const dval     = parseFloat(document.getElementById('addDiscountValue').value) || 0;
+
+  if (!name)          { showToast('Enter an item name', 'error'); document.getElementById('addItemName').focus(); return; }
+  if (!qty || qty <= 0) { showToast('Enter a valid quantity', 'error'); document.getElementById('addQty').focus(); return; }
+  if (isNaN(price) || price < 0) { showToast('Enter a valid price', 'error'); document.getElementById('addPrice').focus(); return; }
+
+  let discount = 0;
+  if (dtype === '%') discount = price * dval / 100;
+  if (dtype === '₹') discount = dval;
+  const finalUnit  = Math.max(0, price - discount);
+  const lineTotal  = finalUnit * qty;
+
+  items.push({
+    item_name:           name,
+    qty:                 qty,
+    unit_price:          price,
+    item_discount_type:  dtype,
+    item_discount_value: dval,
+    final_item_amount:   lineTotal
+  });
+
+  renderItems();
+  showToast(`${name} added`, 'success');
+
+  // Reset add form
+  document.getElementById('addItemName').value        = '';
+  document.getElementById('addPrice').value           = '';
+  document.getElementById('addQty').value             = 1;
+  document.getElementById('addDiscountType').value    = '';
+  document.getElementById('addDiscountValue').value   = '';
+  document.getElementById('addPreview').textContent   = '';
+  document.getElementById('addMaxPriceHint').style.display = 'none';
+  addMaxPrice = null;
+  document.getElementById('addItemName').focus();
+}
+
+function fmt(n)  { return parseFloat(n || 0).toFixed(2); }
+function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent    = msg;
+  t.className      = `toast ${type}`;
+  t.style.display  = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
 </script>
-
 </body>
 </html>

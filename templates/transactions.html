@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Transactions — KSA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/bills.css">
+  <link rel="stylesheet" href="/static/css/transactions.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <h1>Manhatten Industries</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
+    </nav>
+  </header>
+
+  <div class="page-header">
+    <a class="back-link" href="/">← Dashboard</a>
+    <h2 class="page-title">All Transactions</h2>
+    <span class="total-badge" id="totalBadge">—</span>
+  </div>
+
+  <div class="filters-card">
+    <input type="text" id="txnSearch" placeholder="Search customer name, phone, type…">
+    <div class="date-filters">
+      <div><label>Type</label>
+        <select id="typeFilter">
+          <option value="">All</option>
+          <option value="SALE">Sale</option>
+          <option value="PAYMENT">Payment</option>
+          <option value="REFUND">Refund</option>
+          <option value="SETTLEMENT">Settlement</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <table class="bills-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Phone</th>
+          <th>Type</th>
+          <th class="num">Amount</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody id="txnBody"></tbody>
+    </table>
+  </div>
+
+  <div class="footer-back">
+    <button class="btn-load-more" id="loadMoreBtn" onclick="loadMore()">Load more</button>
+  </div>
+
+</div>
+
+<script src="/static/js/transactions.js"></script>
+</body>
+</html>

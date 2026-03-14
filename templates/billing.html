@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Kumara Swami Agencies | Billing</title>
+  <title>Manhatten Industries | Billing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/index.css">
+  <link rel="stylesheet" href="/static/css/billing.css">
 </head>
 <body>
 
@@ -14,15 +14,16 @@
     <div class="header-left">
       <div class="logo-mark">KSA</div>
       <div>
-        <h1>Kumara Swami Agencies</h1>
+        <h1>Manhatten Industries</h1>
         <span class="header-sub">Smart Billing System</span>
       </div>
     </div>
     <nav class="header-nav">
       <a href="/">Dashboard</a>
-      <a href="/catalog">Catalog</a>
-      <a href="/bills" class="active">Bills</a>
-      <a href="/logout" class="nav-logout">Logout</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
     </nav>
   </header>
 
@@ -54,26 +55,62 @@
         <div class="customer-toggle" id="customerToggle">
           <div class="toggle-left">
             <div class="toggle-icon">👤</div>
-            <span>Customer Details</span>
+            <span>Customer</span>
             <span class="badge-optional">optional</span>
           </div>
           <div class="toggle-chevron" id="customerChevron">▸</div>
         </div>
         <div id="customerFields" class="customer-fields collapsed">
-          <div class="field-row">
+
+          <!-- Search existing customers -->
+          <div class="cust-search-wrap" id="custSearchWrap">
+            <label>Search existing customer</label>
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="customerSearchInput"
+                placeholder="Name, phone, or village…" autocomplete="off">
+              <button class="clear-btn" id="clearCustBtn" title="Clear">✕</button>
+            </div>
+            <div id="customerSuggestions" class="suggestions-dropdown" style="display:none;">
+              <div id="customerSuggestionList"></div>
+            </div>
+            <div style="margin-top:8px;">
+  <button class="link-btn" onclick="openCustomerModal()">
+    + Add New Customer
+  </button>
+</div>
+          </div>
+
+          <!-- Selected customer chip -->
+          <div id="selectedCustomerChip" class="customer-chip" style="display:none;">
+            <div class="chip-info">
+              <span class="chip-name" id="chipName"></span>
+              <span class="chip-phone" id="chipPhone"></span>
+              <span class="chip-village" id="chipVillage"></span>
+            </div>
+            <button class="chip-remove" onclick="clearSelectedCustomer()" title="Remove customer">✕</button>
+          </div>
+
+          <div class="cust-divider">
+            <span>or add walk-in details</span>
+          </div>
+
+          <!-- Walk-in fallback (manual entry) -->
+          <div class="field-row" id="walkInFields">
             <div class="field-group">
-              <label>Customer Name</label>
-              <input type="text" id="customerName" placeholder="e.g. Ravi Kumar" autocomplete="off">
+              <label>Name</label>
+              <input type="text" id="customerName" placeholder="Walk-in customer name" autocomplete="off">
             </div>
             <div class="field-group">
-              <label>Phone Number</label>
-              <input type="tel" id="customerPhone" placeholder="e.g. 9876543210" autocomplete="off">
+              <label>Phone</label>
+              <input type="tel" id="customerPhone" placeholder="Mobile number" autocomplete="off">
             </div>
           </div>
-          <div class="field-group">
+          <div class="field-group" id="walkInAddressWrap">
             <label>Address</label>
             <textarea id="customerAddress" placeholder="Street, City, PIN" rows="2"></textarea>
           </div>
+
         </div>
       </div>
 
@@ -106,10 +143,26 @@
             <input id="qty" type="number" min="0.01" step="0.01" value="1" placeholder="Qty">
           </div>
           <div class="field-group">
-            <label>MRP (₹)</label>
+            <label>MRP / Selling Price (₹)</label>
             <input id="price" type="number" min="0" step="0.01" placeholder="0.00">
           </div>
         </div>
+
+        <!-- Biller-only: max price hint (populated from item search) -->
+        <div id="maxPriceHint" class="max-price-hint" style="display:none;">
+          <span class="hint-icon">ℹ</span>
+          Max allowed price for this item:
+          <strong id="maxPriceValue"></strong>
+        </div>
+        <div id="finalPriceHint" class="max-price-hint" style="display:none;">
+          <span class="hint-icon">i</span>
+          Final price for this item:
+          <strong id="finalPriceValue"></strong>
+        </div>
+
+        
+          
+        
 
         <div class="discount-toggle-row">
           <button class="toggle-discount-btn" id="discountToggleBtn" onclick="toggleDiscount()">
@@ -322,6 +375,78 @@
   <!-- Toast -->
   <div id="toast" class="toast" style="display:none;"></div>
 
-  <script src="/static/billing.js"></script>
+  <!-- ===================== CREATE CUSTOMER MODAL ===================== -->
+<div id="customerModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Create Customer</h3>
+      <button class="modal-close" onclick="closeCustomerModal()">✕</button>
+    </div>
+
+    <div class="field-group">
+      <label>Name *</label>
+      <input type="text" id="newCustName">
+    </div>
+
+    <div class="field-group">
+      <label>Phone *</label>
+      <input type="tel" id="newCustPhone">
+    </div>
+
+    <div class="field-group">
+      <label>Village</label>
+      <input type="text" id="newCustVillage">
+    </div>
+
+    <div class="field-group">
+      <label>Address</label>
+      <textarea id="newCustAddress"></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Referral Code (optional)</label>
+      <input type="text" id="newCustReferral">
+    </div>
+
+    <div class="field-group">
+      <label>Customer Type</label>
+      <select id="newCustType">
+        <option value="regular">Regular</option>
+        <option value="electrician">Electrician</option>
+        <option value="premium">Premium</option>
+      </select>
+    </div>
+
+    <div class="action-bar dual">
+      <button class="btn btn-ghost" onclick="closeCustomerModal()">Cancel</button>
+      <button class="btn btn-success" onclick="createCustomer()">Create Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CUSTOMER CREATED MODAL ===================== -->
+<div id="customerCreatedModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Customer Created</h3>
+      <button class="modal-close" onclick="closeCustomerCreated()">✕</button>
+    </div>
+
+    <div style="padding:10px 0;">
+      <p><strong>Name:</strong> <span id="confCustName"></span></p>
+      <p><strong>Phone:</strong> <span id="confCustPhone"></span></p>
+      <p><strong>Referral Code:</strong> <span id="confReferral"></span></p>
+      <p><strong>Wallet Balance:</strong> ₹0.00</p>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-success" onclick="useCreatedCustomer()">
+        Use this customer
+      </button>
+    </div>
+  </div>
+</div>
+
+  <script src="/static/js/billing.js"></script>
 </body>
 </html>

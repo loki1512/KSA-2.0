@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Ledger — KSA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/bills.css">
+  <link rel="stylesheet" href="/static/css/customers.css">
+  <link rel="stylesheet" href="/static/css/transactions.css">
+  <link rel="stylesheet" href="/static/css/customer_ledger.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <h1>Manhatten Industries</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
+    </nav>
+  </header>
+
+  <!-- Loading state -->
+  <div id="loadingState" class="loading-state">Loading customer…</div>
+
+  <!-- Main content (hidden until loaded) -->
+  <div id="mainContent" style="display:none;">
+
+    <div class="page-header">
+      <a class="back-link" href="/customers">← Customers</a>
+      <h2 class="page-title" id="pageTitle">Ledger</h2>
+    </div>
+
+    <!-- Customer profile card -->
+    <div class="ledger-profile-wrap">
+
+      <div class="profile-card">
+        <div class="profile-avatar" id="profileAvatar"></div>
+        <div class="profile-info">
+          <div class="profile-name" id="profileName"></div>
+          <div class="profile-meta">
+            <span class="meta-item" id="profilePhone"></span>
+            <span class="meta-item" id="profileVillage"></span>
+            <span class="type-badge" id="profileType"></span>
+          </div>
+          <div class="profile-meta" id="profileAddress"></div>
+          <div class="profile-meta" id="profileReferral"></div>
+        </div>
+        <div class="profile-actions">
+          <a id="newBillBtn" href="#" class="btn btn-success">+ New Bill</a>
+          <a id="newReturnBtn"
+            href="/returns/new?customer_id={{customer.id}}" target="_blank"
+            class="btn btn-danger">
+            ↩ New Return
+          </a>
+          <button class="btn btn-ghost" onclick="openEditCustomer()">Edit</button>
+        </div>
+      </div>
+
+      <!-- Balance KPIs -->
+      <div class="balance-kpis">
+        <div class="bal-card bal-ledger">
+          <div class="bal-label">Outstanding Balance</div>
+          <div class="bal-value" id="ledgerBalance">₹0.00</div>
+          <div class="bal-hint">Positive = customer owes you</div>
+        </div>
+        <div class="bal-card bal-wallet">
+          <div class="bal-label">Wallet / Store Credit</div>
+          <div class="bal-value" id="walletBalance">₹0.00</div>
+          <div class="bal-hint">Cashback & refund credits</div>
+        </div>
+        <div class="bal-card bal-bills">
+          <div class="bal-label">Total Bills</div>
+          <div class="bal-value" id="totalBills">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="ledger-actions">
+      <button class="btn btn-primary" onclick="openPaymentModal()">Record Payment</button>
+      <button class="btn btn-ghost"   onclick="openSettleModal()">Settle Ledger</button>
+      <button class="btn btn-ghost"   onclick="toggleBillsPanel()">View Bills</button>
+    </div>
+
+    <!-- Bills panel (collapsible) -->
+    <div id="billsPanel" class="bills-panel" style="display:none;">
+      <div class="table-card">
+        <table class="bills-table">
+          <thead>
+            <tr>
+              <th>Bill #</th><th>Date</th>
+              <th class="num">Amount</th><th>View</th>
+            </tr>
+          </thead>
+          <tbody id="billsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Transactions ledger -->
+    <div class="table-card">
+      <table class="bills-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Notes</th>
+            <th class="num">Amount</th>
+            <th>Reference</th>
+          </tr>
+        </thead>
+        <tbody id="txnBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /mainContent -->
+
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Record Payment</h3>
+        <button class="modal-close" onclick="closePaymentModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label>Amount (₹) *</label>
+          <input type="number" id="payAmount" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field-group">
+          <label>Method</label>
+          <select id="payMethod">
+            <option value="cash">Cash</option>
+            <option value="upi">UPI</option>
+            <option value="cheque">Cheque</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Notes</label>
+          <input type="text" id="payNotes" placeholder="Optional reference">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closePaymentModal()">Cancel</button>
+        <button class="btn btn-success" onclick="submitPayment()">Record Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTLE MODAL -->
+  <div id="settleModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Settle Ledger</h3>
+        <button class="modal-close" onclick="closeSettleModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>This will create a settlement transaction that zeroes the outstanding balance for <strong id="settleCustomerName"></strong>.</p>
+        <p style="margin-top:10px;">Current balance: <strong id="settleBalance" class="amt-debit"></strong></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeSettleModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="submitSettle()">Settle Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT CUSTOMER MODAL -->
+  <div id="editCustomerModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Customer</h3>
+        <button class="modal-close" onclick="closeEditCustomer()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-row">
+          <div class="field-group">
+            <label>Name *</label>
+            <input type="text" id="editName" placeholder="Customer name">
+          </div>
+          <div class="field-group">
+            <label>Phone</label>
+            <input type="tel" id="editPhone" placeholder="Mobile number">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Village</label>
+            <input type="text" id="editVillage" placeholder="Village / area">
+          </div>
+          <div class="field-group">
+            <label>Type</label>
+            <select id="editType">
+              <option value="regular">Regular</option>
+              <option value="premium">Premium</option>
+              <option value="electrician">Electrician</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Address</label>
+          <textarea id="editAddress" rows="2" placeholder="Full address"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeEditCustomer()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEditCustomer()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast" style="display:none;"></div>
+
+</div>
+
+<script src="/static/js/customer_ledger.js"></script>
+</body>
+</html>

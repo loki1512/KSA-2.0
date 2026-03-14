@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customers — KSA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/bills.css">
+  <link rel="stylesheet" href="/static/css/customers.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header">
+    <div class="header-left">
+      <h1>Manhatten Industries</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/bills">Bills</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
+    </nav>
+  </header>
+
+  <div class="page-header">
+    <a class="back-link" href="/">← Dashboard</a>
+    <h2 class="page-title">Customers</h2>
+  </div>
+
+  <div class="filters-card">
+    <input type="text" id="customerSearch"
+      placeholder="Search name, phone, village, type… (searches all customers)">
+    <div class="date-filters">
+      <div>
+        <label>Filter</label>
+        <select id="typeFilter">
+          <option value="">All Types</option>
+          <option value="regular">Regular</option>
+          <option value="premium">Premium</option>
+          <option value="electrician">Electrician</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode indicator -->
+  <div class="mode-banner" id="modeBanner" style="display:none;">
+    <span id="modeText"></span>
+    <button class="link-btn" onclick="resetToTop()">← Back to Top 200</button>
+  </div>
+
+  <div class="table-card">
+    <table class="bills-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Village</th>
+          <th>Type</th>
+          <th class="num">Total Spent</th>
+          <th class="num">Bills</th>
+          <th class="num">Wallet</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="customersBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="/static/js/customers.js"></script>
+</body>
+</html>

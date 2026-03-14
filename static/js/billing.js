@@ -7,8 +7,12 @@
 // ─── STATE ────────────────────────────────────────────
 let billItems = [];        // { name, qty, rate, discountType, discountValue, lineTotal }
 let savedBillId = null;
+let selectedCustomerId = null;   // linked Customer record
+let currentItemMaxPrice = null;  // max price of currently selected item (biller-only)
 let searchDebounceTimer = null;
+let currentFinalPrice = null;
 let modalSearchDebounceTimer = null;
+let custSearchDebounce = null;
 let pendingDeleteIndex = null;
 let pendingEditIndex = null;
 
@@ -30,12 +34,122 @@ const itemCountEl      = document.getElementById('itemCount');
 // ─── INIT ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   setupCustomerToggle();
+  setupCustomerSearch();
   setupSearchListeners();
   setupDiscountLivePreview();
   setupEditModalPreview();
   setupBillDiscountLive();
   setupClearBtn();
+
+  // Pre-fill customer if URL has ?customer_id=X (from ledger "New Bill" link)
+  const params = new URLSearchParams(location.search);
+  if (params.get('customer_id')) prefillCustomer(parseInt(params.get('customer_id')));
 });
+
+// ─── CUSTOMER SEARCH ──────────────────────────────────
+function setupCustomerSearch() {
+  const input = document.getElementById('customerSearchInput');
+  const clearBtn = document.getElementById('clearCustBtn');
+
+  input.addEventListener('input', () => {
+    clearTimeout(custSearchDebounce);
+    const q = input.value.trim();
+    if (!q) { hideCustSuggestions(); return; }
+    custSearchDebounce = setTimeout(() => fetchCustomerSuggestions(q), 300);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideCustSuggestions();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    hideCustSuggestions();
+    input.focus();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#custSearchWrap')) hideCustSuggestions();
+  });
+}
+
+async function fetchCustomerSuggestions(q) {
+  try {
+    const res  = await fetch(`/api/customers/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    renderCustomerSuggestions(data);
+  } catch (e) { console.error('Customer search error', e); }
+}
+
+function renderCustomerSuggestions(customers) {
+  const list = document.getElementById('customerSuggestionList');
+  const cont = document.getElementById('customerSuggestions');
+  list.innerHTML = '';
+
+  if (!customers.length) {
+    hideCustSuggestions();
+    return;
+  }
+
+  customers.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.innerHTML = `
+      <span class="suggestion-name">${escHtml(c.name)}</span>
+      <span class="suggestion-price" style="color:var(--text-muted);font-size:11px;">
+        ${c.phone || ''} ${c.village ? '· ' + c.village : ''}
+      </span>`;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectCustomer(c);
+    });
+    list.appendChild(div);
+  });
+
+  cont.style.display = 'block';
+}
+
+function hideCustSuggestions() {
+  document.getElementById('customerSuggestions').style.display = 'none';
+}
+
+function selectCustomer(c) {
+  selectedCustomerId = c.id;
+  document.getElementById('customerSearchInput').value = '';
+  hideCustSuggestions();
+
+  // Show chip
+  document.getElementById('chipName').textContent    = c.name;
+  document.getElementById('chipPhone').textContent   = c.phone || '';
+  document.getElementById('chipVillage').textContent = c.village || '';
+  document.getElementById('selectedCustomerChip').style.display = 'flex';
+
+  // Hide walk-in fields when customer linked
+  document.getElementById('walkInFields').style.display       = 'none';
+  document.getElementById('walkInAddressWrap').style.display  = 'none';
+}
+
+function clearSelectedCustomer() {
+  selectedCustomerId = null;
+  document.getElementById('selectedCustomerChip').style.display = 'none';
+  document.getElementById('walkInFields').style.display        = '';
+  document.getElementById('walkInAddressWrap').style.display   = '';
+}
+
+async function prefillCustomer(id) {
+  try {
+    const res  = await fetch(`/api/customers/${id}`);
+    const data = await res.json();
+    if (res.ok) {
+      // Open customer panel automatically
+      const fields  = document.getElementById('customerFields');
+      const chevron = document.getElementById('customerChevron');
+      fields.classList.add('open');
+      chevron.classList.add('open');
+      selectCustomer(data);
+    }
+  } catch (e) { console.error('Prefill customer error', e); }
+}
 
 // ─── CUSTOMER TOGGLE ──────────────────────────────────
 function setupCustomerToggle() {
@@ -165,10 +279,30 @@ function hideSuggestions() {
 
 function selectItem(item) {
   itemNameInput.value = item.name;
-  priceInput.value = item.price;
+  priceInput.value    = item.price;
   hideSuggestions();
   qtyInput.focus();
   updateDiscountPreview();
+
+  // Show biller-only max price hint
+  currentItemMaxPrice = item.max_price || null;
+  currentFinalPrice = item.final_price||null;
+  const hintEl  = document.getElementById('maxPriceHint');
+  const valEl   = document.getElementById('maxPriceValue');
+  const finalHintEl = document.getElementById('finalPriceHint');
+  const finalValEl  = document.getElementById('finalPriceValue');
+  if (currentItemMaxPrice) {
+    valEl.textContent   = `₹${fmtNum(currentItemMaxPrice)}`;
+    hintEl.style.display = 'flex';
+  } else {
+    hintEl.style.display = 'none';
+  }
+  if (currentFinalPrice) {
+    finalValEl.textContent   = `₹${fmtNum(currentFinalPrice)}`;
+    finalHintEl.style.display = 'flex';
+  } else {
+    finalHintEl.style.display = 'none';
+  }
 }
 
 function setupClearBtn() {
@@ -357,6 +491,8 @@ function resetItemForm() {
   qtyInput.value = 1;
   itemDiscountVal.value = '';
   hideSuggestions();
+  currentItemMaxPrice = null;
+  document.getElementById('maxPriceHint').style.display = 'none';
   const discountBox = document.getElementById('discountBox');
   if (discountBox.style.display !== 'none') toggleDiscount();
   document.getElementById('discountPreview').textContent = '';
@@ -565,9 +701,10 @@ async function saveBill() {
   final = Math.max(0, final);
 
   const payload = {
-    customer_name:    document.getElementById('customerName').value.trim() || null,
-    customer_phone:   document.getElementById('customerPhone').value.trim() || null,
-    customer_address: document.getElementById('customerAddress').value.trim() || null,
+    customer_id:      selectedCustomerId || null,
+    customer_name:    selectedCustomerId ? null : (document.getElementById('customerName').value.trim() || null),
+    customer_phone:   selectedCustomerId ? null : (document.getElementById('customerPhone').value.trim() || null),
+    customer_address: selectedCustomerId ? null : (document.getElementById('customerAddress').value.trim() || null),
     subtotal:   sub,
     finalTotal: final,
     billDiscount: val > 0 ? { type, value: val } : null,
@@ -614,12 +751,14 @@ async function saveBill() {
 function resetForm() {
   billItems = [];
   savedBillId = null;
+  selectedCustomerId = null;
   renderTable();
   resetItemForm();
-  document.getElementById('customerName').value = '';
-  document.getElementById('customerPhone').value = '';
+  document.getElementById('customerName').value    = '';
+  document.getElementById('customerPhone').value   = '';
   document.getElementById('customerAddress').value = '';
-  const fields = document.getElementById('customerFields');
+  clearSelectedCustomer();
+  const fields  = document.getElementById('customerFields');
   const chevron = document.getElementById('customerChevron');
   fields.classList.remove('open');
   chevron.classList.remove('open');
@@ -628,7 +767,7 @@ function resetForm() {
   document.getElementById('step1').style.display = 'block';
   setStep(1);
 
-  document.getElementById('confirmBillBtn').disabled = false;
+  document.getElementById('confirmBillBtn').disabled    = false;
   document.getElementById('confirmBillBtn').textContent = 'Save Bill';
 }
 
@@ -712,3 +851,94 @@ document.getElementById('billDiscountValue').addEventListener('keydown', (e) => 
     document.getElementById('confirmBillBtn').focus();
   }
 });
+
+
+// ============================
+// CUSTOMER CREATION MODAL
+// ============================
+
+let createdCustomer = null;
+
+function openCustomerModal() {
+  document.getElementById("customerModal").style.display = "flex";
+}
+
+function closeCustomerModal() {
+  document.getElementById("customerModal").style.display = "none";
+}
+
+async function createCustomer() {
+
+  const name = document.getElementById("newCustName").value.trim();
+  const phone = document.getElementById("newCustPhone").value.trim();
+
+  if (!name || !phone) {
+    showToast("Name and phone required", "error");
+    return;
+  }
+
+  const payload = {
+    name: name,
+    phone: phone,
+    village: document.getElementById("newCustVillage").value,
+    address: document.getElementById("newCustAddress").value,
+    referral_code: document.getElementById("newCustReferral").value,
+    customer_type: document.getElementById("newCustType").value
+  };
+
+  try {
+
+    const res = await fetch("/api/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.message || "Customer creation failed", "error");
+      return;
+    }
+
+    createdCustomer = {
+      id: data.customer_id,
+      name: name,
+      phone: phone,
+      referral_code: data.referral_code
+    };
+
+    closeCustomerModal();
+
+    // Fill confirmation modal
+    document.getElementById("confCustName").textContent = name;
+    document.getElementById("confCustPhone").textContent = phone;
+    document.getElementById("confReferral").textContent = data.referral_code;
+
+    document.getElementById("customerCreatedModal").style.display = "flex";
+
+  } catch (err) {
+    console.error(err);
+    showToast("Server error", "error");
+  }
+}
+
+function closeCustomerCreated() {
+  document.getElementById("customerCreatedModal").style.display = "none";
+}
+
+function useCreatedCustomer() {
+
+  if (!createdCustomer) return;
+
+  selectCustomer({
+    id: createdCustomer.id,
+    name: createdCustomer.name,
+    phone: createdCustomer.phone,
+    village: ""
+  });
+
+  closeCustomerCreated();
+
+  showToast("Customer added to bill", "success");
+}

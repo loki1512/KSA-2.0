@@ -1,0 +1,169 @@
+/* price_widget.css — Dashboard Quick Price Editor */
+
+.price-widget-card {
+  /* inherits .card styles from daily_dashboard.css */
+}
+
+.price-widget-card .card-header {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.price-widget-card h3 {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary);
+  text-transform: none; letter-spacing: 0;
+  border: none; padding: 0; margin: 0;
+}
+
+.pwe-hint {
+  font-size: 11px; color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ---- SEARCH ---- */
+.pwe-search-wrap {
+  position: relative;
+  padding: 12px 16px 0;
+}
+
+.pwe-search-icon {
+  position: absolute;
+  left: 27px; top: 50%; transform: translateY(-20%);
+  font-size: 14px; pointer-events: none;
+}
+
+.pwe-search-wrap input {
+  font-family: var(--font);
+  font-size: 13px; color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 9px 12px 9px 34px;
+  width: 100%; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pwe-search-wrap input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59,91,219,0.12);
+}
+
+/* ---- SUGGESTIONS DROPDOWN ---- */
+.pwe-suggestions {
+  position: absolute;
+  top: calc(100% - 0px); left: 16px; right: 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  z-index: 50; overflow: hidden; max-height: 220px; overflow-y: auto;
+}
+
+.pwe-sug-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+.pwe-sug-item:last-child { border-bottom: none; }
+.pwe-sug-item:hover { background: var(--accent-light); }
+
+.pwe-sug-name  { font-size: 13px; font-weight: 500; }
+.pwe-sug-price { font-family: var(--font-mono); font-size: 12px; color: var(--success); font-weight: 600; }
+
+/* ---- EDIT ROW ---- */
+.pwe-edit-row {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+.pwe-item-name {
+  font-size: 14px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.pwe-fields {
+  display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;
+}
+
+.pwe-field {
+  display: flex; flex-direction: column; gap: 4px;
+  flex: 1; min-width: 80px;
+}
+
+.pwe-field label {
+  font-size: 10px; font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+
+.pwe-field input {
+  font-family: var(--font-mono);
+  font-size: 13px; color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 7px 10px; width: 100%; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pwe-field input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59,91,219,0.12);
+}
+
+.pwe-save-btn {
+  font-family: var(--font);
+  font-size: 13px; font-weight: 600;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--radius-xs);
+  padding: 8px 16px; cursor: pointer; flex-shrink: 0;
+  transition: background 0.15s;
+  align-self: flex-end;
+}
+
+.pwe-save-btn:hover    { background: var(--accent-hover); }
+.pwe-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---- STATUS ---- */
+.pwe-status { font-size: 12px; font-weight: 500; margin-top: 8px; min-height: 18px; }
+.pwe-status-success { color: var(--success); }
+.pwe-status-error   { color: var(--danger); }
+
+/* ---- RECENT EDITS ---- */
+.pwe-recent {
+  border-top: 1px solid var(--border);
+  padding: 10px 16px 14px;
+}
+
+.pwe-recent-title {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.pwe-recent-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.pwe-recent-item:last-child { border-bottom: none; }
+
+.pwe-recent-name   { flex: 1; font-weight: 500; color: var(--text-primary); }
+.pwe-recent-prices { font-family: var(--font-mono); color: var(--success); font-weight: 600; }
+.pwe-recent-time   { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ---- RESPONSIVE ---- */
+@media (max-width: 480px) {
+  .pwe-fields { flex-direction: column; }
+  .pwe-save-btn { width: 100%; justify-content: center; }
+}
