@@ -172,7 +172,7 @@ body {
 input[type="text"],
 input[type="number"],
 input[type="search"],
-input[type="file"] {
+input[type="file"],select {
   font-family: var(--font);
   font-size: 14px;
   color: var(--text-primary);
