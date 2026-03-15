@@ -249,7 +249,7 @@
 .btn-success:hover { background: var(--success-hover); box-shadow: 0 4px 12px rgba(15,158,110,0.3); }
 
 .btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: var(--danger-hover); color: red; }
+.btn-danger:hover { background: var(--danger-hover); }
 
 .btn-ghost {
   background: var(--surface-2); color: var(--text-secondary);
@@ -288,4 +288,158 @@
   .field-row { flex-direction: column; }
   .modal-footer { flex-direction: column-reverse; }
   .modal-footer .btn { width: 100%; justify-content: center; }
+}
+
+/* ======================================================
+   PRINT MODAL STYLES
+   ====================================================== */
+.print-option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.print-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 14px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  font-family: var(--font);
+  text-align: center;
+  width: 100%;
+}
+
+.print-option-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(59,91,219,0.12);
+}
+
+.print-icon  { font-size: 28px; line-height: 1; }
+.print-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.print-sub   { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+/* ======================================================
+   PRINT AREA (hidden on screen, visible when printing)
+   ====================================================== */
+.ledger-print-area { display: none; }
+
+/* ── SHARED PRINT RULES ── */
+@media print {
+  /* Hide all screen UI */
+  .site-header,
+  .loading-state,
+  .page-header,
+  .ledger-profile-wrap,
+  .ledger-actions,
+  .bills-panel,
+  .table-card,
+  .modal-overlay,
+  .toast,
+  .action-bar        { display: none !important; }
+
+  /* Show only the print area */
+  #ledgerPrintArea {
+    display: block !important;
+    background: #fff;
+    color: #000;
+    font-family: 'Sora', Arial, sans-serif;
+  }
+
+  body, .page { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+
+  /* ── A4 LAYOUT ── */
+  body.print-a4 #ledgerPrintArea {
+    padding: 20mm 18mm;
+    font-size: 10pt;
+  }
+
+  body.print-a4 .lp-shop-name  { font-size: 16pt; font-weight: 700; }
+  body.print-a4 .lp-shop-addr  { font-size: 9pt; color: #555; margin-bottom: 4pt; }
+  body.print-a4 .lp-doc-title  { font-size: 12pt; font-weight: 700; margin: 6pt 0 2pt; }
+  body.print-a4 .lp-print-date { font-size: 9pt; color: #555; margin-bottom: 12pt; }
+  body.print-a4 .lp-cust-name  { font-size: 12pt; font-weight: 700; }
+  body.print-a4 .lp-cust-meta  { font-size: 9pt; color: #444; }
+  body.print-a4 .lp-kpis       { margin: 10pt 0; }
+  body.print-a4 .lp-kpi-row    { font-size: 10pt; padding: 3pt 0; border-bottom: 0.5pt solid #ddd; }
+  body.print-a4 .lp-section-title { font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; color: #555; margin: 12pt 0 4pt; }
+  body.print-a4 .lp-table      { font-size: 9pt; }
+  body.print-a4 .lp-table th   { font-size: 8pt; }
+  body.print-a4 .lp-footer     { margin-top: 12pt; font-size: 8pt; color: #888; }
+
+  /* ── THERMAL / RECEIPT LAYOUT (80mm roll) ── */
+  body.print-thermal #ledgerPrintArea {
+    width: 72mm;
+    padding: 4mm;
+    font-size: 8pt;
+    margin: 0;
+  }
+
+  body.print-thermal .lp-shop-name  { font-size: 11pt; font-weight: 700; text-align: center; }
+  body.print-thermal .lp-shop-addr  { font-size: 7pt; color: #555; text-align: center; margin-bottom: 2mm; }
+  body.print-thermal .lp-doc-title  { font-size: 9pt; font-weight: 700; text-align: center; margin: 2mm 0 1mm; }
+  body.print-thermal .lp-print-date { font-size: 7pt; color: #555; text-align: center; margin-bottom: 3mm; }
+  body.print-thermal .lp-cust-name  { font-size: 9pt; font-weight: 700; }
+  body.print-thermal .lp-cust-meta  { font-size: 7pt; color: #444; }
+  body.print-thermal .lp-kpis       { margin: 3mm 0; }
+  body.print-thermal .lp-kpi-row    { font-size: 8pt; padding: 1.5mm 0; border-bottom: 0.5pt dashed #aaa; display: flex; justify-content: space-between; }
+  body.print-thermal .lp-section-title { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3pt; color: #555; margin: 3mm 0 1.5mm; }
+  body.print-thermal .lp-table      { font-size: 7pt; }
+  body.print-thermal .lp-table th   { font-size: 6.5pt; }
+  body.print-thermal .lp-footer     { margin-top: 4mm; font-size: 7pt; color: #888; text-align: center; }
+
+  /* Thermal: hide Notes and Ref columns to fit narrow width */
+  body.print-thermal .lp-table th:nth-child(3),
+  body.print-thermal .lp-table td:nth-child(3),
+  body.print-thermal .lp-table th:nth-child(5),
+  body.print-thermal .lp-table td:nth-child(5) { display: none; }
+
+  /* ── SHARED TABLE STYLES ── */
+  .lp-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .lp-table th {
+    text-align: left;
+    border-bottom: 1pt solid #000;
+    padding: 2pt 3pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3pt;
+  }
+
+  .lp-table td {
+    padding: 2pt 3pt;
+    border-bottom: 0.5pt solid #ddd;
+    vertical-align: top;
+  }
+
+  .lp-num    { text-align: right; font-family: monospace; }
+  .lp-notes  { color: #555; }
+  .lp-ref    { font-size: 7pt; }
+  .lp-debit  { color: #c00; font-weight: 700; }
+  .lp-credit { color: #060; font-weight: 700; }
+  .lp-empty  { text-align: center; color: #888; padding: 6pt; }
+
+  .lp-divider { border: none; border-top: 1pt solid #000; margin: 3pt 0; }
+
+  .lp-kpi-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 0.5pt solid #ddd;
+  }
+
+  .lp-customer    { margin-bottom: 4pt; }
+  .lp-footer-text { margin-top: 2pt; }
+
+  @page { margin: 0; }
 }

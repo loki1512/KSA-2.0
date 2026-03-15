@@ -1,0 +1,478 @@
+/* ===================================================================
+   RETURN_DETAIL.CSS — Kumara Swami Agencies
+   Mirrors bill_detail.css with return-specific colour accents
+   =================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ─── VARIABLES ──────────────────────────────────────────────────── */
+:root {
+  --bg:             #f0f2f7;
+  --surface:        #ffffff;
+  --surface-2:      #f8f9fc;
+  --border:         #e2e5ed;
+  --border-focus:   #3b5bdb;
+
+  --text-primary:   #0f1117;
+  --text-secondary: #5a6178;
+  --text-muted:     #9399aa;
+
+  --accent:         #3b5bdb;
+  --accent-hover:   #2f4ac7;
+  --accent-light:   #eef1fd;
+
+  --success:        #0f9e6e;
+  --success-light:  #e6f7f2;
+
+  --danger:         #e03131;
+  --danger-hover:   #c42b2b;
+  --danger-light:   #fff0f0;
+
+  /* Return-specific accent — amber/orange to distinguish from bills */
+  --return:         #d97706;
+  --return-light:   #fffbeb;
+  --return-dark:    #92400e;
+
+  --shadow-sm:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg:    0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-modal: 0 24px 80px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.10);
+
+  --radius:    12px;
+  --radius-sm:  8px;
+  --radius-xs:  6px;
+
+  --font:      'Sora', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ─── RESET ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 24px 16px 48px;
+}
+
+/* ─── INVOICE CARD ───────────────────────────────────────────────── */
+#return-print-area {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.invoice {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+/* ─── HEADER ─────────────────────────────────────────────────────── */
+.invoice > header {
+  /* Amber gradient to visually distinguish returns from bills */
+  background: linear-gradient(135deg, #78350f 0%, #d97706 60%, #f59e0b 100%);
+  color: #fff;
+  padding: 28px 32px 22px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.invoice > header::before {
+  content: '';
+  position: absolute;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  top: -80px; right: -60px;
+  pointer-events: none;
+}
+
+.invoice > header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  letter-spacing: -0.2px;
+}
+
+.invoice > header p {
+  font-size: 12px;
+  opacity: 0.82;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.invoice > header hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.25);
+  margin: 14px 0;
+}
+
+/* Return badge pill */
+.return-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 20px;
+  padding: 4px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.doc-id {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px;
+  padding: 3px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.doc-date {
+  font-size: 12px;
+  opacity: 0.72;
+  font-family: var(--font-mono);
+}
+
+/* ─── CUSTOMER ───────────────────────────────────────────────────── */
+.customer {
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.customer strong {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.customer p { font-size: 14px; color: var(--text-primary); line-height: 1.6; margin: 0; }
+.cust-name  { font-weight: 600; font-size: 15px; }
+.cust-phone { font-family: var(--font-mono); font-size: 13px; color: var(--text-secondary); }
+
+/* ─── ITEMS TABLE ────────────────────────────────────────────────── */
+.items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.items thead tr {
+  background: var(--surface-2);
+  border-bottom: 1.5px solid var(--border);
+}
+
+.items th {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.items th.num { text-align: right; }
+
+.items td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.items tbody tr:last-child td { border-bottom: none; }
+.items tbody tr { transition: background 0.1s; }
+.items tbody tr:hover { background: var(--surface-2); }
+
+.items .num     { text-align: right; font-family: var(--font-mono); font-size: 12.5px; }
+.items .sno     { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.items .td-name { font-weight: 500; }
+
+/* Refund amount — amber to match return theme */
+.items .td-refund {
+  font-weight: 700;
+  color: var(--return);
+}
+
+/* ─── TOTALS ─────────────────────────────────────────────────────── */
+.totals {
+  padding: 18px 28px 22px;
+  background: var(--surface-2);
+  border-top: 1.5px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.total-row {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  padding: 10px 20px;
+  background: var(--return-light);
+  border: 1.5px solid #f59e0b;
+  border-radius: var(--radius-sm);
+}
+
+.total-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--return-dark);
+}
+
+.total-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--return);
+}
+
+/* ─── ACTION BAR ─────────────────────────────────────────────────── */
+.action-bar {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ─── BUTTONS ────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radius-xs);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  text-decoration: none;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 130px;
+}
+
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 4px 12px rgba(59,91,219,0.30);
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); color: var(--text-primary); }
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+}
+.btn-ghost:hover { background: var(--surface-2); color: var(--text-primary); }
+
+.btn-danger {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
+}
+.btn-danger:hover {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(224,49,49,0.28);
+}
+
+/* ─── MODAL ──────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,12,20,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-modal);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.2s ease;
+}
+
+.modal-sm { max-width: 360px; }
+
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(16px); }
+  to   { opacity:1; transform: translateY(0);    }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 { font-size: 15px; font-weight: 700; }
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  width: auto;
+  line-height: 1;
+  border-radius: var(--radius-xs);
+  transition: background 0.15s, color 0.15s;
+  font-family: var(--font);
+}
+
+.modal-close:hover { background: var(--surface-2); color: var(--text-primary); }
+
+.modal-body {
+  padding: 18px 20px;
+}
+
+.modal-body p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.modal-body strong { color: var(--text-primary); }
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* In modal, buttons don't stretch */
+.modal-footer .btn { flex: none; min-width: unset; }
+
+/* ─── TOAST ──────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text-primary);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+  animation: toastIn 0.2s ease;
+}
+
+@keyframes toastIn {
+  from { opacity:0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0);    }
+}
+
+.toast.success { background: var(--success); }
+.toast.error   { background: var(--danger);  }
+
+/* ─── PRINT ──────────────────────────────────────────────────────── */
+@media print {
+  body { padding: 0; background: #fff; }
+
+  .action-bar,
+  .modal-overlay,
+  .toast { display: none !important; }
+
+  .invoice {
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+  }
+
+  .invoice > header {
+    background: #fff !important;
+    color: #000 !important;
+    border-bottom: 2px solid #000;
+    padding: 12px 0 10px;
+  }
+
+  .invoice > header::before { display: none; }
+  .invoice > header h1 { font-size: 16px; color: #000; }
+  .invoice > header p  { color: #333; opacity: 1; }
+  .return-badge { background: none; border-color: #000; color: #000; }
+  .doc-id { background: none; border: none; color: #000; padding: 0; }
+
+  .customer  { background: #fff; }
+  .items th, .items td { border-color: #ccc; }
+  .items .td-refund { color: #000; }
+  .totals { background: #fff; }
+  .total-row { background: #fff; border-color: #000; }
+  .total-label, .total-value { color: #000; }
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  body { padding: 14px 10px 40px; }
+
+  .invoice > header { padding: 20px 18px 18px; }
+  .invoice > header h1 { font-size: 16px; }
+
+  .customer  { padding: 14px 18px; }
+  .items th, .items td { padding: 8px 10px; }
+
+  .totals { padding: 14px 18px 18px; }
+  .total-value { font-size: 18px; }
+
+  .action-bar { flex-direction: column; }
+  .btn { min-width: unset; }
+
+  .modal-footer { flex-direction: column-reverse; }
+  .modal-footer .btn { width: 100%; justify-content: center; }
+}

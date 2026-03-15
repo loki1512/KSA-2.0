@@ -83,6 +83,7 @@ def create_app():
     from dashboard import dashboard_bp
     from routes.returns import returns_bp
     from routes.payments import payments_bp
+    from routes.transactions import transactions_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(pages_bp)
@@ -93,6 +94,7 @@ def create_app():
     app.register_blueprint(ledger_bp)
     app.register_blueprint(returns_bp)
     app.register_blueprint(payments_bp)
+    app.register_blueprint(transactions_bp)
 
     # --------------------------------
     # Health Endpoint (for Render)

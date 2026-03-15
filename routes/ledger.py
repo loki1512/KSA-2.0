@@ -38,7 +38,36 @@ def get_ledger(customer_id):
         ]
     })
 
+#-----------------customer copy of ledger-----------------
+@ledger_bp.route("/api/customers/<int:customer_id>/ledger", methods=["GET"])
+def get_customer_ledger(customer_id):
+    customer = Customer.query.get_or_404(customer_id)
 
+    transactions = (
+        Transaction.query
+        .filter_by(customer_id=customer_id)
+        .order_by(Transaction.timestamp.desc())
+        .all()
+    )
+    wallet_balance = customer.wallet.balance if customer.wallet else 0.0
+
+    return jsonify({
+        "customer_id": customer_id,
+        "customer_name": customer.name,
+        "wallet_balance": wallet_balance,
+        "referral_code": customer.referral_code,
+        "transactions": [
+            {
+                "id": txn.id,
+                "type": txn.transaction_type,
+                "amount": txn.amount,
+                "reference_type": txn.reference_type,
+                "reference_id": txn.reference_id,
+                "timestamp": txn.timestamp.isoformat()
+            }
+            for txn in transactions
+        ]
+    })
 # --------------------------------
 # CLEAR CUSTOMER LEDGER
 # --------------------------------

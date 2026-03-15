@@ -118,6 +118,7 @@
     if (phone.length < 10) { alert("Invalid phone number."); return; }
 
     const link    = "https://ksa-2-0.onrender.com/invoice/{{ bill.id }}";
+    const ledger_link = "https://ksa-2-0.onrender.com/customers/{{ bill.customer.id }}/ledger";
     const name    = "{{ bill.customer.name if bill.customer else 'Customer' }}";
     const amount  = "₹{{ '%.2f'|format(bill.final_amount) }}";
 
@@ -126,6 +127,7 @@
       `Thank you for shopping with us.\n` +
       `Your bill amount is *${amount}*.\n\n` +
       `View your bill here:\n${link}\n\n` +
+      `View your ledger here:\n${ledger_link}\n\n` +
       `Thank you for your business!`
     );
 

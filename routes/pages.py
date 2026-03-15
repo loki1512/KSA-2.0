@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, abort
-from flask_security import auth_required
-from models import Bill, BillItem, Customer, Transaction
+from flask import Blueprint, render_template, abort, request
+from flask_security import auth_required, current_user
+from models import Bill, BillItem, Customer, Transaction, Return
 from sqlalchemy import func, desc
 from extensions import db
 
@@ -89,7 +89,16 @@ def customers_page():
 @auth_required()
 def customer_ledger_page(customer_id):
     customer = Customer.query.get_or_404(customer_id)
-    return render_template("customer_ledger.html", customer=customer)
+    if not customer:
+        abort(404)
+
+     # If user is not authenticated, show them the public ledger view (customer self-service portal)
+    if not current_user.is_authenticated:
+        # For API requests, return JSON error
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Authentication required"}), 401
+        # For regular page requests, show the public ledger view
+    return render_template("customer_ledger.html", customer=customer, is_admin=True)
 
 @pages_bp.route("/returns/new")
 @auth_required()
@@ -102,3 +111,10 @@ def customer_returns():
 def my_account():
     """No auth — customer enters phone number to view their ledger."""
     return render_template("my_account.html")
+
+#-----------------View Returns-----------------
+@pages_bp.route("/returns/view/<int:return_id>")
+@auth_required()
+def view_return(return_id):
+    ret = Return.query.get_or_404(return_id)
+    return render_template("return_detail.html", ret=ret)

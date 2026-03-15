@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Return #{{ ret.id }} — KSA</title>
+  <link rel="stylesheet" href="/static/css/return_detail.css">
+
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #return-print-area,
+      #return-print-area * { visibility: visible; }
+      #return-print-area {
+        position: absolute;
+        left: 0; top: 0;
+        width: 100%;
+      }
+      .action-bar { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── PRINTABLE AREA ────────────────────────────────── -->
+<div id="return-print-area">
+  <div class="invoice">
+
+    <!-- Header -->
+    <header>
+      <h1>Kumara Swami Agencies</h1>
+      <p>Near SBI ATM, Ravindra Nagar<br>Galiveedu – 516267</p>
+      <p>📞 9490608943</p>
+      <hr>
+      <div class="return-badge">Return / Refund Note</div>
+      <p class="doc-id">Return #{{ ret.id }}</p>
+      <p class="doc-date">{{ ret.timestamp.strftime('%d %b %Y %H:%M') }}</p>
+    </header>
+
+    <!-- Customer -->
+    <section class="customer">
+      <strong>Customer</strong>
+      {% if ret.customer %}
+        <p class="cust-name">{{ ret.customer.name }}</p>
+        {% if ret.customer.phone %}
+          <p class="cust-phone">{{ ret.customer.phone }}</p>
+        {% endif %}
+        {% if ret.customer.address %}
+          <p>{{ ret.customer.address }}
+            {% if ret.customer.village %}, {{ ret.customer.village }}{% endif %}
+          </p>
+        {% endif %}
+      {% else %}
+        <p class="cust-name">Walk-in Customer</p>
+      {% endif %}
+    </section>
+
+    <!-- Items table -->
+    <table class="items">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Item</th>
+          <th class="num">Qty</th>
+          <th class="num">Unit Price</th>
+          <th class="num">Refund Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in ret.items %}
+        <tr>
+          <td class="sno">{{ loop.index }}</td>
+          <td class="td-name">{{ item.item_name }}</td>
+          <td class="num">{{ item.qty }}</td>
+          <td class="num">₹{{ "%.2f"|format(item.unit_price) }}</td>
+          <td class="num td-refund">₹{{ "%.2f"|format(item.refund_amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Total -->
+    <section class="totals">
+      <div class="total-row">
+        <span class="total-label">Total Refund</span>
+        <span class="total-value">₹{{ "%.2f"|format(ret.total_refund_amount) }}</span>
+      </div>
+    </section>
+
+  </div><!-- /invoice -->
+</div><!-- /return-print-area -->
+
+<!-- ── ACTION BUTTONS ────────────────────────────────── -->
+<div class="action-bar">
+  <button class="btn btn-ghost" onclick="window.print()">
+    🖨️ Print
+  </button>
+
+  {% if ret.customer %}
+  <a href="/customers/{{ ret.customer.id }}/ledger" class="btn btn-primary">
+     📒 Customer Ledger
+  </a>
+  {% endif %}
+
+  <button class="btn btn-secondary" onclick="window.location='/bills'">
+    🔙 Bills
+  </button>
+
+  <button class="btn btn-danger" onclick="confirmDelete()">
+    🗑️ Delete Return
+  </button>
+</div>
+
+<!-- ── DELETE CONFIRMATION MODAL ─────────────────────── -->
+<div id="deleteModal" class="modal-overlay" style="display:none;">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>Delete Return?</h3>
+      <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>This will permanently delete <strong>Return #{{ ret.id }}</strong>
+         and reverse the wallet credit of
+         <strong>₹{{ "%.2f"|format(ret.total_refund_amount) }}</strong>.
+         This cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="submitDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ─────────────────────────────────────────── -->
+<div id="toast" class="toast" style="display:none;"></div>
+
+<script>
+  const RETURN_ID = {{ ret.id }};
+
+  function confirmDelete() {
+    document.getElementById('deleteModal').style.display = 'flex';
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+  }
+
+  async function submitDelete() {
+    try {
+      const res = await fetch(`/api/returns/${RETURN_ID}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      showToast('Return deleted', 'success');
+      setTimeout(() => { window.location.href = '/bills'; }, 1200);
+    } catch {
+      showToast('Delete failed', 'error');
+    }
+  }
+
+  // Keyboard: Escape closes modal, Enter confirms delete
+  document.addEventListener('keydown', e => {
+    const modal = document.getElementById('deleteModal');
+    if (e.key === 'Escape') closeDeleteModal();
+    if (e.key === 'Enter' && modal.style.display === 'flex') {
+      if (document.activeElement?.textContent?.trim() !== 'Cancel') {
+        e.preventDefault();
+        submitDelete();
+      }
+    }
+  });
+
+  // Overlay click closes
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent   = msg;
+    t.className     = `toast ${type}`;
+    t.style.display = 'block';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.display = 'none'; }, 2500);
+  }
+</script>
+</body>
+</html>

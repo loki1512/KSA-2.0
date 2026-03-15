@@ -24,6 +24,8 @@ async function loadLedger() {
     customerData   = await customerRes.json();
     const billsData = await billsRes.json();
 
+    ledgerSnapshot = ledger;   // save for print
+
     renderProfile(customerData);
     renderKPIs(ledger, billsData);
     renderTransactions(ledger.transactions);
@@ -47,6 +49,7 @@ function renderProfile(c) {
   document.getElementById('profileAvatar').textContent = initials;
   document.getElementById('profileName').textContent   = c.name;
   document.getElementById('profilePhone').textContent  = c.phone || 'No phone';
+  document.getElementById('profileReferral').textContent = c.referral_code || 'No referral code';
 
   if (c.village) document.getElementById('profileVillage').textContent = c.village;
   else document.getElementById('profileVillage').style.display = 'none';
@@ -63,8 +66,8 @@ function renderProfile(c) {
 }
 
 // ─── RENDER KPIs ──────────────────────────────────────
-function renderKPIs(ledger, bills) { 
-  const balance = ledger.wallet_balance || 0;
+function renderKPIs(ledger, bills) {
+  const balance = ledger.ledger_balance || 0;
   const balEl   = document.getElementById('ledgerBalance');
   balEl.textContent = `₹${fmt(Math.abs(balance))}`;
   balEl.className   = `bal-value ${balance > 0 ? 'amt-debit' : balance < 0 ? 'amt-credit' : ''}`;
@@ -164,7 +167,7 @@ async function submitPayment() {
 function openSettleModal() {
   if (!customerData) return;
   const balance = parseFloat(
-    document.getElementById('walletBalance').textContent.replace('₹','')
+    document.getElementById('ledgerBalance').textContent.replace('₹','')
   );
   document.getElementById('settleCustomerName').textContent = customerData.name;
   document.getElementById('settleBalance').textContent      = `₹${fmt(balance)}`;
@@ -229,6 +232,105 @@ async function submitEditCustomer() {
   }
 }
 
+// ─── PRINT LEDGER ─────────────────────────────────────
+let currentPrintMode = 'a4';   // 'a4' | 'thermal'
+let ledgerSnapshot   = null;   // saved from last loadLedger call
+
+function openPrintModal() {
+  document.getElementById('printModal').style.display = 'flex';
+}
+
+function closePrintModal() {
+  document.getElementById('printModal').style.display = 'none';
+}
+
+function printLedger(mode) {
+  closePrintModal();
+  currentPrintMode = mode;
+
+  // Populate the hidden print area from live data
+  buildPrintArea();
+
+  // Add mode class to body so CSS @media print picks the right layout
+  document.body.classList.remove('print-a4', 'print-thermal');
+  document.body.classList.add(`print-${mode}`);
+
+  window.print();
+}
+
+function buildPrintArea() {
+  if (!customerData || !ledgerSnapshot) return;
+
+  const now = new Date();
+  const dateStr = now.toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  document.getElementById('lpPrintDate').textContent  = dateStr;
+  document.getElementById('lpFooterDate').textContent = dateStr;
+
+  // Customer block
+  const c = customerData;
+  document.getElementById('lpCustomer').innerHTML = `
+    <div class="lp-cust-name">${esc(c.name)}</div>
+    ${c.phone    ? `<div class="lp-cust-meta">${esc(c.phone)}</div>` : ''}
+    ${c.village  ? `<div class="lp-cust-meta">${esc(c.village)}</div>` : ''}
+    ${c.address  ? `<div class="lp-cust-meta">${esc(c.address)}</div>` : ''}
+    ${c.referral_code ? `<div class="lp-cust-meta">Referral: ${esc(c.referral_code)}</div>` : ''}
+  `;
+  
+
+  // KPI block
+  const balance = ledgerSnapshot.ledger_balance || 0;
+  const wallet  = ledgerSnapshot.wallet_balance || 0;
+  document.getElementById('lpKpis').innerHTML = `
+    <div class="lp-kpi-row">
+      <span>Outstanding Balance</span>
+      <strong class="${balance > 0 ? 'lp-debit' : 'lp-credit'}">
+        ₹${fmt(Math.abs(balance))}${balance > 0 ? ' (owes)' : balance < 0 ? ' (credit)' : ''}
+      </strong>
+    </div>
+    <div class="lp-kpi-row">
+      <span>Wallet / Store Credit</span>
+      <strong>₹${fmt(wallet)}</strong>
+    </div>`;
+
+  // Transactions table
+  const tbody = document.getElementById('lpTxnBody');
+  tbody.innerHTML = '';
+
+  const txns = ledgerSnapshot.transactions || [];
+  if (!txns.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="lp-empty">No transactions</td></tr>`;
+  } else {
+    txns.forEach(t => {
+      const sign = t.amount < 0 ? '−' : '+';
+      const cls  = t.amount < 0 ? 'lp-credit' : 'lp-debit';
+      const ref  = (t.reference_type && t.reference_id)
+        ? `${t.reference_type} #${t.reference_id}` : '—';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${fmtDateShort(t.timestamp)}</td>
+        <td>${esc(t.type)}</td>
+        <td class="lp-notes">${esc(t.notes || '—')}</td>
+        <td class="lp-num ${cls}">${sign}₹${fmt(Math.abs(t.amount))}</td>
+        <td class="lp-num lp-ref">${esc(ref)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Show the print area (print CSS will make everything else invisible)
+  document.getElementById('ledgerPrintArea').style.display = 'block';
+}
+
+function fmtDateShort(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: '2-digit'
+  });
+}
+
 // ─── KEYBOARD SHORTCUTS ───────────────────────────────
 function setupModalKeyboard() {
   document.addEventListener('keydown', e => {
@@ -236,6 +338,7 @@ function setupModalKeyboard() {
       closePaymentModal();
       closeSettleModal();
       closeEditCustomer();
+      closePrintModal();
     }
   });
 
@@ -244,10 +347,11 @@ function setupModalKeyboard() {
   });
 
   // Close modals on overlay click
-  ['paymentModal','settleModal','editCustomerModal'].forEach(id => {
+  ['paymentModal','settleModal','editCustomerModal','printModal'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) {
       if (e.target === this) {
-        closePaymentModal(); closeSettleModal(); closeEditCustomer();
+        closePaymentModal(); closeSettleModal();
+        closeEditCustomer(); closePrintModal();
       }
     });
   });
