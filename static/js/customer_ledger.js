@@ -67,9 +67,9 @@ function renderProfile(c) {
 
 // ─── RENDER KPIs ──────────────────────────────────────
 function renderKPIs(ledger, bills) {
-  const balance = ledger.ledger_balance || 0;
+  const balance = ledger.wallet_balance || 0;
   const balEl   = document.getElementById('ledgerBalance');
-  balEl.textContent = `₹${fmt(Math.abs(balance))}`;
+  balEl.textContent = `₹${fmt((balance*-1))}`;
   balEl.className   = `bal-value ${balance > 0 ? 'amt-debit' : balance < 0 ? 'amt-credit' : ''}`;
 
   document.getElementById('walletBalance').textContent = `₹${fmt(ledger.wallet_balance || 0)}`;
