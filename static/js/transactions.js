@@ -108,3 +108,34 @@ function fmtDate(iso) {
     hour: '2-digit', minute: '2-digit'
   });
 }
+
+// ─── EXPORT TO EXCEL ──────────────────────────────────
+function exportTransactions() {
+  if (!visibleTxns || !visibleTxns.length) {
+    alert('No data to export.'); return;
+  }
+
+  const rows = visibleTxns.map((t, i) => ({
+    '#':               i + 1,
+    'Date':            t.timestamp ? new Date(t.timestamp).toLocaleString('en-IN') : '',
+    'Customer':        t.customer_name  || '',
+    'Phone':           t.customer_phone || '',
+    'Type':            t.type           || '',
+    'Amount':          parseFloat(t.amount || 0),
+    'Reference Type':  t.reference_type || '',
+    'Reference ID':    t.reference_id   || '',
+    'Notes':           t.notes          || ''
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 4 }, { wch: 22 }, { wch: 22 }, { wch: 14 },
+    { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 24 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `transactions_${date}.xlsx`);
+}

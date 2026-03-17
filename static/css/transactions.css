@@ -92,3 +92,31 @@
 .btn-load-more:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
 
 .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+
+/* ---- EXPORT BUTTON ---- */
+.export-wrap { display: flex; flex-direction: column; gap: 4px; }
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font, 'Sora', sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  background: var(--success, #0f9e6e);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-xs, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.btn-export:hover {
+  background: var(--success-hover, #0d8a60);
+  box-shadow: 0 4px 12px rgba(15,158,110,0.28);
+}
+
+.btn-export:active { transform: scale(0.98); }

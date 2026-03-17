@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/bills.css">
   <link rel="stylesheet" href="/static/css/customers.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="page">
@@ -41,6 +42,10 @@
           <option value="premium">Premium</option>
           <option value="electrician">Electrician</option>
         </select>
+      </div>
+      <div class="export-wrap">
+        <label>&nbsp;</label>
+        <button class="btn-export" onclick="exportCustomers()">⬇ Export Excel</button>
       </div>
     </div>
   </div>

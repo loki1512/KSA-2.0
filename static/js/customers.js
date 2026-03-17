@@ -1,8 +1,9 @@
 'use strict';
 
-let topCustomers = [];   // top 200 by value (initial load)
+let topCustomers = [];
 let isSearchMode = false;
 let searchDebounce = null;
+let currentVisibleList = [];   // tracks what's currently rendered for export
 
 document.addEventListener('DOMContentLoaded', () => {
   loadTopCustomers();
@@ -72,6 +73,7 @@ function applyTypeFilter(list) {
 
 // ─── RENDER ───────────────────────────────────────────
 function renderCustomers(customers) {
+  currentVisibleList = customers;   // save for export
   const tbody = document.getElementById('customersBody');
   tbody.innerHTML = '';
 
@@ -103,3 +105,33 @@ function renderCustomers(customers) {
 // ─── HELPERS ──────────────────────────────────────────
 function fmt(n)  { return parseFloat(n || 0).toFixed(2); }
 function esc(s)  { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── EXPORT TO EXCEL ──────────────────────────────────
+function exportCustomers() {
+  if (!currentVisibleList || !currentVisibleList.length) {
+    alert('No data to export.'); return;
+  }
+
+  const rows = currentVisibleList.map((c, i) => ({
+    '#':              i + 1,
+    'Name':           c.name          || '',
+    'Phone':          c.phone         || '',
+    'Village':        c.village       || '',
+    'Type':           c.customer_type || '',
+    'Total Spent':    c.total_spent   != null ? parseFloat(c.total_spent)  : '',
+    'Bill Count':     c.bill_count    != null ? parseInt(c.bill_count)     : '',
+    'Wallet Balance': parseFloat(c.wallet_balance || 0)
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 4 }, { wch: 28 }, { wch: 14 }, { wch: 16 },
+    { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 14 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `customers_${date}.xlsx`);
+}
