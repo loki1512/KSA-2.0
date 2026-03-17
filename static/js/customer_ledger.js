@@ -128,6 +128,11 @@ function toggleBillsPanel() {
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
 }
 
+// ─── NEW RETURN ──────────────────────────────────────
+function new_return(){
+  location.href = `/returns/new?customer_id=${CUSTOMER_ID}`;
+}
+
 // ─── PAYMENT MODAL ────────────────────────────────────
 function openPaymentModal() {
   document.getElementById('payAmount').value = '';
