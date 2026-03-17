@@ -104,26 +104,31 @@ def list_customers():
 def search_customers():
 
     q = request.args.get("q", "").strip()
-
+ 
     if not q:
         return jsonify([])
-
-    keywords = q.lower().split()
-
+ 
+    # Split into tokens — each token must match at least one field.
+    # "kumar ram" → ['kumar', 'ram'] → both tokens must match somewhere.
+    # This means "ra ku" matches "Ram Kumar" because:
+    #   'ra' hits name (Ram), 'ku' hits name (Kumar).
+    tokens = q.lower().split()
+ 
     results = Customer.query
-
-    for kw in keywords:
+ 
+    for token in tokens:
+        pattern = f"%{token}%"
         results = results.filter(
             or_(
-                Customer.name.ilike(f"%{kw}%"),
-                Customer.phone.ilike(f"%{kw}%"),
-                Customer.village.ilike(f"%{kw}%"),
-                Customer.customer_type.ilike(f"%{kw}%")
+                Customer.name.ilike(pattern),
+                Customer.phone.ilike(pattern),
+                Customer.village.ilike(pattern),
+                Customer.customer_type.ilike(pattern)
             )
         )
-
-    customers = results.limit(30).all()
-
+ 
+    customers = results.order_by(Customer.name).limit(30).all()
+ 
     return jsonify([
         {
             "id": c.id,

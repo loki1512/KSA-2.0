@@ -27,13 +27,25 @@ async function loadItems() {
 
 // ─── FILTER (client-side) ─────────────────────────────
 function filterItems() {
-  const q = document.getElementById('catalogSearch').value.toLowerCase().trim();
+  const q = document.getElementById('catalogSearch').value.trim();
   if (!q) { renderItems(allItems); return; }
-
-  const filtered = allItems.filter(i =>
-    (i.name     || '').toLowerCase().includes(q) ||
-    (i.category || '').toLowerCase().includes(q)
-  );
+ 
+  // Split into tokens — every token must match at least one field (name OR category).
+  // "gm wire electrical" → ['gm','wire','electrical']
+  // All three must hit somewhere across name+category combined.
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+ 
+  const filtered = allItems.filter(item => {
+    const haystack = [
+      (item.name     || ''),
+      (item.category || '')
+    ].join(' ').toLowerCase();
+ 
+    // Every token must appear somewhere in the combined haystack
+    return tokens.every(token => haystack.includes(token));
+  });
+ 
+  renderItems(filtered);
   renderItems(filtered);
 }
 
