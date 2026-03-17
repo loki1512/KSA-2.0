@@ -36,7 +36,7 @@ def search_items():
 
     for i in items:
         # Selling price: final_price → default_price, capped at max_price
-        price = i.final_price if i.final_price else i.default_price
+        price = i.max_price if i.max_price else i.default_price
         if i.max_price and price > i.max_price:
             price = i.max_price
 

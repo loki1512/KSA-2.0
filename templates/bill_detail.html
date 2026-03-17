@@ -30,7 +30,6 @@
       <p>Bill #{{ bill.id }}</p>
       <p>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</p>
     </header>
-
     <section class="customer">
       <strong>Customer</strong>
       {% if bill.customer %}
@@ -45,7 +44,7 @@
         <p>Walk-in Customer</p>
       {% endif %}
     </section>
-
+    {% if bill.items %}
     <table class="items">
       <thead>
         <tr>
@@ -86,6 +85,11 @@
         {% endfor %}
       </tbody>
     </table>
+
+    {% else %}
+      <p><em>The bill has been deleted.</em></p>
+    {% endif %}
+    
 
     <section class="totals">
       <p>Subtotal: ₹{{ "%.2f"|format(bill.subtotal) }}</p>

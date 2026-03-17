@@ -39,6 +39,9 @@ def bills_page():
 @auth_required()
 def bill_detail_page(bill_id):
     bill  = Bill.query.get_or_404(bill_id)
+    if bill.message:
+        print(f"Bill with ID {bill_id} not found.")
+        return redirect(url_for("pages.bills_page"))
     items = BillItem.query.filter_by(bill_id=bill.id).all()
     return render_template("bill_detail.html", bill=bill, items=items)
 

@@ -2,6 +2,9 @@ from flask import Blueprint, request, jsonify
 from extensions import db
 from models import Bill, BillItem, Customer, Transaction
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+
 
 bills_bp = Blueprint("bills", __name__)
 
@@ -67,7 +70,7 @@ def save_bill():
 
     return jsonify({
         "bill_id": bill.id,
-        "timestamp": bill.timestamp.isoformat()
+        "timestamp": bill.timestamp.astimezone(ZoneInfo("Asia/Kolkata")).isoformat()
     }), 201
 
 
@@ -97,7 +100,8 @@ def list_bills():
 def get_bill(bill_id):
 
     bill = Bill.query.get_or_404(bill_id)
-
+    if not bill:
+        return jsonify({"error": "Bill not found"}), 404
     return jsonify({
         "id": bill.id,
         "timestamp": bill.timestamp.isoformat(),
