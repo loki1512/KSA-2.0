@@ -28,7 +28,7 @@ def save_bill():
         final_amount=data["finalTotal"],
         bill_discount_type=bill_discount.get("type"),
         bill_discount_value=bill_discount.get("value"),
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(ZoneInfo("Asia/Kolkata")),
         customer=customer
     )
 

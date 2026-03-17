@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 from extensions import db
 from flask_security import UserMixin, RoleMixin
+from zoneinfo import ZoneInfo
 
 
 # -----------------------------
@@ -112,7 +113,7 @@ class Transaction(db.Model):
     reference_type = db.Column(db.String(30))   # bill / payment / return / settlement
     reference_id = db.Column(db.Integer)
     notes = db.Column(db.String(255))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     customer = db.relationship("Customer", back_populates="transactions")
 
 
@@ -169,7 +170,7 @@ class BillItem(db.Model):
 class Return(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     total_refund_amount = db.Column(db.Float, nullable=False)
     customer = db.relationship("Customer")
     items = db.relationship(
