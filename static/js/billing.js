@@ -10,7 +10,6 @@ let savedBillId = null;
 let selectedCustomerId = null;   // linked Customer record
 let currentItemMaxPrice = null;  // max price of currently selected item (biller-only)
 let searchDebounceTimer = null;
-let currentFinalPrice = null;
 let modalSearchDebounceTimer = null;
 let custSearchDebounce = null;
 let pendingDeleteIndex = null;
@@ -286,22 +285,13 @@ function selectItem(item) {
 
   // Show biller-only max price hint
   currentItemMaxPrice = item.max_price || null;
-  currentFinalPrice = item.final_price||null;
   const hintEl  = document.getElementById('maxPriceHint');
   const valEl   = document.getElementById('maxPriceValue');
-  const finalHintEl = document.getElementById('finalPriceHint');
-  const finalValEl  = document.getElementById('finalPriceValue');
   if (currentItemMaxPrice) {
     valEl.textContent   = `₹${fmtNum(currentItemMaxPrice)}`;
     hintEl.style.display = 'flex';
   } else {
     hintEl.style.display = 'none';
-  }
-  if (currentFinalPrice) {
-    finalValEl.textContent   = `₹${fmtNum(currentFinalPrice)}`;
-    finalHintEl.style.display = 'flex';
-  } else {
-    finalHintEl.style.display = 'none';
   }
 }
 
@@ -705,8 +695,9 @@ async function saveBill() {
     customer_name:    selectedCustomerId ? null : (document.getElementById('customerName').value.trim() || null),
     customer_phone:   selectedCustomerId ? null : (document.getElementById('customerPhone').value.trim() || null),
     customer_address: selectedCustomerId ? null : (document.getElementById('customerAddress').value.trim() || null),
-    subtotal:   sub,
-    finalTotal: final,
+    timestamp:    getBillTimestamp(),   // null = use server time (IST)
+    subtotal:     sub,
+    finalTotal:   final,
     billDiscount: val > 0 ? { type, value: val } : null,
     items: billItems.map(it => ({
       name:      it.name,
@@ -747,6 +738,41 @@ async function saveBill() {
   }
 }
 
+// ─── BILL DATETIME (OPTIONAL BACKDATING) ──────────────
+function toggleBillDatetime() {
+  const fields = document.getElementById('billDatetimeFields');
+  const btn    = document.getElementById('toggleDatetimeBtn');
+  const open   = fields.style.display === 'none';
+
+  fields.style.display = open ? 'flex' : 'none';
+  btn.classList.toggle('active', open);
+
+  if (open) {
+    // Default to now (local) as a convenience starting point
+    const input = document.getElementById('billDatetime');
+    if (!input.value) {
+      const now = new Date();
+      // datetime-local needs "YYYY-MM-DDTHH:MM"
+      const pad = n => String(n).padStart(2, '0');
+      input.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    }
+    document.getElementById('billDatetime').focus();
+  }
+}
+
+function clearBillDatetime() {
+  document.getElementById('billDatetime').value = '';
+  document.getElementById('billDatetimeFields').style.display = 'none';
+  document.getElementById('toggleDatetimeBtn').classList.remove('active');
+}
+
+function getBillTimestamp() {
+  const val = document.getElementById('billDatetime').value;
+  if (!val) return null;   // null = backend uses current time
+  // Convert local datetime-local value to ISO string
+  return new Date(val).toISOString();
+}
+
 // ─── RESET ────────────────────────────────────────────
 function resetForm() {
   billItems = [];
@@ -758,6 +784,7 @@ function resetForm() {
   document.getElementById('customerPhone').value   = '';
   document.getElementById('customerAddress').value = '';
   clearSelectedCustomer();
+  clearBillDatetime();
   const fields  = document.getElementById('customerFields');
   const chevron = document.getElementById('customerChevron');
   fields.classList.remove('open');
@@ -851,94 +878,3 @@ document.getElementById('billDiscountValue').addEventListener('keydown', (e) => 
     document.getElementById('confirmBillBtn').focus();
   }
 });
-
-
-// ============================
-// CUSTOMER CREATION MODAL
-// ============================
-
-let createdCustomer = null;
-
-function openCustomerModal() {
-  document.getElementById("customerModal").style.display = "flex";
-}
-
-function closeCustomerModal() {
-  document.getElementById("customerModal").style.display = "none";
-}
-
-async function createCustomer() {
-
-  const name = document.getElementById("newCustName").value.trim();
-  const phone = document.getElementById("newCustPhone").value.trim();
-
-  if (!name || !phone) {
-    showToast("Name and phone required", "error");
-    return;
-  }
-
-  const payload = {
-    name: name,
-    phone: phone,
-    village: document.getElementById("newCustVillage").value,
-    address: document.getElementById("newCustAddress").value,
-    referral_code: document.getElementById("newCustReferral").value,
-    customer_type: document.getElementById("newCustType").value
-  };
-
-  try {
-
-    const res = await fetch("/api/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      showToast(data.message || "Customer creation failed", "error");
-      return;
-    }
-
-    createdCustomer = {
-      id: data.customer_id,
-      name: name,
-      phone: phone,
-      referral_code: data.referral_code
-    };
-
-    closeCustomerModal();
-
-    // Fill confirmation modal
-    document.getElementById("confCustName").textContent = name;
-    document.getElementById("confCustPhone").textContent = phone;
-    document.getElementById("confReferral").textContent = data.referral_code;
-
-    document.getElementById("customerCreatedModal").style.display = "flex";
-
-  } catch (err) {
-    console.error(err);
-    showToast("Server error", "error");
-  }
-}
-
-function closeCustomerCreated() {
-  document.getElementById("customerCreatedModal").style.display = "none";
-}
-
-function useCreatedCustomer() {
-
-  if (!createdCustomer) return;
-
-  selectCustomer({
-    id: createdCustomer.id,
-    name: createdCustomer.name,
-    phone: createdCustomer.phone,
-    village: ""
-  });
-
-  closeCustomerCreated();
-
-  showToast("Customer added to bill", "success");
-}

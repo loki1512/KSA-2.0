@@ -129,7 +129,7 @@ class Item(db.Model):
     default_price = db.Column(db.Float, nullable=False)   # cost / base price
     final_price = db.Column(db.Float)             # selling price (overrides default)
     updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")), onupdate=datetime.now(ZoneInfo("Asia/Kolkata"))
     )
 
 
@@ -140,7 +140,7 @@ class Item(db.Model):
 class Bill(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     subtotal = db.Column(db.Float, nullable=False)
     bill_discount_type = db.Column(db.String(10))
     bill_discount_value = db.Column(db.Float)
@@ -198,5 +198,5 @@ class Payment(db.Model):
     amount = db.Column(db.Float, nullable=False)
     method = db.Column(db.String(30), default="cash")   # cash / upi / cheque
     notes = db.Column(db.String(255))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     customer = db.relationship("Customer", back_populates="payments")

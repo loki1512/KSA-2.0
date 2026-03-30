@@ -9,20 +9,22 @@
 </head>
 <body>
 
+  <!-- SITE HEADER -->
   <header class="site-header">
-  <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
-  </div>
-  <nav class="header-nav">
-    <a href="/billing">+ New Bill</a>
-    <a href="/catalog">Catalog</a>
-    <a href="/bills">Bills</a>
-    <a href="/customers">Customers</a>
-    <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
-  </nav>
-</header>
+    <div class="header-left">
+      <div class="logo-mark">KSA</div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart Billing System</span>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills" class="active">Bills</a>
+      <a href="/logout" class="nav-logout">Logout</a>
+    </nav>
+  </header>
 
   <main class="container">
 
@@ -71,11 +73,6 @@
             <div id="customerSuggestions" class="suggestions-dropdown" style="display:none;">
               <div id="customerSuggestionList"></div>
             </div>
-            <div style="margin-top:8px;">
-  <button class="link-btn" onclick="openCustomerModal()">
-    + Add New Customer
-  </button>
-</div>
           </div>
 
           <!-- Selected customer chip -->
@@ -115,6 +112,16 @@
       <div class="card item-card">
         <div class="card-header">
           <h2>Add Item</h2>
+          <!-- Optional bill timestamp (delayed/backdated entry) -->
+          <div class="bill-datetime-wrap" id="billDatetimeWrap">
+            <button class="toggle-datetime-btn" id="toggleDatetimeBtn" onclick="toggleBillDatetime()">
+              🕐 Set Bill Date
+            </button>
+            <div id="billDatetimeFields" style="display:none;" class="bill-datetime-fields">
+              <input type="datetime-local" id="billDatetime" title="Leave blank to use current time">
+              <button class="clear-datetime-btn" onclick="clearBillDatetime()" title="Clear — use current time">✕ Now</button>
+            </div>
+          </div>
         </div>
 
         <div class="search-wrap">
@@ -151,15 +158,6 @@
           Max allowed price for this item:
           <strong id="maxPriceValue"></strong>
         </div>
-        <div id="finalPriceHint" class="max-price-hint" style="display:none;">
-          <span class="hint-icon">i</span>
-          Final price for this item:
-          <strong id="finalPriceValue"></strong>
-        </div>
-
-        
-          
-        
 
         <div class="discount-toggle-row">
           <button class="toggle-discount-btn" id="discountToggleBtn" onclick="toggleDiscount()">
@@ -371,78 +369,6 @@
 
   <!-- Toast -->
   <div id="toast" class="toast" style="display:none;"></div>
-
-  <!-- ===================== CREATE CUSTOMER MODAL ===================== -->
-<div id="customerModal" class="modal-overlay" style="display:none;">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Create Customer</h3>
-      <button class="modal-close" onclick="closeCustomerModal()">✕</button>
-    </div>
-
-    <div class="field-group">
-      <label>Name *</label>
-      <input type="text" id="newCustName">
-    </div>
-
-    <div class="field-group">
-      <label>Phone *</label>
-      <input type="tel" id="newCustPhone">
-    </div>
-
-    <div class="field-group">
-      <label>Village</label>
-      <input type="text" id="newCustVillage">
-    </div>
-
-    <div class="field-group">
-      <label>Address</label>
-      <textarea id="newCustAddress"></textarea>
-    </div>
-
-    <div class="field-group">
-      <label>Referral Code (optional)</label>
-      <input type="text" id="newCustReferral">
-    </div>
-
-    <div class="field-group">
-      <label>Customer Type</label>
-      <select id="newCustType">
-        <option value="regular">Regular</option>
-        <option value="electrician">Electrician</option>
-        <option value="premium">Premium</option>
-      </select>
-    </div>
-
-    <div class="action-bar dual">
-      <button class="btn btn-ghost" onclick="closeCustomerModal()">Cancel</button>
-      <button class="btn btn-success" onclick="createCustomer()">Create Customer</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===================== CUSTOMER CREATED MODAL ===================== -->
-<div id="customerCreatedModal" class="modal-overlay" style="display:none;">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Customer Created</h3>
-      <button class="modal-close" onclick="closeCustomerCreated()">✕</button>
-    </div>
-
-    <div style="padding:10px 0;">
-      <p><strong>Name:</strong> <span id="confCustName"></span></p>
-      <p><strong>Phone:</strong> <span id="confCustPhone"></span></p>
-      <p><strong>Referral Code:</strong> <span id="confReferral"></span></p>
-      <p><strong>Wallet Balance:</strong> ₹0.00</p>
-    </div>
-
-    <div class="action-bar">
-      <button class="btn btn-success" onclick="useCreatedCustomer()">
-        Use this customer
-      </button>
-    </div>
-  </div>
-</div>
 
   <script src="/static/js/billing.js"></script>
 </body>

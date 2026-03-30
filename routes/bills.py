@@ -23,12 +23,26 @@ def save_bill():
     if data.get("customer_id"):
         customer = db.session.get(Customer, data["customer_id"])
 
+    # Optional backdated timestamp from frontend.
+    # If provided, parse the ISO string; otherwise default to now (IST).
+    raw_ts = data.get("timestamp")
+    if raw_ts:
+        try:
+            # Frontend sends UTC ISO string; convert to IST for storage
+            bill_ts = datetime.fromisoformat(raw_ts.replace("Z", "+00:00"))\
+                              .astimezone(ZoneInfo("Asia/Kolkata"))\
+                              .replace(tzinfo=None)   # store as naive IST
+        except (ValueError, TypeError):
+            bill_ts = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+    else:
+        bill_ts = datetime.now(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
+
     bill = Bill(
         subtotal=data["subtotal"],
         final_amount=data["finalTotal"],
         bill_discount_type=bill_discount.get("type"),
         bill_discount_value=bill_discount.get("value"),
-        timestamp=datetime.now(ZoneInfo("Asia/Kolkata")),
+        timestamp=bill_ts,
         customer=customer
     )
 
@@ -61,18 +75,17 @@ def save_bill():
         )
         db.session.add(txn)
 
-    #-- Deduct from wallet -----
-    if customer and customer.wallet :
+    # Deduct from wallet
+    if customer and customer.wallet:
         customer.wallet.balance -= bill.final_amount
         db.session.add(customer.wallet)
 
     db.session.commit()
 
     return jsonify({
-        "bill_id": bill.id,
-        "timestamp": bill.timestamp.astimezone(ZoneInfo("Asia/Kolkata")).isoformat()
+        "bill_id":   bill.id,
+        "timestamp": bill.timestamp.isoformat()
     }), 201
-
 
 # --------------------------------
 # LIST BILLS
