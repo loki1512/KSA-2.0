@@ -73,6 +73,11 @@
             <div id="customerSuggestions" class="suggestions-dropdown" style="display:none;">
               <div id="customerSuggestionList"></div>
             </div>
+            <div class="new-customer-row">
+              <button class="btn-new-customer" onclick="openCustomerModal()">
+                <span>＋</span> Add New Customer
+              </button>
+            </div>
           </div>
 
           <!-- Selected customer chip -->
@@ -369,6 +374,79 @@
 
   <!-- Toast -->
   <div id="toast" class="toast" style="display:none;"></div>
+
+  <!-- ===================== CREATE CUSTOMER MODAL ===================== -->
+  <div id="customerModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>New Customer</h3>
+        <button class="modal-close" onclick="closeCustomerModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-row">
+          <div class="field-group">
+            <label>Name <span class="req">*</span></label>
+            <input type="text" id="newCustName" placeholder="Full name" autocomplete="off">
+          </div>
+          <div class="field-group">
+            <label>Phone <span class="req">*</span></label>
+            <input type="tel" id="newCustPhone" placeholder="10-digit mobile" autocomplete="off">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Village</label>
+            <input type="text" id="newCustVillage" placeholder="Village / area" autocomplete="off">
+          </div>
+          <div class="field-group">
+            <label>Type</label>
+            <select id="newCustType">
+              <option value="regular">Regular</option>
+              <option value="premium">Premium</option>
+              <option value="electrician">Electrician</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Address</label>
+          <textarea id="newCustAddress" placeholder="Street, landmark, PIN" rows="2"></textarea>
+        </div>
+        <div class="field-group">
+          <label>Referral Code <span class="field-optional">(optional)</span></label>
+          <input type="text" id="newCustReferral" placeholder="Enter referrer's code">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCustomerModal()">Cancel</button>
+        <button class="btn btn-success" id="createCustBtn" onclick="createCustomer()">Create Customer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== CUSTOMER CREATED CONFIRMATION ===================== -->
+  <div id="customerCreatedModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Customer Created ✓</h3>
+        <button class="modal-close" onclick="closeCustomerCreated()">✕</button>
+      </div>
+      <div class="modal-body created-summary">
+        <div class="created-avatar" id="createdAvatar"></div>
+        <div class="created-detail">
+          <div class="created-name" id="confCustName"></div>
+          <div class="created-meta" id="confCustPhone"></div>
+          <div class="created-meta" id="confCustVillage"></div>
+          <div class="created-referral">
+            Referral code: <span class="mono" id="confReferral"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeCustomerCreated()">Close</button>
+        <button class="btn btn-success" onclick="useCreatedCustomer()">Use for This Bill →</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/static/js/billing.js"></script>
 </body>

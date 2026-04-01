@@ -724,7 +724,7 @@ async function saveBill() {
     savedBillId = data.bill_id;
 
     document.getElementById('savedBillId').textContent = `#${savedBillId}`;
-    document.getElementById('viewBillLink').href = `/bills/${savedBillId}`;
+    document.getElementById('viewBillLink').href = `/bills/view_bill/${savedBillId}`;
 
     document.getElementById('step2').style.display = 'none';
     document.getElementById('step3').style.display = 'block';
@@ -839,15 +839,130 @@ function showToast(msg, type = '') {
 }
 
 // Close modals on overlay click
-['productModal','editModal','deleteModal'].forEach(id => {
+['productModal','editModal','deleteModal','customerModal','customerCreatedModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) {
-      if (id === 'productModal') closeProductModal();
-      else if (id === 'editModal') closeEditModal();
-      else if (id === 'deleteModal') closeDeleteModal();
+      if (id === 'productModal')         closeProductModal();
+      else if (id === 'editModal')       closeEditModal();
+      else if (id === 'deleteModal')     closeDeleteModal();
+      else if (id === 'customerModal')   closeCustomerModal();
+      else if (id === 'customerCreatedModal') closeCustomerCreated();
     }
   });
 });
+
+// ─── CREATE CUSTOMER MODAL ────────────────────────────
+let createdCustomer = null;
+
+function openCustomerModal() {
+  // Clear previous values
+  ['newCustName','newCustPhone','newCustVillage','newCustAddress','newCustReferral'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('newCustType').value = 'regular';
+  document.getElementById('createCustBtn').disabled    = false;
+  document.getElementById('createCustBtn').textContent = 'Create Customer';
+  document.getElementById('customerModal').style.display = 'flex';
+  document.getElementById('newCustName').focus();
+
+  // Enter key flow: name → phone → village → create
+  const enterMap = {
+    'newCustName':    'newCustPhone',
+    'newCustPhone':   'newCustVillage',
+    'newCustVillage': 'newCustAddress',
+    'newCustAddress': null,   // Enter here → submit
+    'newCustReferral': null
+  };
+
+  Object.entries(enterMap).forEach(([fromId, toId]) => {
+    const el = document.getElementById(fromId);
+    el.onkeydown = (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (toId) document.getElementById(toId).focus();
+      else createCustomer();
+    };
+  });
+}
+
+function closeCustomerModal() {
+  document.getElementById('customerModal').style.display = 'none';
+}
+
+async function createCustomer() {
+  const name    = document.getElementById('newCustName').value.trim();
+  const phone   = document.getElementById('newCustPhone').value.trim();
+  const village = document.getElementById('newCustVillage').value.trim();
+  const address = document.getElementById('newCustAddress').value.trim();
+  const type    = document.getElementById('newCustType').value;
+  const referral_code = document.getElementById('newCustReferral').value.trim();
+
+  if (!name)  { showToast('Name is required', 'error');  document.getElementById('newCustName').focus();  return; }
+  if (!phone) { showToast('Phone is required', 'error'); document.getElementById('newCustPhone').focus(); return; }
+  if (phone.length < 10) { showToast('Enter a valid 10-digit number', 'error'); document.getElementById('newCustPhone').focus(); return; }
+
+  const btn = document.getElementById('createCustBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Creating…';
+
+  try {
+    const res  = await fetch('/api/customers', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ name, phone, village, address, customer_type: type, referral_code: referral_code || undefined })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.message || 'Customer creation failed', 'error');
+      btn.disabled    = false;
+      btn.textContent = 'Create Customer';
+      return;
+    }
+
+    createdCustomer = { id: data.customer_id, name, phone, village, referral_code: data.referral_code };
+
+    closeCustomerModal();
+
+    // Populate confirmation modal
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('createdAvatar').textContent  = initials;
+    document.getElementById('confCustName').textContent   = name;
+    document.getElementById('confCustPhone').textContent  = phone;
+    document.getElementById('confCustVillage').textContent = village || '';
+    document.getElementById('confReferral').textContent   = data.referral_code || '—';
+
+    document.getElementById('customerCreatedModal').style.display = 'flex';
+
+  } catch (err) {
+    showToast('Server error — please try again', 'error');
+    btn.disabled    = false;
+    btn.textContent = 'Create Customer';
+  }
+}
+
+function closeCustomerCreated() {
+  document.getElementById('customerCreatedModal').style.display = 'none';
+  createdCustomer = null;
+}
+
+function useCreatedCustomer() {
+  if (!createdCustomer) return;
+  selectCustomer(createdCustomer);
+  closeCustomerCreated();
+
+  // Open customer panel if collapsed
+  const fields  = document.getElementById('customerFields');
+  const chevron = document.getElementById('customerChevron');
+  if (!fields.classList.contains('open')) {
+    fields.classList.add('open');
+    chevron.classList.add('open');
+  }
+
+  showToast(`${createdCustomer.name} added to bill`, 'success');
+}
 
 // ─── GLOBAL KEYBOARD SHORTCUTS ────────────────────────
 document.addEventListener('keydown', (e) => {
@@ -856,6 +971,8 @@ document.addEventListener('keydown', (e) => {
     closeProductModal();
     closeEditModal();
     closeDeleteModal();
+    closeCustomerModal();
+    closeCustomerCreated();
     hideSuggestions();
     return;
   }
