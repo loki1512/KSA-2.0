@@ -21,12 +21,23 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    # ── Connection pool tuned for Supabase free tier ──────────────────
+    # Use the Supabase Transaction Pooler URL (port 6543) as SUPABASE_DB_URL
+    # in your Render environment variables — that alone halves real connections.
+    # SQLite doesn't use a pool, so these options are ignored locally.
+    is_postgres = "postgresql" in db_url or "postgres" in db_url
+
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "pool_size": 3,
-        "max_overflow": 2,
-        "isolation_level": "AUTOCOMMIT"
+        "pool_pre_ping":  True,   # discard stale connections before use
+        "pool_recycle":   280,    # recycle before Supabase's 300s idle timeout
+        **(
+            {
+                "pool_size":    2,   # persistent connections kept open
+                "max_overflow": 3,   # burst connections allowed (total = 5)
+                "pool_timeout": 20,  # raise after 20s waiting — fail fast
+            }
+            if is_postgres else {}   # SQLite: no pool settings needed
+        ),
     }
 
     # --------------------------------
@@ -55,6 +66,13 @@ def create_app():
     app.config["SECURITY_CSRF_PROTECT_MECHANISMS"] = []
 
     db.init_app(app)
+
+    # ── Always return connections to pool after every request ──────────
+    # Without this, failed/errored requests leak connections permanently
+    # until the worker restarts, causing pool exhaustion over time.
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        db.session.remove()
 
     # --------------------------------
     # Flask-Security Setup
