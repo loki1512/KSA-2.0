@@ -69,7 +69,7 @@ function renderProfile(c) {
 // ─── RENDER KPIs ──────────────────────────────────────
 function renderKPIs(ledger, bills) {
   // FIX: use ledger_balance for outstanding, wallet_balance for wallet
-  const ledgerBal = ledger.ledger_balance || 0;
+  const ledgerBal = -1*ledger.wallet_balance || 0;
   const walletBal = ledger.wallet_balance || 0;
 
   const balEl = document.getElementById('ledgerBalance');
