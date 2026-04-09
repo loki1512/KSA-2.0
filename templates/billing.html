@@ -6,23 +6,153 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/billing.css">
+  <style>
+    /* ── Reverse-calc mode toggle ── */
+    .calc-mode-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .calc-mode-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-right: 4px;
+    }
+    .calc-mode-btn {
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-xs);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 11px;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      width: auto;
+    }
+    .calc-mode-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .calc-mode-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    /* Reverse input rows */
+    .reverse-input-row {
+      display: none;    /* shown via JS */
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      background: var(--surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+    .reverse-input-row label {
+      white-space: nowrap;
+      min-width: 130px;
+    }
+    .reverse-input-row input { flex: 1; }
+    .reverse-preview {
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--success);
+      min-height: 18px;
+      margin-top: 2px;
+      margin-bottom: 6px;
+    }
+
+    /* ── Bill date field ── */
+    .bill-date-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .bill-date-row label {
+      white-space: nowrap;
+      min-width: 110px;
+    }
+    .bill-date-row input[type="date"] {
+      max-width: 200px;
+    }
+    .date-badge-optional {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+
+    /* ── Referrer search ── */
+    #referrerSearchWrap { position: relative; margin-bottom: 4px; }
+    #referrerSuggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      z-index: 1200;
+      overflow: hidden;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+    }
+    .referrer-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--accent-light);
+      border: 1.5px solid var(--accent);
+      border-radius: var(--radius-xs);
+      padding: 7px 11px;
+      margin-top: 6px;
+      gap: 10px;
+    }
+    .referrer-chip-info { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .referrer-chip-name  { font-weight: 700; font-size: 13px; color: var(--accent); }
+    .referrer-chip-code  { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+    .referrer-chip-phone { font-size: 11px; color: var(--text-muted); }
+    .referrer-chip-remove {
+      background: none; border: none; color: var(--accent);
+      cursor: pointer; font-size: 13px; padding: 2px 6px;
+      width: auto; border-radius: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .referrer-chip-remove:hover { background: var(--danger-light); color: var(--danger); }
+  </style>
 </head>
 <body>
 
   <header class="site-header">
-  <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
-  </div>
-  <nav class="header-nav">
-    <a href="/billing">+ New Bill</a>
-    <a href="/catalog">Catalog</a>
-    <a href="/bills">Bills</a>
-    <a href="/customers">Customers</a>
-    <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
-  </nav>
-</header>
+    <div class="header-left">
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+    <nav class="header-nav">
+      <a href="/billing">+ New Bill</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
+    </nav>
+  </header>
 
   <main class="container">
 
@@ -72,10 +202,10 @@
               <div id="customerSuggestionList"></div>
             </div>
             <div style="margin-top:8px;">
-  <button class="link-btn" onclick="openCustomerModal()">
-    + Add New Customer
-  </button>
-</div>
+              <button class="link-btn" onclick="openCustomerModal()">
+                + Add New Customer
+              </button>
+            </div>
           </div>
 
           <!-- Selected customer chip -->
@@ -92,7 +222,7 @@
             <span>or add walk-in details</span>
           </div>
 
-          <!-- Walk-in fallback (manual entry) -->
+          <!-- Walk-in fallback -->
           <div class="field-row" id="walkInFields">
             <div class="field-group">
               <label>Name</label>
@@ -111,6 +241,18 @@
         </div>
       </div>
 
+      <!-- ── BILL DATE (optional) ── -->
+      <div class="card" style="padding: 14px 20px;">
+        <div class="bill-date-row">
+          <label for="billDate">Bill Date</label>
+          <input type="date" id="billDate" title="Leave blank to use today's date">
+          <span class="date-badge-optional">optional</span>
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+          Leave blank to record bill at the current date &amp; time.
+        </p>
+      </div>
+
       <!-- ITEM ENTRY CARD -->
       <div class="card item-card">
         <div class="card-header">
@@ -124,8 +266,6 @@
             <input type="text" id="itemName" placeholder="Start typing to search..." autocomplete="off">
             <button class="clear-btn" id="clearItemBtn" title="Clear">✕</button>
           </div>
-
-          <!-- Inline suggestions dropdown -->
           <div id="suggestions" class="suggestions-dropdown" style="display:none;">
             <div id="suggestionList"></div>
             <div class="suggestions-footer" id="viewMoreBtn" style="display:none;">
@@ -145,7 +285,7 @@
           </div>
         </div>
 
-        <!-- Biller-only: max price hint (populated from item search) -->
+        <!-- Max / final price hints -->
         <div id="maxPriceHint" class="max-price-hint" style="display:none;">
           <span class="hint-icon">ℹ</span>
           Max allowed price for this item:
@@ -157,11 +297,31 @@
           <strong id="finalPriceValue"></strong>
         </div>
 
-        
-          
-        
+        <!-- ── CALCULATION MODE ── -->
+        <div class="calc-mode-row">
+          <span class="calc-mode-label">Enter via:</span>
+          <button class="calc-mode-btn active" data-mode="mrp"   title="Enter MRP and optionally add a discount">MRP + Discount</button>
+          <button class="calc-mode-btn"         data-mode="unit"  title="Enter the final unit price; discount % is computed automatically">Final Unit Price</button>
+          <button class="calc-mode-btn"         data-mode="total" title="Enter the total line amount; discount % is computed automatically">Line Total</button>
+        </div>
 
-        <div class="discount-toggle-row">
+        <!-- Reverse input: unit price mode -->
+        <div class="reverse-input-row" id="reversUnitRow">
+          <label>Final unit price (₹)</label>
+          <input type="number" id="reverseUnitPrice" min="0" step="0.01" placeholder="0.00">
+        </div>
+
+        <!-- Reverse input: line total mode -->
+        <div class="reverse-input-row" id="reverseTotalRow">
+          <label>Line total (₹)</label>
+          <input type="number" id="reverseLineTotal" min="0" step="0.01" placeholder="0.00">
+        </div>
+
+        <!-- Live reverse preview (shown in both reverse modes) -->
+        <div class="reverse-preview" id="reversePreview"></div>
+
+        <!-- Standard discount box (only in MRP mode) -->
+        <div id="discountToggleRow" class="discount-toggle-row">
           <button class="toggle-discount-btn" id="discountToggleBtn" onclick="toggleDiscount()">
             <span id="discountBtnIcon">＋</span> Add Item Discount
           </button>
@@ -228,7 +388,6 @@
           <h2>Finalise Bill</h2>
         </div>
 
-        <!-- Summary table (read-only) -->
         <div class="table-scroll">
           <table>
             <thead>
@@ -373,76 +532,100 @@
   <div id="toast" class="toast" style="display:none;"></div>
 
   <!-- ===================== CREATE CUSTOMER MODAL ===================== -->
-<div id="customerModal" class="modal-overlay" style="display:none;">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Create Customer</h3>
-      <button class="modal-close" onclick="closeCustomerModal()">✕</button>
-    </div>
+  <div id="customerModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create Customer</h3>
+        <button class="modal-close" onclick="closeCustomerModal()">✕</button>
+      </div>
 
-    <div class="field-group">
-      <label>Name *</label>
-      <input type="text" id="newCustName">
-    </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label>Name *</label>
+          <input type="text" id="newCustName">
+        </div>
 
-    <div class="field-group">
-      <label>Phone *</label>
-      <input type="tel" id="newCustPhone">
-    </div>
+        <div class="field-group">
+          <label>Phone *</label>
+          <input type="tel" id="newCustPhone">
+        </div>
 
-    <div class="field-group">
-      <label>Village</label>
-      <input type="text" id="newCustVillage">
-    </div>
+        <div class="field-group">
+          <label>Village</label>
+          <input type="text" id="newCustVillage">
+        </div>
 
-    <div class="field-group">
-      <label>Address</label>
-      <textarea id="newCustAddress"></textarea>
-    </div>
+        <div class="field-group">
+          <label>Address</label>
+          <textarea id="newCustAddress"></textarea>
+        </div>
 
-    <div class="field-group">
-      <label>Referral Code (optional)</label>
-      <input type="text" id="newCustReferral">
-    </div>
+        <!-- ── REFERRER SEARCH (replaces plain referral code field) ── -->
+        <div class="field-group">
+          <label>Referred by <span style="font-weight:400;color:var(--text-muted);">(optional — search by name, phone, village, or code)</span></label>
+          <div id="referrerSearchWrap">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="referrerSearchInput"
+                placeholder="Start typing to find referrer…" autocomplete="off">
+              <button class="clear-btn" id="clearReferrerBtn" title="Clear">✕</button>
+            </div>
+            <div id="referrerSuggestions">
+              <div id="referrerSuggestionList"></div>
+            </div>
+          </div>
+          <!-- Selected referrer chip -->
+          <div id="selectedReferrerChip" class="referrer-chip" style="display:none;">
+            <div class="referrer-chip-info">
+              <span class="referrer-chip-name"  id="referrerChipName"></span>
+              <span class="referrer-chip-code"  id="referrerChipCode"></span>
+              <span class="referrer-chip-phone" id="referrerChipPhone"></span>
+            </div>
+            <button class="referrer-chip-remove"
+              onclick="clearSelectedReferrer(true)" title="Remove referrer">✕</button>
+          </div>
+        </div>
 
-    <div class="field-group">
-      <label>Customer Type</label>
-      <select id="newCustType">
-        <option value="regular">Regular</option>
-        <option value="electrician">Electrician</option>
-        <option value="premium">Premium</option>
-      </select>
-    </div>
+        <div class="field-group">
+          <label>Customer Type</label>
+          <select id="newCustType">
+            <option value="regular">Regular</option>
+            <option value="electrician">Electrician</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+      </div>
 
-    <div class="action-bar dual">
-      <button class="btn btn-ghost" onclick="closeCustomerModal()">Cancel</button>
-      <button class="btn btn-success" onclick="createCustomer()">Create Customer</button>
+      <div class="action-bar dual">
+        <button class="btn btn-ghost" onclick="closeCustomerModal()">Cancel</button>
+        <button class="btn btn-success" onclick="createCustomer()">Create Customer</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ===================== CUSTOMER CREATED MODAL ===================== -->
-<div id="customerCreatedModal" class="modal-overlay" style="display:none;">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Customer Created</h3>
-      <button class="modal-close" onclick="closeCustomerCreated()">✕</button>
-    </div>
+  <!-- ===================== CUSTOMER CREATED MODAL ===================== -->
+  <div id="customerCreatedModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Customer Created</h3>
+        <button class="modal-close" onclick="closeCustomerCreated()">✕</button>
+      </div>
 
-    <div style="padding:10px 0;">
-      <p><strong>Name:</strong> <span id="confCustName"></span></p>
-      <p><strong>Phone:</strong> <span id="confCustPhone"></span></p>
-      <p><strong>Referral Code:</strong> <span id="confReferral"></span></p>
-      <p><strong>Wallet Balance:</strong> ₹0.00</p>
-    </div>
+      <div class="modal-body">
+        <p><strong>Name:</strong> <span id="confCustName"></span></p>
+        <p><strong>Phone:</strong> <span id="confCustPhone"></span></p>
+        <p><strong>Referral Code:</strong> <span id="confReferral"></span></p>
+        <p><strong>Referred by:</strong> <span id="confReferredBy">—</span></p>
+        <p><strong>Wallet Balance:</strong> ₹0.00</p>
+      </div>
 
-    <div class="action-bar">
-      <button class="btn btn-success" onclick="useCreatedCustomer()">
-        Use this customer
-      </button>
+      <div class="action-bar">
+        <button class="btn btn-success" onclick="useCreatedCustomer()">
+          Use this customer
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
   <script src="/static/js/billing.js"></script>
 </body>

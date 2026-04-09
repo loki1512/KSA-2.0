@@ -5,16 +5,23 @@
 'use strict';
 
 // ─── STATE ────────────────────────────────────────────
-let billItems = [];        // { name, qty, rate, discountType, discountValue, lineTotal }
+let billItems = [];
 let savedBillId = null;
-let selectedCustomerId = null;   // linked Customer record
-let currentItemMaxPrice = null;  // max price of currently selected item (biller-only)
+let selectedCustomerId = null;
+let currentItemMaxPrice = null;
 let searchDebounceTimer = null;
 let currentFinalPrice = null;
 let modalSearchDebounceTimer = null;
 let custSearchDebounce = null;
 let pendingDeleteIndex = null;
 let pendingEditIndex = null;
+
+// Referrer search state (customer creation modal)
+let referrerSearchDebounce = null;
+let selectedReferrer = null;   // { id, name, phone, village, referral_code }
+
+// Reverse-calc mode: 'mrp' (default) | 'unit' | 'total'
+let reverseMode = 'mrp';
 
 // ─── DOM REFS ─────────────────────────────────────────
 const itemNameInput    = document.getElementById('itemName');
@@ -40,8 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEditModalPreview();
   setupBillDiscountLive();
   setupClearBtn();
+  setupReverseModeToggle();
+  setupReverseInputs();
+  setupReferrerSearch();
 
-  // Pre-fill customer if URL has ?customer_id=X (from ledger "New Bill" link)
   const params = new URLSearchParams(location.search);
   if (params.get('customer_id')) prefillCustomer(parseInt(params.get('customer_id')));
 });
@@ -86,10 +95,7 @@ function renderCustomerSuggestions(customers) {
   const cont = document.getElementById('customerSuggestions');
   list.innerHTML = '';
 
-  if (!customers.length) {
-    hideCustSuggestions();
-    return;
-  }
+  if (!customers.length) { hideCustSuggestions(); return; }
 
   customers.forEach(c => {
     const div = document.createElement('div');
@@ -99,10 +105,7 @@ function renderCustomerSuggestions(customers) {
       <span class="suggestion-price" style="color:var(--text-muted);font-size:11px;">
         ${c.phone || ''} ${c.village ? '· ' + c.village : ''}
       </span>`;
-    div.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      selectCustomer(c);
-    });
+    div.addEventListener('mousedown', (e) => { e.preventDefault(); selectCustomer(c); });
     list.appendChild(div);
   });
 
@@ -118,15 +121,13 @@ function selectCustomer(c) {
   document.getElementById('customerSearchInput').value = '';
   hideCustSuggestions();
 
-  // Show chip
   document.getElementById('chipName').textContent    = c.name;
   document.getElementById('chipPhone').textContent   = c.phone || '';
   document.getElementById('chipVillage').textContent = c.village || '';
   document.getElementById('selectedCustomerChip').style.display = 'flex';
 
-  // Hide walk-in fields when customer linked
-  document.getElementById('walkInFields').style.display       = 'none';
-  document.getElementById('walkInAddressWrap').style.display  = 'none';
+  document.getElementById('walkInFields').style.display      = 'none';
+  document.getElementById('walkInAddressWrap').style.display = 'none';
 }
 
 function clearSelectedCustomer() {
@@ -141,7 +142,6 @@ async function prefillCustomer(id) {
     const res  = await fetch(`/api/customers/${id}`);
     const data = await res.json();
     if (res.ok) {
-      // Open customer panel automatically
       const fields  = document.getElementById('customerFields');
       const chevron = document.getElementById('customerChevron');
       fields.classList.add('open');
@@ -153,8 +153,8 @@ async function prefillCustomer(id) {
 
 // ─── CUSTOMER TOGGLE ──────────────────────────────────
 function setupCustomerToggle() {
-  const toggle = document.getElementById('customerToggle');
-  const fields = document.getElementById('customerFields');
+  const toggle  = document.getElementById('customerToggle');
+  const fields  = document.getElementById('customerFields');
   const chevron = document.getElementById('customerChevron');
 
   toggle.addEventListener('click', () => {
@@ -164,7 +164,7 @@ function setupCustomerToggle() {
 }
 
 // ─── SEARCH ───────────────────────────────────────────
-let activeSuggestionIndex = -1;   // highlighted row in inline dropdown
+let activeSuggestionIndex = -1;
 
 function setupSearchListeners() {
   itemNameInput.addEventListener('input', () => {
@@ -176,7 +176,7 @@ function setupSearchListeners() {
   });
 
   itemNameInput.addEventListener('keydown', (e) => {
-    const items = suggestionList.querySelectorAll('.suggestion-item');
+    const items  = suggestionList.querySelectorAll('.suggestion-item');
     const isOpen = suggestionsCont.style.display !== 'none';
 
     if (e.key === 'ArrowDown') {
@@ -189,18 +189,15 @@ function setupSearchListeners() {
       if (!isOpen) return;
       activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, -1);
       highlightSuggestion(items, activeSuggestionIndex);
-      // If back to -1, restore typed text
       if (activeSuggestionIndex === -1) itemNameInput.value = itemNameInput.dataset.typed || itemNameInput.value;
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (isOpen && activeSuggestionIndex >= 0 && items[activeSuggestionIndex]) {
         items[activeSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       } else if (!isOpen || activeSuggestionIndex === -1) {
-        // No suggestion selected — treat Enter as "Add Item"
         addItem();
       }
     } else if (e.key === 'Tab' && isOpen && activeSuggestionIndex >= 0) {
-      // Tab confirms highlighted suggestion
       e.preventDefault();
       items[activeSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     } else if (e.key === 'Escape') {
@@ -209,7 +206,6 @@ function setupSearchListeners() {
     }
   });
 
-  // Remember what the admin typed so ArrowUp can restore it
   itemNameInput.addEventListener('input', () => {
     itemNameInput.dataset.typed = itemNameInput.value;
   });
@@ -225,7 +221,6 @@ function setupSearchListeners() {
 function highlightSuggestion(items, index) {
   items.forEach((el, i) => el.classList.toggle('keyboard-active', i === index));
   if (index >= 0 && items[index]) {
-    // Preview the name in the input while navigating
     const nameEl = items[index].querySelector('.suggestion-name');
     if (nameEl) itemNameInput.value = nameEl.textContent;
     items[index].scrollIntoView({ block: 'nearest' });
@@ -234,25 +229,17 @@ function highlightSuggestion(items, index) {
 
 async function fetchSuggestions(q, forModal) {
   try {
-    const res = await fetch(`/api/items/search?q=${encodeURIComponent(q)}`);
+    const res   = await fetch(`/api/items/search?q=${encodeURIComponent(q)}`);
     const items = await res.json();
-    if (forModal) {
-      renderModalResults(items, q);
-    } else {
-      renderSuggestions(items);
-    }
-  } catch (err) {
-    console.error('Search error:', err);
-  }
+    if (forModal) renderModalResults(items, q);
+    else renderSuggestions(items);
+  } catch (err) { console.error('Search error:', err); }
 }
 
 function renderSuggestions(items) {
   suggestionList.innerHTML = '';
 
-  if (!items.length) {
-    hideSuggestions();
-    return;
-  }
+  if (!items.length) { hideSuggestions(); return; }
 
   const show = items.slice(0, 10);
   show.forEach(item => {
@@ -260,16 +247,11 @@ function renderSuggestions(items) {
     div.className = 'suggestion-item';
     div.innerHTML = `<span class="suggestion-name">${escHtml(item.name)}</span>
                      <span class="suggestion-price">₹${fmtNum(item.price)}</span>`;
-    div.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      selectItem(item);
-    });
+    div.addEventListener('mousedown', (e) => { e.preventDefault(); selectItem(item); });
     suggestionList.appendChild(div);
   });
 
-  // Show "View more" if there might be more results (returned 10 items = API limit)
   viewMoreBtn.style.display = items.length >= 10 ? 'block' : 'none';
-
   suggestionsCont.style.display = 'block';
 }
 
@@ -281,24 +263,29 @@ function selectItem(item) {
   itemNameInput.value = item.name;
   priceInput.value    = item.price;
   hideSuggestions();
+
+  // Reset reverse-calc inputs whenever a new item is selected
+  resetReverseInputs();
   qtyInput.focus();
   updateDiscountPreview();
 
-  // Show biller-only max price hint
   currentItemMaxPrice = item.max_price || null;
-  currentFinalPrice = item.final_price||null;
-  const hintEl  = document.getElementById('maxPriceHint');
-  const valEl   = document.getElementById('maxPriceValue');
+  currentFinalPrice   = item.final_price || null;
+
+  const hintEl      = document.getElementById('maxPriceHint');
+  const valEl       = document.getElementById('maxPriceValue');
   const finalHintEl = document.getElementById('finalPriceHint');
   const finalValEl  = document.getElementById('finalPriceValue');
+
   if (currentItemMaxPrice) {
-    valEl.textContent   = `₹${fmtNum(currentItemMaxPrice)}`;
+    valEl.textContent    = `₹${fmtNum(currentItemMaxPrice)}`;
     hintEl.style.display = 'flex';
   } else {
     hintEl.style.display = 'none';
   }
+
   if (currentFinalPrice) {
-    finalValEl.textContent   = `₹${fmtNum(currentFinalPrice)}`;
+    finalValEl.textContent    = `₹${fmtNum(currentFinalPrice)}`;
     finalHintEl.style.display = 'flex';
   } else {
     finalHintEl.style.display = 'none';
@@ -309,11 +296,11 @@ function setupClearBtn() {
   const clearBtn = document.getElementById('clearItemBtn');
   clearBtn.addEventListener('click', () => {
     itemNameInput.value = '';
-    priceInput.value = '';
-    qtyInput.value = 1;
+    priceInput.value    = '';
+    qtyInput.value      = 1;
     itemDiscountVal.value = '';
     hideSuggestions();
-    hideSuggestions();
+    resetReverseInputs();
     const discountBox = document.getElementById('discountBox');
     if (discountBox.style.display !== 'none') toggleDiscount();
     itemNameInput.focus();
@@ -326,24 +313,21 @@ let activeModalIndex = -1;
 function openProductModal() {
   hideSuggestions();
   activeModalIndex = -1;
-  const modal = document.getElementById('productModal');
+  const modal       = document.getElementById('productModal');
   const searchInput = document.getElementById('modalSearch');
   modal.style.display = 'flex';
-  searchInput.value = itemNameInput.value.trim();
+  searchInput.value   = itemNameInput.value.trim();
   searchInput.focus();
 
-  if (searchInput.value) {
-    fetchSuggestions(searchInput.value, true);
-  } else {
-    renderModalResults([], '');
-  }
+  if (searchInput.value) fetchSuggestions(searchInput.value, true);
+  else renderModalResults([], '');
 
   searchInput.addEventListener('input', onModalSearch);
   searchInput.addEventListener('keydown', onModalKeydown);
 }
 
 function onModalKeydown(e) {
-  const list = document.getElementById('modalResultsList');
+  const list  = document.getElementById('modalResultsList');
   const items = list.querySelectorAll('.modal-result-item:not(.empty)');
 
   if (e.key === 'ArrowDown') {
@@ -356,9 +340,7 @@ function onModalKeydown(e) {
     highlightModalItem(items, activeModalIndex);
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (activeModalIndex >= 0 && items[activeModalIndex]) {
-      items[activeModalIndex].click();
-    }
+    if (activeModalIndex >= 0 && items[activeModalIndex]) items[activeModalIndex].click();
   } else if (e.key === 'Escape') {
     closeProductModal();
   }
@@ -377,7 +359,7 @@ function onModalSearch() {
 }
 
 function closeProductModal() {
-  const modal = document.getElementById('productModal');
+  const modal       = document.getElementById('productModal');
   modal.style.display = 'none';
   const searchInput = document.getElementById('modalSearch');
   searchInput.removeEventListener('input', onModalSearch);
@@ -402,24 +384,20 @@ function renderModalResults(items, q) {
     div.className = 'modal-result-item';
     div.innerHTML = `<span class="modal-item-name">${escHtml(item.name)}</span>
                      <span class="modal-item-price">₹${fmtNum(item.price)}</span>`;
-    div.addEventListener('click', () => {
-      selectItem(item);
-      closeProductModal();
-    });
+    div.addEventListener('click', () => { selectItem(item); closeProductModal(); });
     list.appendChild(div);
   });
 }
 
 // ─── DISCOUNT TOGGLE ──────────────────────────────────
 function toggleDiscount() {
-  const box = document.getElementById('discountBox');
-  const btn = document.getElementById('discountToggleBtn');
+  const box  = document.getElementById('discountBox');
+  const btn  = document.getElementById('discountToggleBtn');
   const icon = document.getElementById('discountBtnIcon');
   const open = box.style.display === 'none';
   box.style.display = open ? 'block' : 'none';
   btn.classList.toggle('active', open);
-  icon.textContent = open ? '−' : '＋';
-  btn.querySelector('span:last-child') || null;
+  icon.textContent  = open ? '−' : '＋';
   if (open) itemDiscountVal.focus();
 }
 
@@ -428,21 +406,18 @@ function setupDiscountLivePreview() {
     el.addEventListener('input', updateDiscountPreview);
   });
 
-  // Enter on qty → move to price
   qtyInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); priceInput.focus(); }
   });
 
-  // Enter on price → if discount open go there, else add item
   priceInput.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     const discountOpen = document.getElementById('discountBox').style.display !== 'none';
-    if (discountOpen) { itemDiscountVal.focus(); }
-    else { addItem(); }
+    if (discountOpen) itemDiscountVal.focus();
+    else addItem();
   });
 
-  // Enter on discount value → add item
   itemDiscountVal.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); addItem(); }
   });
@@ -450,10 +425,10 @@ function setupDiscountLivePreview() {
 
 function updateDiscountPreview() {
   const preview = document.getElementById('discountPreview');
-  const price = parseFloat(priceInput.value) || 0;
-  const qty   = parseFloat(qtyInput.value) || 1;
-  const type  = itemDiscountType.value;
-  const val   = parseFloat(itemDiscountVal.value) || 0;
+  const price   = parseFloat(priceInput.value) || 0;
+  const qty     = parseFloat(qtyInput.value) || 1;
+  const type    = itemDiscountType.value;
+  const val     = parseFloat(itemDiscountVal.value) || 0;
 
   if (!price || !val) { preview.textContent = ''; return; }
 
@@ -462,22 +437,189 @@ function updateDiscountPreview() {
   preview.textContent = `Save ₹${fmtNum(saving)} per unit · Final unit price ₹${fmtNum(finalUnit)}`;
 }
 
+// ─── REVERSE-CALC: MODE TOGGLE ────────────────────────
+// Three modes: 'mrp' (normal MRP-first), 'unit' (enter final unit price → derive discount%),
+//              'total' (enter line total → derive discount%)
+// The discount box (type+value) is auto-managed — user only chooses mode.
+
+function setupReverseModeToggle() {
+  document.querySelectorAll('.calc-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      setReverseMode(mode);
+    });
+  });
+}
+
+function setReverseMode(mode) {
+  reverseMode = mode;
+
+  // Update active button styling
+  document.querySelectorAll('.calc-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Show/hide the appropriate reverse input rows and the standard discount box toggle
+  const unitRow    = document.getElementById('reversUnitRow');
+  const totalRow   = document.getElementById('reverseTotalRow');
+  const discToggle = document.getElementById('discountToggleRow');
+
+  unitRow.style.display    = mode === 'unit'  ? 'flex' : 'none';
+  totalRow.style.display   = mode === 'total' ? 'flex' : 'none';
+  discToggle.style.display = mode === 'mrp'   ? 'block' : 'none';
+
+  // When leaving MRP mode, close the discount box if open
+  if (mode !== 'mrp') {
+    const discountBox = document.getElementById('discountBox');
+    if (discountBox.style.display !== 'none') toggleDiscount();
+  }
+
+  resetReverseInputs();
+  syncReverseFromMRP();
+  updateDiscountPreview();
+}
+
+function setupReverseInputs() {
+  const unitInput  = document.getElementById('reverseUnitPrice');
+  const totalInput = document.getElementById('reverseLineTotal');
+
+  // Live sync: when user types into reverse inputs, compute discount% from MRP
+  unitInput.addEventListener('input', () => {
+    if (reverseMode !== 'unit') return;
+    const mrp     = parseFloat(priceInput.value) || 0;
+    const unit    = parseFloat(unitInput.value);
+    const qty     = parseFloat(qtyInput.value) || 1;
+
+    if (!mrp || isNaN(unit)) {
+      clearReversePreview(); return;
+    }
+
+    // Clamp: unit price cannot exceed MRP or be negative
+    const clampedUnit = Math.min(Math.max(unit, 0), mrp);
+    const discPct     = mrp > 0 ? ((mrp - clampedUnit) / mrp) * 100 : 0;
+    showReversePreview(clampedUnit, discPct, clampedUnit * qty, 'unit');
+  });
+
+  totalInput.addEventListener('input', () => {
+    if (reverseMode !== 'total') return;
+    const mrp      = parseFloat(priceInput.value) || 0;
+    const qty      = parseFloat(qtyInput.value) || 1;
+    const total    = parseFloat(totalInput.value);
+
+    if (!mrp || !qty || isNaN(total)) {
+      clearReversePreview(); return;
+    }
+
+    const maxTotal   = mrp * qty;
+    const clampedTotal = Math.min(Math.max(total, 0), maxTotal);
+    const unitPrice    = qty > 0 ? clampedTotal / qty : 0;
+    const discPct      = mrp > 0 ? ((mrp - unitPrice) / mrp) * 100 : 0;
+    showReversePreview(unitPrice, discPct, clampedTotal, 'total');
+  });
+
+  // Also re-sync when MRP or qty changes (so preview stays accurate)
+  priceInput.addEventListener('input', syncReverseFromMRP);
+  qtyInput.addEventListener('input', syncReverseFromMRP);
+}
+
+// Called when MRP or qty changes — update preview if a reverse input is already filled
+function syncReverseFromMRP() {
+  if (reverseMode === 'unit') {
+    const unitInput = document.getElementById('reverseUnitPrice');
+    if (unitInput.value.trim()) unitInput.dispatchEvent(new Event('input'));
+  } else if (reverseMode === 'total') {
+    const totalInput = document.getElementById('reverseLineTotal');
+    if (totalInput.value.trim()) totalInput.dispatchEvent(new Event('input'));
+  }
+}
+
+function showReversePreview(unitPrice, discPct, lineTotal, source) {
+  const preview = document.getElementById('reversePreview');
+  if (discPct < 0) {
+    preview.style.color = 'var(--danger)';
+    preview.textContent = 'Value exceeds MRP — will be clamped to MRP.';
+    return;
+  }
+  preview.style.color = 'var(--success)';
+  const pctStr = discPct.toFixed(2);
+  if (source === 'unit') {
+    preview.textContent = `Discount: ${pctStr}% · Line total: ₹${fmtNum(lineTotal)}`;
+  } else {
+    preview.textContent = `Unit price: ₹${fmtNum(unitPrice)} · Discount: ${pctStr}%`;
+  }
+}
+
+function clearReversePreview() {
+  const preview = document.getElementById('reversePreview');
+  preview.textContent = '';
+}
+
+function resetReverseInputs() {
+  const unitInput  = document.getElementById('reverseUnitPrice');
+  const totalInput = document.getElementById('reverseLineTotal');
+  if (unitInput)  unitInput.value  = '';
+  if (totalInput) totalInput.value = '';
+  clearReversePreview();
+}
+
+// Reads current mode and computes the final discount% to pass into calcLineTotal.
+// Returns { discountType, discountValue } — always uses % for reverse modes.
+function resolveDiscountFromMode() {
+  if (reverseMode === 'mrp') {
+    const discountOpen = document.getElementById('discountBox').style.display !== 'none';
+    return {
+      discountType:  discountOpen ? itemDiscountType.value : '',
+      discountValue: discountOpen ? (parseFloat(itemDiscountVal.value) || 0) : 0
+    };
+  }
+
+  const mrp = parseFloat(priceInput.value) || 0;
+  if (!mrp) return { discountType: '', discountValue: 0 };
+
+  if (reverseMode === 'unit') {
+    const unit    = parseFloat(document.getElementById('reverseUnitPrice').value);
+    if (isNaN(unit)) return { discountType: '', discountValue: 0 };
+    const clamped = Math.min(Math.max(unit, 0), mrp);
+    const pct     = ((mrp - clamped) / mrp) * 100;
+    return { discountType: '%', discountValue: parseFloat(pct.toFixed(4)) };
+  }
+
+  if (reverseMode === 'total') {
+    const qty   = parseFloat(qtyInput.value) || 1;
+    const total = parseFloat(document.getElementById('reverseLineTotal').value);
+    if (isNaN(total)) return { discountType: '', discountValue: 0 };
+    const maxTotal = mrp * qty;
+    const clamped  = Math.min(Math.max(total, 0), maxTotal);
+    const unit     = qty > 0 ? clamped / qty : 0;
+    const pct      = ((mrp - unit) / mrp) * 100;
+    return { discountType: '%', discountValue: parseFloat(pct.toFixed(4)) };
+  }
+
+  return { discountType: '', discountValue: 0 };
+}
+
 // ─── ADD ITEM ─────────────────────────────────────────
 function addItem() {
-  const name  = itemNameInput.value.trim();
-  const qty   = parseFloat(qtyInput.value);
-  const rate  = parseFloat(priceInput.value);
+  const name = itemNameInput.value.trim();
+  const qty  = parseFloat(qtyInput.value);
+  const rate = parseFloat(priceInput.value);
 
-  if (!name) { showToast('Please enter an item name', 'error'); itemNameInput.focus(); return; }
+  if (!name)            { showToast('Please enter an item name', 'error'); itemNameInput.focus(); return; }
   if (!qty || qty <= 0) { showToast('Enter a valid quantity', 'error'); qtyInput.focus(); return; }
   if (isNaN(rate) || rate < 0) { showToast('Enter a valid price', 'error'); priceInput.focus(); return; }
 
-  const discountType = document.getElementById('discountBox').style.display !== 'none'
-    ? itemDiscountType.value : '';
-  const discountValue = discountType
-    ? (parseFloat(itemDiscountVal.value) || 0) : 0;
+  // Validate reverse inputs are present when in reverse mode
+  if (reverseMode === 'unit') {
+    const unitVal = document.getElementById('reverseUnitPrice').value.trim();
+    if (!unitVal) { showToast('Enter the final unit price', 'error'); document.getElementById('reverseUnitPrice').focus(); return; }
+  }
+  if (reverseMode === 'total') {
+    const totVal = document.getElementById('reverseLineTotal').value.trim();
+    if (!totVal) { showToast('Enter the line total', 'error'); document.getElementById('reverseLineTotal').focus(); return; }
+  }
 
-  const { lineTotal, finalUnit } = calcLineTotal(rate, qty, discountType, discountValue);
+  const { discountType, discountValue } = resolveDiscountFromMode();
+  const { lineTotal, finalUnit }        = calcLineTotal(rate, qty, discountType, discountValue);
 
   billItems.push({ name, qty, rate, discountType, discountValue, finalUnit, lineTotal });
   renderTable();
@@ -486,16 +628,18 @@ function addItem() {
 }
 
 function resetItemForm() {
-  itemNameInput.value = '';
-  priceInput.value = '';
-  qtyInput.value = 1;
+  itemNameInput.value   = '';
+  priceInput.value      = '';
+  qtyInput.value        = 1;
   itemDiscountVal.value = '';
   hideSuggestions();
   currentItemMaxPrice = null;
-  document.getElementById('maxPriceHint').style.display = 'none';
+  document.getElementById('maxPriceHint').style.display   = 'none';
+  document.getElementById('finalPriceHint').style.display = 'none';
   const discountBox = document.getElementById('discountBox');
   if (discountBox.style.display !== 'none') toggleDiscount();
   document.getElementById('discountPreview').textContent = '';
+  resetReverseInputs();
   itemNameInput.focus();
 }
 
@@ -518,9 +662,15 @@ function renderTable() {
 
   billItems.forEach((item, i) => {
     subtotal += item.lineTotal;
-    const discountLabel = item.discountType
-      ? `${item.discountValue}${item.discountType}`
-      : '—';
+
+    let discountLabel = '—';
+    if (item.discountType === '%' && item.discountValue > 0) {
+      // Always show as % with 2 decimal places (covers reverse-computed values)
+      discountLabel = `${parseFloat(item.discountValue.toFixed(2))}%`;
+    } else if (item.discountType === '₹' && item.discountValue > 0) {
+      discountLabel = `₹${fmtNum(item.discountValue)}`;
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="sno">${i + 1}</td>
@@ -543,8 +693,8 @@ function renderTable() {
   itemCountEl.textContent = `${billItems.length} item${billItems.length !== 1 ? 's' : ''}`;
 
   const show = billItems.length > 0;
-  tableCard.style.display = show ? 'block' : 'none';
-  finaliseBar.style.display = show ? 'flex' : 'none';
+  tableCard.style.display   = show ? 'block' : 'none';
+  finaliseBar.style.display = show ? 'flex'  : 'none';
 }
 
 function getSubtotal() {
@@ -555,12 +705,14 @@ function getSubtotal() {
 function openEditModal(index) {
   pendingEditIndex = index;
   const item = billItems[index];
-  document.getElementById('editIndex').value = index;
-  document.getElementById('editName').value = item.name;
-  document.getElementById('editQty').value = item.qty;
-  document.getElementById('editPrice').value = item.rate;
-  document.getElementById('editDiscountType').value = item.discountType || '';
-  document.getElementById('editDiscountValue').value = item.discountValue || '';
+  document.getElementById('editIndex').value         = index;
+  document.getElementById('editName').value          = item.name;
+  document.getElementById('editQty').value           = item.qty;
+  document.getElementById('editPrice').value         = item.rate;
+  document.getElementById('editDiscountType').value  = item.discountType || '';
+  // Round displayed discount to 2dp so long reverse-computed values look clean
+  document.getElementById('editDiscountValue').value = item.discountValue
+    ? parseFloat(item.discountValue.toFixed(2)) : '';
   updateEditPreview();
   document.getElementById('editModal').style.display = 'flex';
 }
@@ -575,7 +727,6 @@ function setupEditModalPreview() {
     document.getElementById(id).addEventListener('input', updateEditPreview);
   });
 
-  // Enter in any edit field saves the edit
   ['editName','editQty','editPrice','editDiscountValue'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
@@ -584,10 +735,10 @@ function setupEditModalPreview() {
 }
 
 function updateEditPreview() {
-  const price = parseFloat(document.getElementById('editPrice').value) || 0;
-  const qty   = parseFloat(document.getElementById('editQty').value) || 1;
-  const type  = document.getElementById('editDiscountType').value;
-  const val   = parseFloat(document.getElementById('editDiscountValue').value) || 0;
+  const price   = parseFloat(document.getElementById('editPrice').value) || 0;
+  const qty     = parseFloat(document.getElementById('editQty').value) || 1;
+  const type    = document.getElementById('editDiscountType').value;
+  const val     = parseFloat(document.getElementById('editDiscountValue').value) || 0;
   const preview = document.getElementById('editPreview');
 
   if (!price) { preview.textContent = ''; return; }
@@ -599,13 +750,13 @@ function saveEdit() {
   const index = pendingEditIndex;
   if (index === null) return;
 
-  const name  = document.getElementById('editName').value.trim();
-  const qty   = parseFloat(document.getElementById('editQty').value);
-  const rate  = parseFloat(document.getElementById('editPrice').value);
+  const name          = document.getElementById('editName').value.trim();
+  const qty           = parseFloat(document.getElementById('editQty').value);
+  const rate          = parseFloat(document.getElementById('editPrice').value);
   const discountType  = document.getElementById('editDiscountType').value;
   const discountValue = parseFloat(document.getElementById('editDiscountValue').value) || 0;
 
-  if (!name) { showToast('Item name cannot be empty', 'error'); return; }
+  if (!name)            { showToast('Item name cannot be empty', 'error'); return; }
   if (!qty || qty <= 0) { showToast('Enter a valid quantity', 'error'); return; }
   if (isNaN(rate) || rate < 0) { showToast('Enter a valid price', 'error'); return; }
 
@@ -642,7 +793,6 @@ function confirmDelete() {
 function openFinalScreen() {
   if (!billItems.length) { showToast('Add at least one item', 'error'); return; }
 
-  // Populate final summary table
   const finalBody = document.getElementById('finalItemsBody');
   finalBody.innerHTML = '';
   billItems.forEach((item, i) => {
@@ -657,9 +807,9 @@ function openFinalScreen() {
   });
 
   const sub = getSubtotal();
-  document.getElementById('finalSubtotal').textContent = fmtNum(sub);
-  document.getElementById('finalAmount').textContent = fmtNum(sub);
-  document.getElementById('billDiscountValue').value = '';
+  document.getElementById('finalSubtotal').textContent    = fmtNum(sub);
+  document.getElementById('finalAmount').textContent      = fmtNum(sub);
+  document.getElementById('billDiscountValue').value      = '';
 
   document.getElementById('step1').style.display = 'none';
   document.getElementById('step2').style.display = 'block';
@@ -678,10 +828,10 @@ function setupBillDiscountLive() {
 }
 
 function recalcFinal() {
-  const sub  = getSubtotal();
-  const type = document.getElementById('billDiscountType').value;
-  const val  = parseFloat(document.getElementById('billDiscountValue').value) || 0;
-  let final = sub;
+  const sub   = getSubtotal();
+  const type  = document.getElementById('billDiscountType').value;
+  const val   = parseFloat(document.getElementById('billDiscountValue').value) || 0;
+  let final   = sub;
 
   if (type === '%' && val > 0) final = sub - (sub * val / 100);
   else if (type === '₹' && val > 0) final = sub - val;
@@ -692,40 +842,45 @@ function recalcFinal() {
 
 // ─── SAVE BILL ────────────────────────────────────────
 async function saveBill() {
-  const sub   = getSubtotal();
-  const type  = document.getElementById('billDiscountType').value;
-  const val   = parseFloat(document.getElementById('billDiscountValue').value) || 0;
-  let final   = sub;
+  const sub  = getSubtotal();
+  const type = document.getElementById('billDiscountType').value;
+  const val  = parseFloat(document.getElementById('billDiscountValue').value) || 0;
+  let final  = sub;
   if (type === '%' && val > 0) final = sub - (sub * val / 100);
   else if (type === '₹' && val > 0) final = sub - val;
   final = Math.max(0, final);
+
+  // Read optional bill date; send as ISO string or null
+  const billDateInput = document.getElementById('billDate');
+  const billDate = billDateInput && billDateInput.value ? billDateInput.value : null;
 
   const payload = {
     customer_id:      selectedCustomerId || null,
     customer_name:    selectedCustomerId ? null : (document.getElementById('customerName').value.trim() || null),
     customer_phone:   selectedCustomerId ? null : (document.getElementById('customerPhone').value.trim() || null),
     customer_address: selectedCustomerId ? null : (document.getElementById('customerAddress').value.trim() || null),
-    subtotal:   sub,
-    finalTotal: final,
-    billDiscount: val > 0 ? { type, value: val } : null,
+    bill_date:        billDate,   // null → backend uses current timestamp
+    subtotal:         sub,
+    finalTotal:       final,
+    billDiscount:     val > 0 ? { type, value: val } : null,
     items: billItems.map(it => ({
       name:      it.name,
       qty:       it.qty,
       rate:      it.rate,
       lineTotal: it.lineTotal,
-      discount:  it.discountType ? { type: it.discountType, value: it.discountValue } : null
+      discount:  it.discountType ? { type: it.discountType, value: parseFloat(it.discountValue.toFixed(4)) } : null
     }))
   };
 
   const btn = document.getElementById('confirmBillBtn');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = 'Saving…';
 
   try {
     const res = await fetch('/api/bills', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body:    JSON.stringify(payload)
     });
 
     if (!res.ok) throw new Error('Save failed');
@@ -733,7 +888,7 @@ async function saveBill() {
     savedBillId = data.bill_id;
 
     document.getElementById('savedBillId').textContent = `#${savedBillId}`;
-    document.getElementById('viewBillLink').href = `/bills/${savedBillId}`;
+    document.getElementById('viewBillLink').href       = `/bills/${savedBillId}`;
 
     document.getElementById('step2').style.display = 'none';
     document.getElementById('step3').style.display = 'block';
@@ -742,7 +897,7 @@ async function saveBill() {
 
   } catch (err) {
     showToast('Failed to save bill. Please try again.', 'error');
-    btn.disabled = false;
+    btn.disabled    = false;
     btn.textContent = 'Save Bill';
   }
 }
@@ -758,10 +913,17 @@ function resetForm() {
   document.getElementById('customerPhone').value   = '';
   document.getElementById('customerAddress').value = '';
   clearSelectedCustomer();
+
+  const billDateInput = document.getElementById('billDate');
+  if (billDateInput) billDateInput.value = '';
+
   const fields  = document.getElementById('customerFields');
   const chevron = document.getElementById('customerChevron');
   fields.classList.remove('open');
   chevron.classList.remove('open');
+
+  // Reset reverse mode to default
+  setReverseMode('mrp');
 
   document.getElementById('step3').style.display = 'none';
   document.getElementById('step1').style.display = 'block';
@@ -791,7 +953,7 @@ function setStep(n) {
 // ─── HELPERS ──────────────────────────────────────────
 function fmtNum(n) {
   const num = parseFloat(n) || 0;
-  return num % 1 === 0 ? num.toFixed(2) : num.toFixed(2);
+  return num.toFixed(2);
 }
 
 function escHtml(str) {
@@ -805,7 +967,7 @@ function escHtml(str) {
 function showToast(msg, type = '') {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
-  toast.className = `toast ${type}`;
+  toast.className   = `toast ${type}`;
   toast.style.display = 'block';
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 2800);
@@ -824,7 +986,6 @@ function showToast(msg, type = '') {
 
 // ─── GLOBAL KEYBOARD SHORTCUTS ────────────────────────
 document.addEventListener('keydown', (e) => {
-  // Escape closes any open modal / dropdown
   if (e.key === 'Escape') {
     closeProductModal();
     closeEditModal();
@@ -833,9 +994,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Enter on delete confirmation modal (when modal is focused/open)
   if (e.key === 'Enter' && document.getElementById('deleteModal').style.display === 'flex') {
-    // Only trigger if focus is not on Cancel button
     if (document.activeElement?.textContent?.trim() !== 'Cancel') {
       e.preventDefault();
       confirmDelete();
@@ -844,22 +1003,118 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Enter on bill discount value field → move focus to Save button
 document.getElementById('billDiscountValue').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('confirmBillBtn').focus();
-  }
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('confirmBillBtn').focus(); }
 });
 
+// ─── REFERRER SEARCH (customer creation modal) ────────
+// Uses the existing /api/customers/search endpoint.
+// No new backend endpoints required.
 
-// ============================
-// CUSTOMER CREATION MODAL
-// ============================
+function setupReferrerSearch() {
+  const input    = document.getElementById('referrerSearchInput');
+  const clearBtn = document.getElementById('clearReferrerBtn');
 
+  if (!input) return;   // guard if DOM not ready
+
+  input.addEventListener('input', () => {
+    clearTimeout(referrerSearchDebounce);
+    const q = input.value.trim();
+    if (!q) { hideReferrerSuggestions(); clearSelectedReferrer(false); return; }
+    referrerSearchDebounce = setTimeout(() => fetchReferrerSuggestions(q), 300);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideReferrerSuggestions();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    hideReferrerSuggestions();
+    clearSelectedReferrer(true);
+    input.focus();
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#referrerSearchWrap')) hideReferrerSuggestions();
+  });
+}
+
+async function fetchReferrerSuggestions(q) {
+  try {
+    const res  = await fetch(`/api/customers/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderReferrerSuggestions(data);
+  } catch (e) { console.error('Referrer search error', e); }
+}
+
+function renderReferrerSuggestions(customers) {
+  const list = document.getElementById('referrerSuggestionList');
+  const cont = document.getElementById('referrerSuggestions');
+  list.innerHTML = '';
+
+  if (!customers.length) {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.style.color = 'var(--text-muted)';
+    div.style.pointerEvents = 'none';
+    div.textContent = 'No customers found';
+    list.appendChild(div);
+    cont.style.display = 'block';
+    return;
+  }
+
+  customers.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.innerHTML = `
+      <span class="suggestion-name">${escHtml(c.name)}</span>
+      <span class="suggestion-price" style="color:var(--text-muted);font-size:11px;">
+        ${c.phone || ''} ${c.village ? '· ' + c.village : ''}
+      </span>`;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectReferrer(c);
+    });
+    list.appendChild(div);
+  });
+
+  cont.style.display = 'block';
+}
+
+function selectReferrer(c) {
+  selectedReferrer = c;
+  document.getElementById('referrerSearchInput').value = '';
+  hideReferrerSuggestions();
+
+  // Show confirmation chip
+  const chip = document.getElementById('selectedReferrerChip');
+  document.getElementById('referrerChipName').textContent  = c.name;
+  document.getElementById('referrerChipCode').textContent  = c.referral_code
+    ? `Code: ${c.referral_code}` : '';
+  document.getElementById('referrerChipPhone').textContent = c.phone || '';
+  chip.style.display = 'flex';
+}
+
+function clearSelectedReferrer(resetInput = true) {
+  selectedReferrer = null;
+  document.getElementById('selectedReferrerChip').style.display = 'none';
+  if (resetInput) document.getElementById('referrerSearchInput').value = '';
+}
+
+function hideReferrerSuggestions() {
+  const cont = document.getElementById('referrerSuggestions');
+  if (cont) cont.style.display = 'none';
+}
+
+// ─── CUSTOMER CREATION MODAL ──────────────────────────
 let createdCustomer = null;
 
 function openCustomerModal() {
+  // Reset referrer state each time modal opens
+  clearSelectedReferrer(true);
   document.getElementById("customerModal").style.display = "flex";
 }
 
@@ -868,8 +1123,7 @@ function closeCustomerModal() {
 }
 
 async function createCustomer() {
-
-  const name = document.getElementById("newCustName").value.trim();
+  const name  = document.getElementById("newCustName").value.trim();
   const phone = document.getElementById("newCustPhone").value.trim();
 
   if (!name || !phone) {
@@ -878,22 +1132,21 @@ async function createCustomer() {
   }
 
   const payload = {
-    name: name,
-    phone: phone,
-    village: document.getElementById("newCustVillage").value,
-    address: document.getElementById("newCustAddress").value,
-    referral_code: document.getElementById("newCustReferral").value,
+    name:          name,
+    phone:         phone,
+    village:       document.getElementById("newCustVillage").value.trim(),
+    address:       document.getElementById("newCustAddress").value.trim(),
+    // Send the referrer's referral_code if a referrer was selected, else empty string
+    referral_code: selectedReferrer ? (selectedReferrer.referral_code || '') : '',
     customer_type: document.getElementById("newCustType").value
   };
 
   try {
-
-    const res = await fetch("/api/customers", {
-      method: "POST",
+    const res  = await fetch("/api/customers", {
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body:    JSON.stringify(payload)
     });
-
     const data = await res.json();
 
     if (!res.ok) {
@@ -902,20 +1155,28 @@ async function createCustomer() {
     }
 
     createdCustomer = {
-      id: data.customer_id,
-      name: name,
-      phone: phone,
+      id:           data.customer_id,
+      name:         name,
+      phone:        phone,
       referral_code: data.referral_code
     };
 
     closeCustomerModal();
 
-    // Fill confirmation modal
-    document.getElementById("confCustName").textContent = name;
-    document.getElementById("confCustPhone").textContent = phone;
-    document.getElementById("confReferral").textContent = data.referral_code;
+    document.getElementById("confCustName").textContent    = name;
+    document.getElementById("confCustPhone").textContent   = phone;
+    document.getElementById("confReferral").textContent    = data.referral_code;
+    document.getElementById("confReferredBy").textContent  = selectedReferrer
+      ? selectedReferrer.name : '—';
 
     document.getElementById("customerCreatedModal").style.display = "flex";
+
+    // Clear form fields for next use
+    ['newCustName','newCustPhone','newCustVillage','newCustAddress'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('newCustType').value = 'regular';
+    clearSelectedReferrer(true);
 
   } catch (err) {
     console.error(err);
@@ -928,17 +1189,13 @@ function closeCustomerCreated() {
 }
 
 function useCreatedCustomer() {
-
   if (!createdCustomer) return;
-
   selectCustomer({
-    id: createdCustomer.id,
-    name: createdCustomer.name,
-    phone: createdCustomer.phone,
+    id:      createdCustomer.id,
+    name:    createdCustomer.name,
+    phone:   createdCustomer.phone,
     village: ""
   });
-
   closeCustomerCreated();
-
   showToast("Customer added to bill", "success");
 }
