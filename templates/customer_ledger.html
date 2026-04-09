@@ -13,20 +13,20 @@
 <div class="page">
 
   <header class="site-header">
-  <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
-  </div>
-  <nav class="header-nav">
-    <a href="/billing">+ New Bill</a>
-    <a href="/">Dashboard</a>
-    <a href="/catalog">Catalog</a>
-    <a href="/bills">Bills</a>
-    <a href="/customers">Customers</a>
-    <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
-  </nav>
-</header>
+    <div class="header-left">
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+    <nav class="header-nav">
+      <a href="/billing">+ New Bill</a>
+      <a href="/">Dashboard</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
+    </nav>
+  </header>
 
   <!-- Loading state -->
   <div id="loadingState" class="loading-state">Loading customer…</div>
@@ -46,7 +46,9 @@
         <div class="profile-avatar" id="profileAvatar"></div>
         <div class="profile-info">
           <div class="profile-name" id="profileName"></div>
+          <div class="meta-item" id="email"></div>
           <div class="profile-meta">
+            <span class="meta-item" id="email"></span>
             <span class="meta-item" id="profilePhone"></span>
             <span class="meta-item" id="profileVillage"></span>
             <span class="type-badge" id="profileType"></span>
@@ -56,8 +58,9 @@
         </div>
         <div class="profile-actions">
           <a id="newBillBtn" href="#" class="btn btn-success">+ New Bill</a>
-          <button class="btn btn-ghost" onclick="openEditCustomer()">Edit</button>
-          <button class="btn btn-danger" onclick="new_return()">+ New Return</button>
+          <button class="btn btn-primary" onclick="openEditCustomer()">✏️ Edit</button>
+          <button class="btn btn-warning" onclick="new_return()">+ Return</button>
+          <button class="btn btn-danger-outline" onclick="openDeleteModal()">🗑 Delete</button>
         </div>
       </div>
 
@@ -71,7 +74,7 @@
         <div class="bal-card bal-wallet">
           <div class="bal-label">Wallet / Store Credit</div>
           <div class="bal-value" id="walletBalance">₹0.00</div>
-          <div class="bal-hint">Cashback & refund credits</div>
+          <div class="bal-hint">Cashback &amp; refund credits</div>
         </div>
         <div class="bal-card bal-bills">
           <div class="bal-label">Total Bills</div>
@@ -82,10 +85,10 @@
 
     <!-- Action buttons -->
     <div class="ledger-actions">
-      <button class="btn btn-primary" onclick="openPaymentModal()">Record Payment</button>
-      <button class="btn btn-ghost"   onclick="openSettleModal()">Settle Ledger</button>
-      <button class="btn btn-ghost"   onclick="toggleBillsPanel()">View Bills</button>
-      <button class="btn btn-ghost"   onclick="openPrintModal()">🖨️ Print</button>
+      <button class="btn btn-primary" onclick="openPaymentModal()">💳 Record Payment</button>
+      <button class="btn btn-settle"  onclick="openSettleModal()">✅ Settle Ledger</button>
+      <button class="btn btn-outline" onclick="toggleBillsPanel()">📋 View Bills</button>
+      <button class="btn btn-outline" onclick="openPrintModal()">🖨️ Print</button>
     </div>
 
     <!-- Bills panel (collapsible) -->
@@ -121,7 +124,9 @@
 
   </div><!-- /mainContent -->
 
-  <!-- PAYMENT MODAL -->
+  <!-- ════════════════════════════════════════════════
+       PAYMENT MODAL
+  ═════════════════════════════════════════════════ -->
   <div id="paymentModal" class="modal-overlay" style="display:none;">
     <div class="modal">
       <div class="modal-header">
@@ -153,7 +158,9 @@
     </div>
   </div>
 
-  <!-- SETTLE MODAL -->
+  <!-- ════════════════════════════════════════════════
+       SETTLE MODAL
+  ═════════════════════════════════════════════════ -->
   <div id="settleModal" class="modal-overlay" style="display:none;">
     <div class="modal modal-sm">
       <div class="modal-header">
@@ -171,14 +178,19 @@
     </div>
   </div>
 
-  <!-- EDIT CUSTOMER MODAL -->
+  <!-- ════════════════════════════════════════════════
+       EDIT CUSTOMER MODAL — FULL CRUD
+  ═════════════════════════════════════════════════ -->
   <div id="editCustomerModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
+    <div class="modal modal-lg">
       <div class="modal-header">
         <h3>Edit Customer</h3>
         <button class="modal-close" onclick="closeEditCustomer()">✕</button>
       </div>
       <div class="modal-body">
+
+        <!-- Section: Basic Info -->
+        <div class="modal-section-title">Basic Information</div>
         <div class="field-row">
           <div class="field-group">
             <label>Name *</label>
@@ -189,13 +201,14 @@
             <input type="tel" id="editPhone" placeholder="Mobile number">
           </div>
         </div>
+
         <div class="field-row">
           <div class="field-group">
-            <label>Village</label>
-            <input type="text" id="editVillage" placeholder="Village / area">
+            <label>Village / Area</label>
+            <input type="text" id="editVillage" placeholder="Village or area">
           </div>
           <div class="field-group">
-            <label>Type</label>
+            <label>Customer Type</label>
             <select id="editType">
               <option value="regular">Regular</option>
               <option value="premium">Premium</option>
@@ -203,10 +216,32 @@
             </select>
           </div>
         </div>
+
         <div class="field-group">
           <label>Address</label>
           <textarea id="editAddress" rows="2" placeholder="Full address"></textarea>
         </div>
+
+        <!-- Section: Referral -->
+        <div class="modal-section-title" style="margin-top:14px;">Referral</div>
+        <div class="field-group">
+          <label>Referral Code</label>
+          <input type="text" id="editReferralCode" placeholder="e.g. RAM9876MUM">
+        </div>
+
+        <!-- Section: Password Change -->
+        <div class="modal-section-title" style="margin-top:14px;">Change Password <span class="section-hint">(leave blank to keep current)</span></div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>New Password</label>
+            <input type="password" id="editPassword" placeholder="Min. 6 characters" autocomplete="new-password">
+          </div>
+          <div class="field-group">
+            <label>Confirm Password</label>
+            <input type="password" id="editPasswordConfirm" placeholder="Repeat new password" autocomplete="new-password">
+          </div>
+        </div>
+
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeEditCustomer()">Cancel</button>
@@ -215,7 +250,32 @@
     </div>
   </div>
 
-  <!-- PRINT MODE MODAL -->
+  <!-- ════════════════════════════════════════════════
+       DELETE CUSTOMER MODAL
+  ═════════════════════════════════════════════════ -->
+  <div id="deleteCustomerModal" class="modal-overlay" style="display:none;">
+    <div class="modal modal-sm">
+      <div class="modal-header modal-header-danger">
+        <h3>Delete Customer</h3>
+        <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>This will <strong>permanently delete</strong> <strong id="deleteCustomerName"></strong> and all associated data. This cannot be undone.</p>
+        <div class="field-group" style="margin-top:14px;">
+          <label>Type the customer's name to confirm</label>
+          <input type="text" id="deleteConfirmInput" placeholder="Customer name">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn btn-danger" onclick="submitDeleteCustomer()">Delete Permanently</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       PRINT MODE MODAL
+  ═════════════════════════════════════════════════ -->
   <div id="printModal" class="modal-overlay" style="display:none;">
     <div class="modal modal-sm">
       <div class="modal-header">
@@ -254,7 +314,6 @@
     </div>
 
     <div class="lp-customer" id="lpCustomer"></div>
-
     <div class="lp-kpis" id="lpKpis"></div>
 
     <div class="lp-section-title">Transaction History</div>

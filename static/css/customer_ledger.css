@@ -2,7 +2,7 @@
 
 :root {
   --warning-light: #fffbeb;
-  --warning: #d97706;
+  --warning:       #d97706;
 }
 
 /* ---- LOADING STATE ---- */
@@ -168,7 +168,27 @@
 
 .field-row .field-group { flex: 1; }
 
-/* ---- MODAL (reuse billing modal styles) ---- */
+/* ---- MODAL SECTION TITLES ---- */
+.modal-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.section-hint {
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+/* ---- MODAL ---- */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(10,12,20,0.55);
@@ -192,7 +212,8 @@
   overflow: hidden;
 }
 
-.modal-sm { max-width: 360px; }
+.modal-sm { max-width: 380px; }
+.modal-lg { max-width: 560px; }
 
 @keyframes slideUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
 
@@ -204,6 +225,13 @@
 }
 
 .modal-header h3 { font-size: 15px; font-weight: 700; }
+
+/* Danger header variant for destructive modals */
+.modal-header-danger {
+  background: #fff1f1;
+  border-bottom-color: #fecaca;
+}
+.modal-header-danger h3 { color: #b91c1c; }
 
 .modal-close {
   background: none; border: none; color: var(--text-muted);
@@ -230,32 +258,118 @@
   flex-shrink: 0;
 }
 
-/* ---- BUTTONS (local) ---- */
+/* =====================================================
+   BUTTONS — high-contrast idle + hover states
+   ===================================================== */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   font-family: var(--font); font-size: 13px; font-weight: 600;
   padding: 9px 18px; border-radius: var(--radius-xs);
-  border: none; cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s,
+              box-shadow 0.15s, transform 0.1s;
   text-decoration: none; white-space: nowrap;
+  line-height: 1;
 }
 
-.btn:active { transform: scale(0.98); }
+.btn:active { transform: scale(0.97); }
 
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 12px rgba(59,91,219,0.3); }
+/* Primary — indigo */
+.btn-primary {
+  background: #3b5bdb;
+  color: #ffffff;
+  border-color: #3b5bdb;
+}
+.btn-primary:hover {
+  background: #2f4bc4;
+  border-color: #2f4bc4;
+  box-shadow: 0 4px 14px rgba(59,91,219,0.35);
+}
 
-.btn-success { background: var(--success); color: #fff; }
-.btn-success:hover { background: var(--success-hover); box-shadow: 0 4px 12px rgba(15,158,110,0.3); }
+/* Success — green */
+.btn-success {
+  background: #0f9e6e;
+  color: #ffffff;
+  border-color: #0f9e6e;
+}
+.btn-success:hover {
+  background: #0b8a5e;
+  border-color: #0b8a5e;
+  box-shadow: 0 4px 14px rgba(15,158,110,0.35);
+}
 
-.btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover { background: var(--danger-hover); }
+/* Danger — red (filled) */
+.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+.btn-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  box-shadow: 0 4px 14px rgba(220,38,38,0.35);
+}
 
+/* Danger outline — for secondary destructive actions */
+.btn-danger-outline {
+  background: transparent;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+.btn-danger-outline:hover {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(220,38,38,0.25);
+}
+
+/* Warning — amber */
+.btn-warning {
+  background: #d97706;
+  color: #ffffff;
+  border-color: #d97706;
+}
+.btn-warning:hover {
+  background: #b45309;
+  border-color: #b45309;
+  box-shadow: 0 4px 14px rgba(217,119,6,0.35);
+}
+
+/* Settle — teal/emerald */
+.btn-settle {
+  background: #0891b2;
+  color: #ffffff;
+  border-color: #0891b2;
+}
+.btn-settle:hover {
+  background: #0e7490;
+  border-color: #0e7490;
+  box-shadow: 0 4px 14px rgba(8,145,178,0.35);
+}
+
+/* Outline (neutral) — for non-destructive secondary actions */
+.btn-outline {
+  background: var(--surface);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+.btn-outline:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Ghost — minimal, for cancel / tertiary */
 .btn-ghost {
-  background: var(--surface-2); color: var(--text-secondary);
-  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border-color: var(--border);
 }
-.btn-ghost:hover { background: var(--border); color: var(--text-primary); }
+.btn-ghost:hover {
+  background: var(--border);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
 
 /* ---- TOAST ---- */
 .toast {
@@ -270,8 +384,8 @@
 
 @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(12px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
 
-.toast.success { background: var(--success); }
-.toast.error   { background: var(--danger); }
+.toast.success { background: #0f9e6e; }
+.toast.error   { background: #dc2626; }
 
 /* ---- PAGE HEADER (override max-width for this page) ---- */
 .page-header, .table-card, .footer-back {
@@ -281,13 +395,14 @@
 /* ---- RESPONSIVE ---- */
 @media (max-width: 640px) {
   .profile-card { flex-wrap: wrap; }
-  .profile-actions { flex-direction: row; width: 100%; }
+  .profile-actions { flex-direction: row; flex-wrap: wrap; width: 100%; }
   .balance-kpis { grid-template-columns: 1fr 1fr; }
   .bal-bills { grid-column: 1 / -1; }
   .ledger-actions { flex-direction: column; }
   .field-row { flex-direction: column; }
   .modal-footer { flex-direction: column-reverse; }
   .modal-footer .btn { width: 100%; justify-content: center; }
+  .modal-lg { max-width: 100%; }
 }
 
 /* ======================================================
@@ -333,7 +448,6 @@
 
 /* ── SHARED PRINT RULES ── */
 @media print {
-  /* Hide all screen UI */
   .site-header,
   .loading-state,
   .page-header,
@@ -345,7 +459,6 @@
   .toast,
   .action-bar        { display: none !important; }
 
-  /* Show only the print area */
   #ledgerPrintArea {
     display: block !important;
     background: #fff;
@@ -355,7 +468,6 @@
 
   body, .page { background: #fff !important; padding: 0 !important; margin: 0 !important; }
 
-  /* ── A4 LAYOUT ── */
   body.print-a4 #ledgerPrintArea {
     padding: 20mm 18mm;
     font-size: 10pt;
@@ -374,7 +486,6 @@
   body.print-a4 .lp-table th   { font-size: 8pt; }
   body.print-a4 .lp-footer     { margin-top: 12pt; font-size: 8pt; color: #888; }
 
-  /* ── THERMAL / RECEIPT LAYOUT (80mm roll) ── */
   body.print-thermal #ledgerPrintArea {
     width: 72mm;
     padding: 4mm;
@@ -395,13 +506,11 @@
   body.print-thermal .lp-table th   { font-size: 6.5pt; }
   body.print-thermal .lp-footer     { margin-top: 4mm; font-size: 7pt; color: #888; text-align: center; }
 
-  /* Thermal: hide Notes and Ref columns to fit narrow width */
   body.print-thermal .lp-table th:nth-child(3),
   body.print-thermal .lp-table td:nth-child(3),
   body.print-thermal .lp-table th:nth-child(5),
   body.print-thermal .lp-table td:nth-child(5) { display: none; }
 
-  /* ── SHARED TABLE STYLES ── */
   .lp-table {
     width: 100%;
     border-collapse: collapse;

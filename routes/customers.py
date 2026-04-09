@@ -35,9 +35,7 @@ def create_customer():
     if referral_code:
         referrer = Customer.query.filter_by(referral_code=referral_code).first()
 
-    # Auto-create a User so the customer can (optionally) log in later.
-    # Email derived from phone; password is a random UUID (not used for login).
-    fake_email = f"{phone}@ksa.local"
+    fake_email    = f"{phone}@ksa.local"
     fake_password = uuid.uuid4().hex
 
     user = User(
@@ -48,6 +46,13 @@ def create_customer():
 
     db.session.add(user)
     db.session.flush()
+
+    # FIX: guard against village/name being None before slicing
+    name_part    = (name    or '')[:3]
+    phone_part   = (phone   or '')[-3:]
+    village_part = (village or '')[:3]
+    auto_referral_code = name_part + phone_part + village_part
+
     customer = Customer(
         user_id=user.id,
         name=name,
@@ -56,7 +61,7 @@ def create_customer():
         village=village,
         referred_by_id=referrer.id if referrer else None,
         customer_type=customer_type,
-        referral_code=name[:3]+phone[-3:]+village[:3]  # unique referral code
+        referral_code=auto_referral_code
     )
 
     db.session.add(customer)
@@ -104,18 +109,14 @@ def list_customers():
 def search_customers():
 
     q = request.args.get("q", "").strip()
- 
+
     if not q:
         return jsonify([])
- 
-    # Split into tokens — each token must match at least one field.
-    # "kumar ram" → ['kumar', 'ram'] → both tokens must match somewhere.
-    # This means "ra ku" matches "Ram Kumar" because:
-    #   'ra' hits name (Ram), 'ku' hits name (Kumar).
+
     tokens = q.lower().split()
- 
+
     results = Customer.query
- 
+
     for token in tokens:
         pattern = f"%{token}%"
         results = results.filter(
@@ -126,9 +127,9 @@ def search_customers():
                 Customer.customer_type.ilike(pattern)
             )
         )
- 
+
     customers = results.order_by(Customer.name).limit(30).all()
- 
+
     return jsonify([
         {
             "id": c.id,
@@ -211,6 +212,7 @@ def get_customer(customer_id):
 
     return jsonify({
         "id": customer.id,
+        "email": customer.user.email if customer.user else None,
         "name": customer.name,
         "phone": customer.phone,
         "address": customer.address,
@@ -290,9 +292,7 @@ def recent_customers():
 @customers_bp.route("/api/customers/top", methods=["GET"])
 @auth_required()
 def top_customers():
-    """Returns first 200 customers ."""
-    from sqlalchemy import func
-
+    """Returns top 200 customers by total spend."""
     rows = (
         db.session.query(
             Customer,
@@ -305,8 +305,7 @@ def top_customers():
         .limit(200)
         .all()
     )
-    
-    print("Top customers query returned", len(rows), "rows")
+
     return jsonify([
         {
             "id": c.id,
@@ -323,7 +322,7 @@ def top_customers():
 
 
 # --------------------------------
-# UPDATE CUSTOMER
+# UPDATE CUSTOMER (full replace)
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>", methods=["PUT"])
 @auth_required()
@@ -332,18 +331,38 @@ def update_customer(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     data = request.get_json(force=True)
 
-    customer.name          = data.get("name", customer.name)
-    customer.phone         = data.get("phone", customer.phone)
-    customer.address       = data.get("address", customer.address)
-    customer.village       = data.get("village", customer.village)
+    customer.name          = data.get("name",          customer.name)
+    customer.phone         = data.get("phone",         customer.phone)
+    customer.address       = data.get("address",       customer.address)
+    customer.village       = data.get("village",       customer.village)
     customer.customer_type = data.get("customer_type", customer.customer_type)
+
+    # Allow referral_code to be updated directly
+    if "referral_code" in data and data["referral_code"]:
+        # Check uniqueness (exclude self)
+        conflict = Customer.query.filter(
+            Customer.referral_code == data["referral_code"],
+            Customer.id != customer_id
+        ).first()
+        if conflict:
+            return jsonify({"message": "Referral code already in use by another customer"}), 400
+        customer.referral_code = data["referral_code"]
+
+    # Optional password change — updates the linked User record
+    password = data.get("password", "").strip()
+    if password:
+        if len(password) < 6:
+            return jsonify({"message": "Password must be at least 6 characters"}), 400
+        user = User.query.get(customer.user_id)
+        if user:
+            user.password = hash_password(password)
 
     db.session.commit()
     return jsonify({"message": "Customer updated successfully"})
 
 
 # --------------------------------
-# PATCH CUSTOMER
+# PATCH CUSTOMER (partial update)
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>", methods=["PATCH"])
 @auth_required()
@@ -352,7 +371,7 @@ def patch_customer(customer_id):
     customer = Customer.query.get_or_404(customer_id)
     data = request.get_json(force=True)
 
-    for field in ["name", "phone", "address", "village", "customer_type"]:
+    for field in ["name", "phone", "address", "village", "customer_type", "referral_code"]:
         if field in data:
             setattr(customer, field, data[field])
 

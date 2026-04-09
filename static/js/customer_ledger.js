@@ -20,8 +20,8 @@ async function loadLedger() {
       fetch(`/api/customers/${CUSTOMER_ID}/bills`)
     ]);
 
-    const ledger   = await ledgerRes.json();
-    customerData   = await customerRes.json();
+    const ledger    = await ledgerRes.json();
+    customerData    = await customerRes.json();
     const billsData = await billsRes.json();
 
     ledgerSnapshot = ledger;   // save for print
@@ -50,6 +50,7 @@ function renderProfile(c) {
   document.getElementById('profileName').textContent   = c.name;
   document.getElementById('profilePhone').textContent  = c.phone || 'No phone';
   document.getElementById('profileReferral').textContent = c.referral_code || 'No referral code';
+  document.getElementById('email').textContent = c.email || 'No email';
 
   if (c.village) document.getElementById('profileVillage').textContent = c.village;
   else document.getElementById('profileVillage').style.display = 'none';
@@ -67,12 +68,15 @@ function renderProfile(c) {
 
 // ─── RENDER KPIs ──────────────────────────────────────
 function renderKPIs(ledger, bills) {
-  const balance = ledger.wallet_balance || 0;
-  const balEl   = document.getElementById('ledgerBalance');
-  balEl.textContent = `₹${fmt((balance*-1))}`;
-  balEl.className   = `bal-value ${balance > 0 ? 'amt-debit' : balance < 0 ? 'amt-credit' : ''}`;
+  // FIX: use ledger_balance for outstanding, wallet_balance for wallet
+  const ledgerBal = ledger.ledger_balance || 0;
+  const walletBal = ledger.wallet_balance || 0;
 
-  document.getElementById('walletBalance').textContent = `₹${fmt(ledger.wallet_balance || 0)}`;
+  const balEl = document.getElementById('ledgerBalance');
+  balEl.textContent = `₹${fmt(Math.abs(ledgerBal))}`;
+  balEl.className   = `bal-value ${ledgerBal > 0 ? 'amt-debit' : ledgerBal < 0 ? 'amt-credit' : ''}`;
+
+  document.getElementById('walletBalance').textContent = `₹${fmt(walletBal)}`;
   document.getElementById('totalBills').textContent    = bills.length;
 }
 
@@ -171,11 +175,10 @@ async function submitPayment() {
 // ─── SETTLE MODAL ─────────────────────────────────────
 function openSettleModal() {
   if (!customerData) return;
-  const balance = parseFloat(
-    document.getElementById('ledgerBalance').textContent.replace('₹','')
-  );
+  // FIX: use raw snapshot data instead of parsing DOM text
+  const balance = ledgerSnapshot ? (ledgerSnapshot.ledger_balance || 0) : 0;
   document.getElementById('settleCustomerName').textContent = customerData.name;
-  document.getElementById('settleBalance').textContent      = `₹${fmt(balance)}`;
+  document.getElementById('settleBalance').textContent      = `₹${fmt(Math.abs(balance))}`;
   document.getElementById('settleModal').style.display = 'flex';
 }
 
@@ -196,7 +199,7 @@ async function submitSettle() {
   }
 }
 
-// ─── EDIT CUSTOMER MODAL ──────────────────────────────
+// ─── EDIT CUSTOMER MODAL (FULL CRUD) ──────────────────
 function openEditCustomer() {
   if (!customerData) return;
   document.getElementById('editName').value    = customerData.name    || '';
@@ -204,6 +207,10 @@ function openEditCustomer() {
   document.getElementById('editVillage').value = customerData.village || '';
   document.getElementById('editAddress').value = customerData.address || '';
   document.getElementById('editType').value    = customerData.customer_type || 'regular';
+  document.getElementById('editReferralCode').value = customerData.referral_code || '';
+  // Clear password fields on open
+  document.getElementById('editPassword').value        = '';
+  document.getElementById('editPasswordConfirm').value = '';
   document.getElementById('editCustomerModal').style.display = 'flex';
   document.getElementById('editName').focus();
 }
@@ -213,27 +220,75 @@ function closeEditCustomer() {
 }
 
 async function submitEditCustomer() {
-  const name    = document.getElementById('editName').value.trim();
-  const phone   = document.getElementById('editPhone').value.trim();
-  const village = document.getElementById('editVillage').value.trim();
-  const address = document.getElementById('editAddress').value.trim();
-  const type    = document.getElementById('editType').value;
+  const name     = document.getElementById('editName').value.trim();
+  const phone    = document.getElementById('editPhone').value.trim();
+  const village  = document.getElementById('editVillage').value.trim();
+  const address  = document.getElementById('editAddress').value.trim();
+  const type     = document.getElementById('editType').value;
+  const refCode  = document.getElementById('editReferralCode').value.trim();
+  const password = document.getElementById('editPassword').value;
+  const confirm  = document.getElementById('editPasswordConfirm').value;
 
   if (!name) { showToast('Name is required', 'error'); return; }
+  if (password && password !== confirm) {
+    showToast('Passwords do not match', 'error');
+    return;
+  }
+  if (password && password.length < 6) {
+    showToast('Password must be at least 6 characters', 'error');
+    return;
+  }
+
+  const payload = { name, phone, village, address, customer_type: type, referral_code: refCode };
+  if (password) payload.password = password;
 
   try {
     const res = await fetch(`/api/customers/${CUSTOMER_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, village, address, customer_type: type })
+      body: JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.message || 'Update failed', 'error');
+      return;
+    }
     closeEditCustomer();
     showToast('Customer updated', 'success');
     loadLedger();
   } catch {
     showToast('Update failed', 'error');
+  }
+}
+
+// ─── DELETE CUSTOMER ──────────────────────────────────
+function openDeleteModal() {
+  if (!customerData) return;
+  document.getElementById('deleteCustomerName').textContent = customerData.name;
+  document.getElementById('deleteConfirmInput').value = '';
+  document.getElementById('deleteCustomerModal').style.display = 'flex';
+  document.getElementById('deleteConfirmInput').focus();
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteCustomerModal').style.display = 'none';
+}
+
+async function submitDeleteCustomer() {
+  const typed = document.getElementById('deleteConfirmInput').value.trim();
+  if (typed !== customerData.name) {
+    showToast('Name does not match', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/customers/${CUSTOMER_ID}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    showToast('Customer deleted', 'success');
+    setTimeout(() => { location.href = '/customers'; }, 1000);
+  } catch {
+    showToast('Delete failed', 'error');
   }
 }
 
@@ -252,16 +307,17 @@ function closePrintModal() {
 function printLedger(mode) {
   closePrintModal();
   currentPrintMode = mode;
-
-  // Populate the hidden print area from live data
   buildPrintArea();
-
-  // Add mode class to body so CSS @media print picks the right layout
   document.body.classList.remove('print-a4', 'print-thermal');
   document.body.classList.add(`print-${mode}`);
-
   window.print();
 }
+
+// FIX: reset print area and body class after printing
+window.addEventListener('afterprint', () => {
+  document.getElementById('ledgerPrintArea').style.display = 'none';
+  document.body.classList.remove('print-a4', 'print-thermal');
+});
 
 function buildPrintArea() {
   if (!customerData || !ledgerSnapshot) return;
@@ -275,7 +331,6 @@ function buildPrintArea() {
   document.getElementById('lpPrintDate').textContent  = dateStr;
   document.getElementById('lpFooterDate').textContent = dateStr;
 
-  // Customer block
   const c = customerData;
   document.getElementById('lpCustomer').innerHTML = `
     <div class="lp-cust-name">${esc(c.name)}</div>
@@ -284,9 +339,8 @@ function buildPrintArea() {
     ${c.address  ? `<div class="lp-cust-meta">${esc(c.address)}</div>` : ''}
     ${c.referral_code ? `<div class="lp-cust-meta">Referral: ${esc(c.referral_code)}</div>` : ''}
   `;
-  
 
-  // KPI block
+  // FIX: use ledger_balance (not wallet_balance) for outstanding
   const balance = ledgerSnapshot.ledger_balance || 0;
   const wallet  = ledgerSnapshot.wallet_balance || 0;
   document.getElementById('lpKpis').innerHTML = `
@@ -301,7 +355,6 @@ function buildPrintArea() {
       <strong>₹${fmt(wallet)}</strong>
     </div>`;
 
-  // Transactions table
   const tbody = document.getElementById('lpTxnBody');
   tbody.innerHTML = '';
 
@@ -325,7 +378,6 @@ function buildPrintArea() {
     });
   }
 
-  // Show the print area (print CSS will make everything else invisible)
   document.getElementById('ledgerPrintArea').style.display = 'block';
 }
 
@@ -344,6 +396,7 @@ function setupModalKeyboard() {
       closeSettleModal();
       closeEditCustomer();
       closePrintModal();
+      closeDeleteModal();
     }
   });
 
@@ -351,12 +404,12 @@ function setupModalKeyboard() {
     if (e.key === 'Enter') submitPayment();
   });
 
-  // Close modals on overlay click
-  ['paymentModal','settleModal','editCustomerModal','printModal'].forEach(id => {
+  ['paymentModal','settleModal','editCustomerModal','printModal','deleteCustomerModal'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) {
       if (e.target === this) {
         closePaymentModal(); closeSettleModal();
         closeEditCustomer(); closePrintModal();
+        closeDeleteModal();
       }
     });
   });
