@@ -68,6 +68,10 @@ body {
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 }
+.logo-full {
+  height: 36px;
+  width: auto;
+}
 
 .header-left {
   display: flex;
@@ -434,6 +438,7 @@ body {
     flex-wrap: wrap;
     gap: 8px;
   }
+
 
   .header-nav {
     flex-wrap: wrap;
