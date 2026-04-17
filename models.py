@@ -128,6 +128,7 @@ class Item(db.Model):
     max_price = db.Column(db.Float)               # MRP / ceiling
     default_price = db.Column(db.Float, nullable=False)   # cost / base price
     final_price = db.Column(db.Float)             # selling price (overrides default)
+    cost_price = db.Column(db.Numeric(10, 2), nullable=True, default=0.00)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
