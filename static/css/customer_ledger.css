@@ -389,11 +389,11 @@
 
 /* ---- PAGE HEADER (override max-width for this page) ---- */
 .page-header, .table-card, .footer-back {
-  max-width: 960px;
+  max-width: 90%;
 }
 
 /* ---- RESPONSIVE ---- */
-@media (max-width: 640px) {
+@media (max-width: 90%) {
   .profile-card { flex-wrap: wrap; }
   .profile-actions { flex-direction: row; flex-wrap: wrap; width: 100%; }
   .balance-kpis { grid-template-columns: 1fr 1fr; }

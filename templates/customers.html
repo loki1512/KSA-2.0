@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Customers — KSA</title>
+  <title>Customers - KSA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/bills.css">
   <link rel="stylesheet" href="/static/css/customers.css">
@@ -13,65 +13,128 @@
 <div class="page">
 
   <header class="site-header">
-  <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
-  </div>
-  <nav class="header-nav">
-    <a href="/billing">+ New Bill</a>
-    <a href="/">Dashboard</a>
-    <a href="/catalog">Catalog</a>
-    <a href="/bills">Bills</a>
-    <a href="/customers">Customers</a>
-    <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
-  </nav>
-</header>
+    <div class="header-left">
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+    <nav class="header-nav">
+      <a href="/billing">+ New Bill</a>
+      <a href="/">Dashboard</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/logout" style="color:#dc2626;">Logout</a>
+    </nav>
+  </header>
 
-  <div class="page-header">
-    <a class="back-link" href="/">← Dashboard</a>
-    <h2 class="page-title">Customers</h2>
-  </div>
-
-  <div class="filters-card">
-    <input type="text" id="customerSearch"
-      placeholder="Search name, phone, village, type… (searches all customers)">
-    <div class="date-filters">
-      <div>
-        <label>Filter</label>
-        <select id="typeFilter">
-          <option value="">All Types</option>
-          <option value="regular">Regular</option>
-          <option value="premium">Premium</option>
-          <option value="electrician">Electrician</option>
-        </select>
-      </div>
-      <div class="export-wrap">
-        <label>&nbsp;</label>
-        <button class="btn-export" onclick="exportCustomers()">⬇ Export Excel</button>
-      </div>
+  <div class="page-header customer-page-header">
+    <div>
+      <a class="back-link" href="/">&larr; Dashboard</a>
+      <h2 class="page-title">Customers</h2>
+      <p class="table-hint">Click a column name to sort. Filters live right under the related headers.</p>
+    </div>
+    <div class="page-actions">
+      <button class="btn-export" onclick="exportCustomers()">Export Excel</button>
+      <button class="btn-reset" type="button" onclick="resetToTop()">Reset</button>
     </div>
   </div>
 
-  <!-- Mode indicator -->
   <div class="mode-banner" id="modeBanner" style="display:none;">
     <span id="modeText"></span>
-    <button class="link-btn" onclick="resetToTop()">← Back to Top 200</button>
+    <button class="link-btn" onclick="resetToTop()">&larr; Back to Top 200</button>
   </div>
 
   <div class="table-card">
+    <div class="table-toolbar">
+      <input
+        type="text"
+        id="customerSearch"
+        class="customer-search-input"
+        placeholder="Search name, phone, village, type... (searches all customers)"
+        aria-label="Search customers"
+      >
+    </div>
+
     <table class="bills-table">
       <thead>
-        <tr>
+        <tr class="heading-row">
           <th>#</th>
-          <th>Name</th>
-          <th>Phone</th>
-          <th>Village</th>
-          <th>Type</th>
-          <th class="num">Total Spent</th>
-          <th class="num">Bills</th>
-          <th class="num">Wallet</th>
+          <th>
+            <button type="button" class="sort-button" data-sort-key="name">
+              <span>Name</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="sort-button" data-sort-key="phone">
+              <span>Phone</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="sort-button" data-sort-key="village">
+              <span>Village</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="sort-button" data-sort-key="customer_type">
+              <span>Type</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th class="num">
+            <button type="button" class="sort-button sort-button-num" data-sort-key="total_spent">
+              <span>Total Spent</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th class="num">
+            <button type="button" class="sort-button sort-button-num" data-sort-key="bill_count">
+              <span>Bills</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th class="num">
+            <button type="button" class="sort-button sort-button-num" data-sort-key="outstanding_balance">
+              <span>Outstanding</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
+          <th class="num">
+            <button type="button" class="sort-button sort-button-num" data-sort-key="wallet_balance">
+              <span>Wallet</span>
+              <span class="sort-indicator" aria-hidden="true"></span>
+            </button>
+          </th>
           <th>Actions</th>
+        </tr>
+        <tr class="header-filters">
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th>
+            <select id="typeFilter" class="header-filter-control" aria-label="Filter customer type">
+              <option value="">All Types</option>
+              <option value="regular">Regular</option>
+              <option value="premium">Premium</option>
+              <option value="electrician">Electrician</option>
+            </select>
+          </th>
+          <th></th>
+          <th></th>
+          <th>
+            <select id="outstandingFilter" class="header-filter-control" aria-label="Filter outstanding balance">
+              <option value="">All Balances</option>
+              <option value="due">Due Only</option>
+              <option value="settled">Settled</option>
+              <option value="credit">Advance/Credit</option>
+            </select>
+          </th>
+          <th></th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="customersBody"></tbody>

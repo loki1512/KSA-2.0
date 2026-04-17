@@ -26,62 +26,81 @@
 
 <div class="page-wrap">
 
-  <a href="/">← Back to Dashboard</a>
+  <a href="/">&larr; Back to Dashboard</a>
 
-  <!-- ADD / EDIT FORM -->
   <div class="card form-card">
     <div class="card-header">
-      <h2 id="formTitle">Add Item</h2>
-      <button class="btn btn-ghost btn-sm" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">Cancel Edit</button>
+      <div>
+        <h2>Find, Add or Edit Item</h2>
+        <p class="section-subtitle">Search first. If the item exists, view or edit it. If it does not, add it from the same workspace.</p>
+      </div>
     </div>
-    <div class="card-body">
-      <input type="hidden" id="editingItemId">
 
-      <div class="form-field" style="min-width:220px; flex:2;">
-        <label>Item Name <span class="required">*</span></label>
-        <input id="catItemName" type="text" placeholder="e.g. Rice 25kg" autocomplete="off">
-      </div>
+    <div class="card-body workspace-body">
+      <section class="workspace-panel search-panel">
+        <label class="panel-label" for="catalogSearch">Search Existing Item or Type a New One</label>
+        <div class="search-wrap smart-search-wrap">
+          <input
+            id="catalogSearch"
+            type="search"
+            placeholder="Search by item name or category, or type a new item name"
+            autocomplete="off"
+          >
+        </div>
+        <div id="catalogSmartState" class="catalog-smart-state"></div>
+      </section>
 
-      <div class="form-field">
-        <label>Category</label>
-        <!-- <input type="text" id="catItemCategory" placeholder="e.g. Groceries, Electronics…" autocomplete="off"> -->
-        <select id="catItemCategory">
-          <option value="Electrical">Electrical</option>
-          <option value="Plumbing">Plumbing</option>
-          <option value="Agriculture">Agriculture</option>
-          <option value="Miscellaneous">Miscellaneous</option>
-        </select>
-      </div>
+      <section class="workspace-panel editor-panel" id="catalogEditor">
+        <div class="editor-header">
+          <h3 id="formTitle">Add Item</h3>
+          <button class="btn btn-ghost btn-sm" id="cancelEditBtn" style="display:none;" onclick="cancelEdit()">Cancel Edit</button>
+        </div>
 
-      <div class="form-field">
-        <label>Default Price (₹) <span class="required">*</span></label>
-        <input id="catItemDefaultPrice" type="number" min="0" step="0.01" placeholder="Cost / base price">
-      </div>
+        <input type="hidden" id="editingItemId">
 
-      <div class="form-field">
-        <label>Max Price / MRP (₹)</label>
-        <input id="catItemMaxPrice" type="number" min="0" step="0.01" placeholder="Ceiling price">
-      </div>
+        <div class="editor-grid">
+          <div class="form-field form-field-wide">
+            <label>Item Name <span class="required">*</span></label>
+            <input id="catItemName" type="text" placeholder="e.g. Rice 25kg" autocomplete="off">
+          </div>
 
-      <div class="form-field">
-        <label>Final / Selling Price (₹)</label>
-        <input id="catItemFinalPrice" type="number" min="0" step="0.01" placeholder="least price offered">
-      </div>
+          <div class="form-field">
+            <label>Category</label>
+            <select id="catItemCategory">
+              <option value="Electrical">Electrical</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Agriculture">Agriculture</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+          </div>
 
-      <button id="saveCatItemBtn" onclick="saveCatalogItem()">Save Item</button>
+          <div class="form-field">
+            <label>Default Price (&#8377;) <span class="required">*</span></label>
+            <input id="catItemDefaultPrice" type="number" min="0" step="0.01" placeholder="Cost / base price">
+          </div>
+
+          <div class="form-field">
+            <label>Max Price / MRP (&#8377;)</label>
+            <input id="catItemMaxPrice" type="number" min="0" step="0.01" placeholder="Ceiling price">
+          </div>
+
+          <div class="form-field">
+            <label>Final / Selling Price (&#8377;)</label>
+            <input id="catItemFinalPrice" type="number" min="0" step="0.01" placeholder="Least price offered">
+          </div>
+        </div>
+
+        <div class="editor-actions">
+          <button id="saveCatItemBtn" onclick="saveCatalogItem()">Save Item</button>
+        </div>
+      </section>
     </div>
   </div>
 
-  <!-- SEARCH + ITEM LIST -->
   <div class="card">
     <div class="card-header">
       <h2>Catalogue Items</h2>
-      <span class="item-count" id="catItemCount">—</span>
-    </div>
-    <div class="card-body" style="padding-bottom:0;">
-      <div class="search-wrap">
-        <input id="catalogSearch" type="search" placeholder="Search items by name or category…">
-      </div>
+      <span class="item-count" id="catItemCount">-</span>
     </div>
     <div class="table-wrapper">
       <table id="catalogTable">
@@ -89,9 +108,9 @@
           <tr>
             <th>Name</th>
             <th>Category</th>
-            <th class="num">Default ₹</th>
-            <th class="num">Max ₹</th>
-            <th class="num">Final ₹</th>
+            <th class="num">Default &#8377;</th>
+            <th class="num">Max &#8377;</th>
+            <th class="num">Final &#8377;</th>
             <th class="num">Updated</th>
             <th class="actions-col">Actions</th>
           </tr>
@@ -101,7 +120,6 @@
     </div>
   </div>
 
-  <!-- EXCEL IMPORT -->
   <div class="card import-card">
     <div class="card-header">
       <h2>Import from Excel</h2>
@@ -116,7 +134,7 @@
           <span class="chip">max_price</span>
           <span class="chip">final_price</span>
         </div>
-        <p class="hint-note">Columns marked <strong>*</strong> are required. Existing items (matched by name) will be updated. Optional columns may be omitted.</p>
+        <p class="hint-note">Columns marked <strong>*</strong> are required. Existing items matched by name will be updated. Optional columns may be omitted.</p>
       </div>
       <div class="import-row">
         <input type="file" id="importFile" accept=".xlsx,.xls,.csv">
