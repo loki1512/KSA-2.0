@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify
+from flask_security import auth_required
 from extensions import db
 from models import Transaction, Customer, Wallet, Bill, Return, Payment
 
@@ -158,3 +159,45 @@ def ledger_status(customer_id):
         "customer_name": customer.name,
         "balance": balance
     })
+
+
+# --------------------------------
+# DELETE CUSTOMER VIA LEDGER
+# --------------------------------
+@ledger_bp.route("/api/ledgers/<int:customer_id>/customer", methods=["DELETE"])
+@auth_required()
+def delete_customer_from_ledger(customer_id):
+
+    customer = Customer.query.get_or_404(customer_id)
+    user = customer.user
+
+    # Clear self-referential links first so the customer row can be removed safely.
+    for referred_customer in Customer.query.filter_by(referred_by_id=customer_id).all():
+        referred_customer.referred_by_id = None
+
+    for txn in Transaction.query.filter_by(customer_id=customer_id).all():
+        db.session.delete(txn)
+
+    for bill in Bill.query.filter_by(customer_id=customer_id).all():
+        db.session.delete(bill)
+
+    for ret in Return.query.filter_by(customer_id=customer_id).all():
+        db.session.delete(ret)
+
+    for payment in Payment.query.filter_by(customer_id=customer_id).all():
+        db.session.delete(payment)
+
+    wallet = Wallet.query.filter_by(customer_id=customer_id).first()
+    if wallet:
+        db.session.delete(wallet)
+
+    db.session.delete(customer)
+
+    if user:
+        db.session.delete(user)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Customer deleted successfully"
+    }), 200

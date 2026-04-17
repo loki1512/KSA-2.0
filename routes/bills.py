@@ -22,10 +22,13 @@ def save_bill():
     customer = None
     if data.get("customer_id"):
         customer = db.session.get(Customer, data["customer_id"])
-    if data["bill_date"]:date_str = data["bill_date"]
+    date_str = data.get("bill_date")
+    if date_str:
+        timestamp = datetime.strptime(date_str, "%Y-%m-%d")
     else:
-        date_str = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
-    timestamp = datetime.strptime(date_str, "%Y-%m-%d") or datetime.now(ZoneInfo("Asia/Kolkata"))
+        timestamp = datetime.now(ZoneInfo("Asia/Kolkata")).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).replace(tzinfo=None)
 
     bill = Bill(
         subtotal=data["subtotal"],

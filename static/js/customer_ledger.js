@@ -283,7 +283,7 @@ async function submitDeleteCustomer() {
   }
 
   try {
-    const res = await fetch(`/api/customers/${CUSTOMER_ID}`, { method: 'DELETE' });
+    const res = await fetch(`/api/ledgers/${CUSTOMER_ID}/customer`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
     showToast('Customer deleted', 'success');
     setTimeout(() => { location.href = '/customers'; }, 1000);

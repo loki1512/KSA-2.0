@@ -198,5 +198,5 @@ class Payment(db.Model):
     amount = db.Column(db.Float, nullable=False)
     method = db.Column(db.String(30), default="cash")   # cash / upi / cheque
     notes = db.Column(db.String(255))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     customer = db.relationship("Customer", back_populates="payments")

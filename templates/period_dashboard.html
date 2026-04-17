@@ -39,9 +39,9 @@
     <!-- TAB SWITCHER -->
     <div class="tab-switcher">
         <a href="/" class="tab">Daily</a>
-        <a href="/dashboard/monthly"   class="tab {% if period == 'monthly'   %}active{% endif %}">Monthly</a>
+        <a href="/dashboard/monthly" class="tab {% if period == 'monthly' %}active{% endif %}">Monthly</a>
         <a href="/dashboard/quarterly" class="tab {% if period == 'quarterly' %}active{% endif %}">Quarterly</a>
-        <a href="/dashboard/yearly"    class="tab {% if period == 'yearly'    %}active{% endif %}">Yearly</a>
+        <a href="/dashboard/yearly" class="tab {% if period == 'yearly' %}active{% endif %}">Yearly</a>
     </div>
 
     <!-- KPI GRID -->
@@ -59,8 +59,16 @@
             <div class="kpi-value">{{ total_units }}</div>
         </div>
         <div class="kpi-card">
+            <div class="kpi-label">Payments Inflow</div>
+            <div class="kpi-value">₹ {{ total_payments }}</div>
+        </div>
+        <div class="kpi-card">
             <div class="kpi-label">Avg Bill</div>
             <div class="kpi-value">₹ {{ avg_bill }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Outstanding</div>
+            <div class="kpi-value">₹ {{ total_outstanding }}</div>
         </div>
     </div>
 
@@ -73,10 +81,9 @@
         </div>
     </div>
 
-    <!-- TABLES 2×2 GRID -->
+    <!-- TABLES GRID -->
     <div class="tables-grid">
 
-        <!-- Top Customers by Bill Count -->
         <div class="card">
             <h3>Top Customers by Bills</h3>
             <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
@@ -108,7 +115,6 @@
             </div>
         </div>
 
-        <!-- Top Customers by Revenue -->
         <div class="card">
             <h3>Top Customers by Revenue</h3>
             <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
@@ -140,7 +146,6 @@
             </div>
         </div>
 
-        <!-- Top Products by Quantity -->
         <div class="card">
             <h3>Top Products by Quantity</h3>
             <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
@@ -163,7 +168,6 @@
             </div>
         </div>
 
-        <!-- Top Products by Revenue -->
         <div class="card">
             <h3>Top Products by Revenue</h3>
             <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
@@ -188,19 +192,51 @@
 
     </div><!-- /tables-grid -->
 
+    <div class="card">
+        <h3>Highest Credit Customers</h3>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Phone</th>
+                        <th>Outstanding</th>
+                        <th>Ledger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in highest_credit_customers %}
+                    <tr>
+                        <td>
+                            <a href="/customers/{{ c.customer_id }}/ledger" class="cust-link">
+                                {{ c.customer_name }}
+                            </a>
+                        </td>
+                        <td>{{ c.customer_phone or '—' }}</td>
+                        <td>₹ {{ '%.2f'|format(c.outstanding_amount) }}</td>
+                        <td><a href="/customers/{{ c.customer_id }}/ledger" class="ref-link">View</a></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px;">No outstanding balances</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div><!-- /container -->
 
 <script>
-const days     = {{ days|tojson }};
+const days = {{ days|tojson }};
 const daySales = {{ day_sales|tojson }};
 
-const ctx   = document.getElementById('dailySalesChart').getContext('2d');
+const ctx = document.getElementById('dailySalesChart').getContext('2d');
 const chart = new Chart(ctx, {
     type: 'line',
     data: {
         labels: days.map(d => {
             const dt = new Date(d);
-            return dt.toLocaleDateString('en-IN', { day:'numeric', month:'short' });
+            return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
         }),
         datasets: [{
             label: 'Sales (₹)',
@@ -223,7 +259,7 @@ const chart = new Chart(ctx, {
                 callbacks: {
                     title: function(items) {
                         const dt = new Date(days[items[0].dataIndex]);
-                        return dt.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+                        return dt.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
                     },
                     label: function(item) {
                         return '₹ ' + item.raw.toLocaleString('en-IN');

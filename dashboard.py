@@ -2,8 +2,8 @@ from flask import Blueprint, render_template, request
 from flask_security import auth_required
 from datetime import datetime, date, timedelta
 from calendar import monthrange
-from sqlalchemy import func, cast, Date, distinct, and_, or_
-from models import Bill, BillItem, Customer
+from sqlalchemy import func, cast, Date, distinct, and_
+from models import Bill, BillItem, Customer, Payment, Transaction
 from extensions import db
 
 
@@ -21,6 +21,52 @@ def _hour_col(col):
     if _is_postgres():
         return func.to_char(col, 'HH24')
     return func.strftime('%H', col)
+
+
+def _payment_total_in_range(start_date, end_date):
+    return (
+        db.session.query(func.sum(Payment.amount))
+        .filter(
+            _date_col(Payment.timestamp) >= start_date,
+            _date_col(Payment.timestamp) <= end_date,
+        )
+        .scalar()
+        or 0
+    )
+
+
+def _outstanding_snapshot(as_of_date, limit=10):
+    balance_expr = func.coalesce(func.sum(Transaction.amount), 0)
+    customer_balances = (
+        db.session.query(
+            Transaction.customer_id.label("customer_id"),
+            balance_expr.label("outstanding_amount"),
+        )
+        .filter(_date_col(Transaction.timestamp) <= as_of_date)
+        .group_by(Transaction.customer_id)
+        .having(balance_expr > 0)
+        .subquery()
+    )
+
+    highest_credit_customers = (
+        db.session.query(
+            Customer.id.label("customer_id"),
+            Customer.name.label("customer_name"),
+            Customer.phone.label("customer_phone"),
+            customer_balances.c.outstanding_amount.label("outstanding_amount"),
+        )
+        .join(customer_balances, customer_balances.c.customer_id == Customer.id)
+        .order_by(customer_balances.c.outstanding_amount.desc())
+        .limit(limit)
+        .all()
+    )
+
+    total_outstanding = round(
+        db.session.query(func.coalesce(func.sum(customer_balances.c.outstanding_amount), 0)).scalar() or 0,
+        2,
+    )
+
+    return total_outstanding, highest_credit_customers
 
 
 dashboard_bp = Blueprint("dashboard", __name__)
@@ -49,6 +95,8 @@ def daily_dashboard():
     total_units = db.session.query(func.sum(BillItem.qty))\
         .join(Bill, Bill.id == BillItem.bill_id)\
         .filter(date_filter).scalar() or 0
+    total_payments = round(_payment_total_in_range(today, today), 2)
+    total_outstanding, highest_credit_customers = _outstanding_snapshot(today)
 
     # ── Hourly sales ──────────────────────────────────────
     hourly = db.session.query(
@@ -134,6 +182,9 @@ def daily_dashboard():
         total_bills=total_bills,
         avg_bill=avg_bill,
         total_units=total_units,
+        total_payments=total_payments,
+        total_outstanding=total_outstanding,
+        highest_credit_customers=highest_credit_customers,
         hours=hours,
         hour_sales=hour_sales,
         top_items=top_items,
@@ -163,6 +214,8 @@ def _period_dashboard_data(start_date, end_date):
     total_units = db.session.query(func.sum(BillItem.qty))\
         .join(Bill, Bill.id == BillItem.bill_id)\
         .filter(date_filter).scalar() or 0
+    total_payments = round(_payment_total_in_range(start_date, end_date), 2)
+    total_outstanding, highest_credit_customers = _outstanding_snapshot(end_date)
 
     # ── Top customers by bill count ────────────────────────
     top_customers_by_count = db.session.query(
@@ -229,6 +282,9 @@ def _period_dashboard_data(start_date, end_date):
         total_bills=total_bills,
         avg_bill=avg_bill,
         total_units=total_units,
+        total_payments=total_payments,
+        total_outstanding=total_outstanding,
+        highest_credit_customers=highest_credit_customers,
         top_customers_by_count=top_customers_by_count,
         top_customers_by_revenue=top_customers_by_revenue,
         top_products_by_qty=top_products_by_qty,

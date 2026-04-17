@@ -56,10 +56,18 @@
             <div class="kpi-label">Units Sold</div>
             <div class="kpi-value">{{ total_units }}</div>
         </a>
+        <a href="/transactions" class="kpi-card link-card">
+            <div class="kpi-label">Payments Inflow</div>
+            <div class="kpi-value">₹ {{ total_payments }}</div>
+        </a>
         <div class="kpi-card">
             <div class="kpi-label">Avg Bill</div>
             <div class="kpi-value">₹ {{ avg_bill }}</div>
         </div>
+        <a href="/transactions" class="kpi-card link-card">
+            <div class="kpi-label">Outstanding</div>
+            <div class="kpi-value">₹ {{ total_outstanding }}</div>
+        </a>
         <a href="/customers" class="kpi-card link-card">
             <div class="kpi-label">Customers</div>
             <div class="kpi-value">{{ total_customers }}</div>
@@ -82,7 +90,7 @@
         </a>
         <a href="/billing" class="kpi-card link-card">
             <div class="kpi-label">Quick Action</div>
-            <div class="kpi-value">➕ New Bill</div>
+            <div class="kpi-value">+ New Bill</div>
         </a>
     </div>
 
@@ -128,7 +136,7 @@
         </div>
         <div class="pwe-search-wrap">
             <span class="pwe-search-icon">🔍</span>
-            <input type="text" id="pweSearch" placeholder="Search item to update price…" autocomplete="off">
+            <input type="text" id="pweSearch" placeholder="Search item to update price..." autocomplete="off">
             <div id="pweSuggestions" class="pwe-suggestions" style="display:none;"></div>
         </div>
         <div id="pweEditRow" class="pwe-edit-row" style="display:none;">
@@ -151,6 +159,44 @@
             <div class="pwe-status" id="pweStatus"></div>
         </div>
         <div id="pweRecentList" class="pwe-recent"></div>
+    </div>
+
+    <div class="card">
+        <h3>Highest Credit Customers</h3>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Phone</th>
+                        <th>Outstanding</th>
+                        <th>Ledger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in highest_credit_customers %}
+                    <tr>
+                        <td>
+                            <a href="/customers/{{ c.customer_id }}/ledger" class="cust-link">
+                                {{ c.customer_name }}
+                            </a>
+                        </td>
+                        <td style="font-family:var(--font-mono); font-size:12px; color:var(--text-muted);">
+                            {{ c.customer_phone or '—' }}
+                        </td>
+                        <td style="font-family:var(--font-mono); font-weight:600; color:#dc2626; text-align:right;">
+                            ₹ {{ '%.2f'|format(c.outstanding_amount) }}
+                        </td>
+                        <td style="text-align:center;">
+                            <a href="/customers/{{ c.customer_id }}/ledger" class="ref-link">View</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:24px;">No outstanding balances</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- CUSTOMERS TODAY -->
@@ -233,11 +279,11 @@ new Chart(ctx, {
 });
 
 function updateGreeting() {
-    const now   = new Date();
-    const h     = now.getHours();
+    const now = new Date();
+    const h = now.getHours();
     const greet = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
-    const dateStr = now.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'short', day:'numeric' });
-    const timeStr = now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     document.getElementById('greeting').innerText = `${greet}, Manager 👋 — ${dateStr} ${timeStr}`;
 }
 

@@ -3,8 +3,10 @@ from flask_security import auth_required
 from extensions import db
 from models import Payment, Customer, Wallet, Transaction
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 payments_bp = Blueprint("payments", __name__)
+APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 
 # --------------------------------
@@ -31,7 +33,7 @@ def record_payment():
         amount=amount,
         method=method,
         notes=notes,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(APP_TIMEZONE)
     )
     db.session.add(payment)
     db.session.flush()   # get payment.id
