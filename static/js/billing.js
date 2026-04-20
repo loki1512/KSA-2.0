@@ -666,7 +666,7 @@ function renderTable() {
     let discountLabel = '—';
     if (item.discountType === '%' && item.discountValue > 0) {
       // Always show as % with 2 decimal places (covers reverse-computed values)
-      discountLabel = `${parseFloat(item.discountValue.toFixed(2))}%`;
+      discountLabel = `${parseFloat(item.discountValue)}%`;
     } else if (item.discountType === '₹' && item.discountValue > 0) {
       discountLabel = `₹${fmtNum(item.discountValue)}`;
     }
