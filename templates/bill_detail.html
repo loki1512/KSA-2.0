@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <link rel="stylesheet" href="/static/css/bill_detail.css">
   <link rel="stylesheet" href="/static/css/update_bill.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
   <style>
     @media print {
       body * { visibility: hidden; }
@@ -16,7 +17,42 @@
     }
   </style>
 </head>
-<body>
+<body class="app-shell-body">
+
+<header class="site-header">
+  <div class="header-left">
+    <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+    <div>
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <a href="/">Dashboard</a>
+    <a href="/billing">+ New Bill</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/bills" class="active">Bills</a>
+    <a href="/customers">Customers</a>
+    <a href="/transactions">Transactions</a>
+    <a href="/returns/new">Returns</a>
+    <a href="/logout" class="nav-logout">Logout</a>
+  </nav>
+</header>
+
+<main class="page-shell page-shell--narrow">
+  <div class="page-header">
+    <div class="page-header-content">
+      <p class="page-kicker">Sales Document</p>
+      <h2 class="page-title">Bill #{{ bill.id }}</h2>
+      <p class="page-summary">Review the invoice, print it, share it, or jump straight into edits and the customer ledger.</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="back-link" href="/bills">Bills</a>
+      {% if bill.customer %}
+      <a class="back-link" href="/customers/{{ bill.customer.id }}/ledger">Ledger</a>
+      {% endif %}
+    </div>
+  </div>
 
 <!-- ── PRINTABLE INVOICE ─────────────────────────────── -->
 <div id="bill-print-area">
@@ -115,6 +151,8 @@
   {% endif %}
   <button onclick="deleteBill({{ bill.id }})" class="btn-delete-danger">🗑️ Delete</button>
 </div>
+
+</main>
 
 <script>
   function sendWhatsApp() {

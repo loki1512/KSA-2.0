@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/css/customers.css">
   <link rel="stylesheet" href="/static/css/transactions.css">
   <link rel="stylesheet" href="/static/css/customer_ledger.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
 </head>
 <body>
@@ -15,17 +16,21 @@
 
   <header class="site-header">
     <div class="header-left">
-      <h1>Kumara Swami Agencies</h1>
-      <span class="header-sub">Smart billing system</span>
+      <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart billing system</span>
+      </div>
     </div>
     <nav class="header-nav">
-      <a href="/billing">+ New Bill</a>
       <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
       <a href="/catalog">Catalog</a>
       <a href="/bills">Bills</a>
-      <a href="/customers">Customers</a>
+      <a href="/customers" class="active">Customers</a>
       <a href="/transactions">Transactions</a>
-      <a href="/logout" style="color:#dc2626;">Logout</a>
+      <a href="/returns/new">Returns</a>
+      <a href="/logout" class="nav-logout">Logout</a>
     </nav>
   </header>
 
@@ -37,7 +42,9 @@
 
     <div class="page-header">
       <a class="back-link" href="/customers">← Customers</a>
+      <p class="page-kicker">Customer Account</p>
       <h2 class="page-title" id="pageTitle">Ledger</h2>
+      <p class="page-summary">View the balance, bills, payments, and profile details for this customer in one place.</p>
     </div>
 
     <!-- Customer profile card -->

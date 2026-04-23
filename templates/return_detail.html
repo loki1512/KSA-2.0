@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Return #{{ ret.id }} — KSA</title>
   <link rel="stylesheet" href="/static/css/return_detail.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
 
   <style>
     @media print {
@@ -20,7 +21,42 @@
     }
   </style>
 </head>
-<body>
+<body class="app-shell-body">
+
+<header class="site-header">
+  <div class="header-left">
+    <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+    <div>
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <a href="/">Dashboard</a>
+    <a href="/billing">+ New Bill</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/bills">Bills</a>
+    <a href="/customers">Customers</a>
+    <a href="/transactions">Transactions</a>
+    <a href="/returns/new" class="active">Returns</a>
+    <a href="/logout" class="nav-logout">Logout</a>
+  </nav>
+</header>
+
+<main class="page-shell page-shell--narrow">
+  <div class="page-header">
+    <div class="page-header-content">
+      <p class="page-kicker">Return Document</p>
+      <h2 class="page-title">Return #{{ ret.id }}</h2>
+      <p class="page-summary">Review the refund note, print it, and jump back to the customer ledger or returns workflow.</p>
+    </div>
+    <div class="page-header-actions">
+      {% if ret.customer %}
+      <a class="back-link" href="/customers/{{ ret.customer.id }}/ledger">Ledger</a>
+      {% endif %}
+      <a class="back-link" href="/returns/new">Returns</a>
+    </div>
+  </div>
 
 <!-- ── PRINTABLE AREA ────────────────────────────────── -->
 <div id="return-print-area">
@@ -112,6 +148,8 @@
 </div>
 
 <!-- ── DELETE CONFIRMATION MODAL ─────────────────────── -->
+</main>
+
 <div id="deleteModal" class="modal-overlay" style="display:none;">
   <div class="modal modal-sm">
     <div class="modal-header">

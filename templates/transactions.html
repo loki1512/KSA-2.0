@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/bills.css">
   <link rel="stylesheet" href="/static/css/transactions.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -14,21 +15,29 @@
 
   <header class="site-header">
     <div class="header-left">
-      <h1>Kumara Swami Agencies</h1>
-      <span class="header-sub">Smart billing system</span>
+      <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart billing system</span>
+      </div>
     </div>
     <nav class="header-nav">
       <a href="/">Dashboard</a>
       <a href="/billing">+ New Bill</a>
+      <a href="/catalog">Catalog</a>
       <a href="/bills">Bills</a>
       <a href="/customers">Customers</a>
-      <a href="/logout" style="color:#dc2626;">Logout</a>
+      <a href="/transactions" class="active">Transactions</a>
+      <a href="/returns/new">Returns</a>
+      <a href="/logout" class="nav-logout">Logout</a>
     </nav>
   </header>
 
   <div class="page-header">
     <a class="back-link" href="/">← Dashboard</a>
+    <p class="page-kicker">Money Movement</p>
     <h2 class="page-title">All Transactions</h2>
+    <p class="page-summary">Track sales, payments, refunds, and settlements in one unified ledger view.</p>
     <span class="total-badge" id="totalBadge">—</span>
   </div>
 

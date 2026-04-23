@@ -11,6 +11,7 @@
 <link rel="icon" type="image/png" href="/static/images/head-logo.png">
 <link rel="stylesheet" href="/static/css/billing.css">
 <link rel="stylesheet" href="/static/css/returns.css">
+<link rel="stylesheet" href="/static/css/app_shell.css">
 
 </head>
 
@@ -19,19 +20,22 @@
 <header class="site-header">
 
 <div class="header-left">
-<div class="logo-mark">KSA</div>
+<div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
 <div>
 <h1>Kumara Swami Agencies</h1>
-<span class="header-sub">Product Return</span>
+<span class="header-sub">Smart billing system</span>
 </div>
 </div>
 
 <nav class="header-nav">
 <a href="/">Dashboard</a>
 <a href="/billing">+ New Bill</a>
+<a href="/catalog">Catalog</a>
+<a href="/bills">Bills</a>
 <a href="/customers">Customers</a>
 <a href="/transactions">Transactions</a>
-<a href="/logout" style="color:#dc2626;">Logout</a>
+<a href="/returns/new" class="active">Returns</a>
+<a href="/logout" class="nav-logout">Logout</a>
 </nav>
 
 </header>
@@ -39,6 +43,17 @@
 
 
 <main class="container">
+
+<div class="page-header">
+<div class="page-header-content">
+<p class="page-kicker">Returns Workspace</p>
+<h2 class="page-title">Create a Product Return</h2>
+<p class="page-summary">Select the customer, add returned items, and save the refund note with the same app header used everywhere else.</p>
+</div>
+<div class="page-header-actions">
+<a class="back-link" href="/customers">Customers</a>
+</div>
+</div>
 
 <!-- CUSTOMER CARD -->
 

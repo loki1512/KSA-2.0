@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/bills.css">
   <link rel="stylesheet" href="/static/css/customers.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -14,27 +15,32 @@
 
   <header class="site-header">
     <div class="header-left">
-      <h1>Kumara Swami Agencies</h1>
-      <span class="header-sub">Smart billing system</span>
+      <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart billing system</span>
+      </div>
     </div>
     <nav class="header-nav">
-      <a href="/billing">+ New Bill</a>
       <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
       <a href="/catalog">Catalog</a>
       <a href="/bills">Bills</a>
-      <a href="/customers">Customers</a>
+      <a href="/customers" class="active">Customers</a>
       <a href="/transactions">Transactions</a>
-      <a href="/logout" style="color:#dc2626;">Logout</a>
+      <a href="/returns/new">Returns</a>
+      <a href="/logout" class="nav-logout">Logout</a>
     </nav>
   </header>
 
   <div class="page-header customer-page-header">
-    <div>
-      <a class="back-link" href="/">&larr; Dashboard</a>
+    <div class="page-header-content">
+      <p class="page-kicker">Customer Directory</p>
       <h2 class="page-title">Customers</h2>
-      <p class="table-hint">Click a column name to sort. Filters live right under the related headers.</p>
+      <p class="page-summary">Sort, filter, export, and open individual ledgers without leaving the customer list.</p>
     </div>
-    <div class="page-actions">
+    <div class="page-header-actions page-actions">
+      <a class="back-link" href="/">Dashboard</a>
       <button class="btn-export" onclick="exportCustomers()">Export Excel</button>
       <button class="btn-reset" type="button" onclick="resetToTop()">Reset</button>
     </div>

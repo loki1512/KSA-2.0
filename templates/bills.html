@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <link rel="stylesheet" href="/static/css/bills.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
 </head>
 <body>
 
@@ -13,24 +14,30 @@
   <!-- SITE HEADER -->
   <header class="site-header">
   <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
+    <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+    <div>
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
   </div>
   <nav class="header-nav">
-    <a href="/billing">+ New Bill</a>
     <a href="/">Dashboard</a>
+    <a href="/billing">+ New Bill</a>
     <a href="/catalog">Catalog</a>
-    <a href="/bills">Bills</a>
+    <a href="/bills" class="active">Bills</a>
     <a href="/customers">Customers</a>
     <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
+    <a href="/returns/new">Returns</a>
+    <a href="/logout" class="nav-logout">Logout</a>
   </nav>
 </header>
 
   <!-- PAGE HEADER -->
   <div class="page-header">
     <a class="back-link" href="/">← Back to Billing</a>
+    <p class="page-kicker">Sales Records</p>
     <h2 class="page-title">Bill History</h2>
+    <p class="page-summary">Review saved bills, open invoice details, and jump into edits from one place.</p>
   </div>
 
   <!-- FILTER CARD -->

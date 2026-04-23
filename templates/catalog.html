@@ -5,28 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <link rel="stylesheet" href="/static/css/catalog.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
 </head>
 <body>
 
 <header class="site-header">
   <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
+    <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+    <div>
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
   </div>
   <nav class="header-nav">
-    <a href="/billing">+ New Bill</a>
     <a href="/">Dashboard</a>
-    <a href="/catalog">Catalog</a>
+    <a href="/billing">+ New Bill</a>
+    <a href="/catalog" class="active">Catalog</a>
     <a href="/bills">Bills</a>
     <a href="/customers">Customers</a>
     <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
+    <a href="/returns/new">Returns</a>
+    <a href="/logout" class="nav-logout">Logout</a>
   </nav>
 </header>
 
 <div class="page-wrap">
-
-  <a href="/">&larr; Back to Dashboard</a>
+  <div class="page-header">
+    <div class="page-header-content">
+      <p class="page-kicker">Product Catalog</p>
+      <h2 class="page-title">Catalogue Management</h2>
+      <p class="page-summary">Search items, update pricing, and import product data from a single workspace.</p>
+    </div>
+    <div class="page-header-actions">
+      <a class="back-link" href="/">Dashboard</a>
+    </div>
+  </div>
 
   <div class="card form-card">
     <div class="card-header">

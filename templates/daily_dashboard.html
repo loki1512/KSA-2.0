@@ -8,22 +8,27 @@
     <link rel="icon" type="image/png" href="/static/images/head-logo.png">
     <link rel="stylesheet" href="/static/css/daily_dashboard.css">
     <link rel="stylesheet" href="/static/css/price_widget.css">
+    <link rel="stylesheet" href="/static/css/app_shell.css">
 </head>
 <body>
 
   <header class="site-header">
   <div class="header-left">
-    <h1>Kumara Swami Agencies</h1>
-    <span class="header-sub">Smart billing system</span>
+    <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+    <div>
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
   </div>
   <nav class="header-nav">
+    <a href="/" class="active">Dashboard</a>
     <a href="/billing">+ New Bill</a>
-    <a href="/">Dashboard</a>
     <a href="/catalog">Catalog</a>
     <a href="/bills">Bills</a>
     <a href="/customers">Customers</a>
     <a href="/transactions">Transactions</a>
-    <a href="/logout" style="color:#dc2626;">Logout</a>
+    <a href="/returns/new">Returns</a>
+    <a href="/logout" class="nav-logout">Logout</a>
   </nav>
 </header>
 
@@ -31,15 +36,18 @@
 <div class="container">
 
     <!-- GREETING HERO -->
-    <div class="header">
-        <div class="greeting" id="greeting"></div>
-        <div class="subtitle">Store Performance Overview</div>
+    <div class="page-header dashboard-page-header">
+      <div class="page-header-content">
+        <p class="page-kicker">Daily Dashboard</p>
+        <h2 class="page-title greeting" id="greeting"></h2>
+        <p class="page-summary subtitle">Store Performance Overview</p>
         {% if selected_date and selected_date != today_iso %}
         <div class="date-viewing">
-            Viewing: {{ selected_date }} &mdash;
-            <a href="/">Back to Today</a>
+          Viewing: {{ selected_date }} &mdash;
+          <a href="/">Back to Today</a>
         </div>
         {% endif %}
+      </div>
     </div>
 
     <!-- KPI GRID -->

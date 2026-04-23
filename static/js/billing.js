@@ -542,10 +542,12 @@ function showReversePreview(unitPrice, discPct, lineTotal, source) {
   }
   preview.style.color = 'var(--success)';
   const pctStr = discPct.toFixed(2);
+  const roundedUnitPrice = Math.round(unitPrice);
+  const roundedLineTotal = Math.round(lineTotal);
   if (source === 'unit') {
-    preview.textContent = `Discount: ${pctStr}% · Line total: ₹${fmtNum(lineTotal)}`;
+    preview.textContent = `Discount: ${pctStr}% · Line total: ₹${fmtNum(roundedLineTotal)}`;
   } else {
-    preview.textContent = `Unit price: ₹${fmtNum(unitPrice)} · Discount: ${pctStr}%`;
+    preview.textContent = `Unit price: ₹${fmtNum(roundedUnitPrice)} · Discount: ${pctStr}%`;
   }
 }
 
@@ -580,7 +582,8 @@ function resolveDiscountFromMode() {
     const unit    = parseFloat(document.getElementById('reverseUnitPrice').value);
     if (isNaN(unit)) return { discountType: '', discountValue: 0 };
     const clamped = Math.min(Math.max(unit, 0), mrp);
-    const pct     = ((mrp - clamped) / mrp) * 100;
+    const roundedUnit = Math.round(clamped);
+    const pct     = ((mrp - roundedUnit) / mrp) * 100;
     return { discountType: '%', discountValue: parseFloat(pct.toFixed(4)) };
   }
 
@@ -590,8 +593,10 @@ function resolveDiscountFromMode() {
     if (isNaN(total)) return { discountType: '', discountValue: 0 };
     const maxTotal = mrp * qty;
     const clamped  = Math.min(Math.max(total, 0), maxTotal);
-    const unit     = qty > 0 ? clamped / qty : 0;
-    const pct      = ((mrp - unit) / mrp) * 100;
+    const roundedTotal = Math.round(clamped);
+    const unit     = qty > 0 ? roundedTotal / qty : 0;
+    const roundedUnit = Math.round(unit);
+    const pct      = ((mrp - roundedUnit) / mrp) * 100;
     return { discountType: '%', discountValue: parseFloat(pct.toFixed(4)) };
   }
 
@@ -651,8 +656,9 @@ function calcLineTotal(rate, qty, discountType, discountValue) {
   } else if (discountType === '₹' && discountValue > 0) {
     finalUnit = rate - discountValue;
   }
-  finalUnit = Math.max(0, finalUnit);
-  return { finalUnit, lineTotal: finalUnit * qty };
+  finalUnit = Math.max(0, Math.round(finalUnit));
+  const lineTotal = Math.round(finalUnit * qty);
+  return { finalUnit, lineTotal };
 }
 
 // ─── RENDER TABLE ─────────────────────────────────────
@@ -666,7 +672,7 @@ function renderTable() {
     let discountLabel = '—';
     if (item.discountType === '%' && item.discountValue > 0) {
       // Always show as % with 2 decimal places (covers reverse-computed values)
-      discountLabel = `${parseFloat(item.discountValue)}%`;
+      discountLabel = `${parseFloat(item.discountValue).toFixed(2)}%`;
     } else if (item.discountType === '₹' && item.discountValue > 0) {
       discountLabel = `₹${fmtNum(item.discountValue)}`;
     }
