@@ -3,7 +3,7 @@ from flask_security import auth_required
 from datetime import datetime, date, timedelta
 from calendar import monthrange
 from sqlalchemy import func, cast, Date, distinct, and_
-from models import Bill, BillItem, Customer, Payment, Transaction
+from models import Bill, BillItem, Customer, Payment, Transaction, Wallet
 from extensions import db
 
 
@@ -142,15 +142,40 @@ def daily_dashboard():
         .scalar() or 0
 
     # ── Customers today (details) ─────────────────────────
-    # Linked customers
+    # Linked customers with transaction details
     linked_details = db.session.query(
         Customer.id.label("customer_id"),
         Customer.name.label("customer_name"),
         Customer.phone.label("customer_phone"),
-        func.sum(Bill.final_amount).label("total_spent")
+        func.sum(Bill.final_amount).label("total_spent"),
+        # Total paid today (PAYMENT transactions - stored as negative amounts)
+        func.coalesce(
+            func.sum(
+                db.case(
+                    (Transaction.transaction_type == 'PAYMENT', func.abs(Transaction.amount)),
+                    else_=0
+                )
+            ), 0
+        ).label("total_paid"),
+        # Settled amount today (SETTLEMENT transactions)
+        func.coalesce(
+            func.sum(
+                db.case(
+                    (Transaction.transaction_type == 'SETTLEMENT', Transaction.amount),
+                    else_=0
+                )
+            ), 0
+        ).label("settled_amount"),
+        # Wallet balance from Wallet table
+        func.coalesce(Wallet.balance, 0).label("wallet_balance")
     ).join(Bill, Bill.customer_id == Customer.id)\
+     .outerjoin(Transaction, db.and_(
+        Transaction.customer_id == Customer.id,
+        _date_col(Transaction.timestamp) == today
+    ))\
+     .outerjoin(Wallet, Wallet.customer_id == Customer.id)\
      .filter(date_filter)\
-     .group_by(Customer.id, Customer.name, Customer.phone)\
+     .group_by(Customer.id, Customer.name, Customer.phone, Wallet.balance)\
      .order_by(func.sum(Bill.final_amount).desc())\
      .all()
 
@@ -163,7 +188,10 @@ def daily_dashboard():
             "customer_id":    row.customer_id,
             "customer_name":  row.customer_name,
             "customer_phone": row.customer_phone,
-            "total_spent":    round(row.total_spent, 2)
+            "total_spent":    round(row.total_spent, 2),
+            "total_paid":     round(float(row.total_paid or 0), 2),
+            "settled_amount": round(float(row.settled_amount or 0), 2),
+            "balance":        -float(row.wallet_balance or 0)  # Just negative of wallet
         }
         for row in linked_details
     ]
@@ -173,7 +201,10 @@ def daily_dashboard():
             "customer_id":    None,
             "customer_name":  "Walk-in",
             "customer_phone": None,
-            "total_spent":    round(walkin_total, 2)
+            "total_spent":    round(walkin_total, 2),
+            "total_paid":     0,
+            "settled_amount": 0,
+            "balance":        round(walkin_total, 2)
         })
 
     return render_template(
