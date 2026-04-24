@@ -19,6 +19,10 @@ let pendingEditIndex = null;
 // Referrer search state (customer creation modal)
 let referrerSearchDebounce = null;
 let selectedReferrer = null;   // { id, name, phone, village, referral_code }
+let villageSearchDebounce = null;
+let activeCustomerSuggestionIndex = -1;
+let activeVillageSuggestionIndex = -1;
+let activeReferrerSuggestionIndex = -1;
 
 // Reverse-calc mode: 'mrp' (default) | 'unit' | 'total'
 let reverseMode = 'mrp';
@@ -50,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupReverseModeToggle();
   setupReverseInputs();
   setupReferrerSearch();
+  setupVillageSearch();
+  setupCustomerModalKeyboard();
 
   const params = new URLSearchParams(location.search);
   if (params.get('customer_id')) prefillCustomer(parseInt(params.get('customer_id')));
@@ -68,7 +74,25 @@ function setupCustomerSearch() {
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') hideCustSuggestions();
+    const items = document.querySelectorAll('#customerSuggestionList .suggestion-item');
+    const isOpen = document.getElementById('customerSuggestions').style.display !== 'none';
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen || !items.length) return;
+      activeCustomerSuggestionIndex = Math.min(activeCustomerSuggestionIndex + 1, items.length - 1);
+      highlightKeyboardSuggestions(items, activeCustomerSuggestionIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen || !items.length) return;
+      activeCustomerSuggestionIndex = Math.max(activeCustomerSuggestionIndex - 1, -1);
+      highlightKeyboardSuggestions(items, activeCustomerSuggestionIndex);
+    } else if ((e.key === 'Enter' || e.key === 'Tab') && isOpen && activeCustomerSuggestionIndex >= 0 && items[activeCustomerSuggestionIndex]) {
+      e.preventDefault();
+      items[activeCustomerSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    } else if (e.key === 'Escape') {
+      hideCustSuggestions();
+    }
   });
 
   clearBtn.addEventListener('click', () => {
@@ -94,6 +118,7 @@ function renderCustomerSuggestions(customers) {
   const list = document.getElementById('customerSuggestionList');
   const cont = document.getElementById('customerSuggestions');
   list.innerHTML = '';
+  activeCustomerSuggestionIndex = -1;
 
   if (!customers.length) { hideCustSuggestions(); return; }
 
@@ -113,6 +138,7 @@ function renderCustomerSuggestions(customers) {
 }
 
 function hideCustSuggestions() {
+  activeCustomerSuggestionIndex = -1;
   document.getElementById('customerSuggestions').style.display = 'none';
 }
 
@@ -223,6 +249,13 @@ function highlightSuggestion(items, index) {
   if (index >= 0 && items[index]) {
     const nameEl = items[index].querySelector('.suggestion-name');
     if (nameEl) itemNameInput.value = nameEl.textContent;
+    items[index].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function highlightKeyboardSuggestions(items, index) {
+  items.forEach((el, i) => el.classList.toggle('keyboard-active', i === index));
+  if (index >= 0 && items[index]) {
     items[index].scrollIntoView({ block: 'nearest' });
   }
 }
@@ -865,6 +898,8 @@ async function saveBill() {
     customer_name:    selectedCustomerId ? null : (document.getElementById('customerName').value.trim() || null),
     customer_phone:   selectedCustomerId ? null : (document.getElementById('customerPhone').value.trim() || null),
     customer_address: selectedCustomerId ? null : (document.getElementById('customerAddress').value.trim() || null),
+    // Pass referral_code for walk-in customer creation
+    referral_code:    (!selectedCustomerId && selectedReferrer) ? (selectedReferrer.referral_code || '') : null,
     bill_date:        billDate,   // null → backend uses current timestamp
     subtotal:         sub,
     finalTotal:       final,
@@ -980,12 +1015,14 @@ function showToast(msg, type = '') {
 }
 
 // Close modals on overlay click
-['productModal','editModal','deleteModal'].forEach(id => {
+['productModal','editModal','deleteModal','customerModal','customerCreatedModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) {
       if (id === 'productModal') closeProductModal();
       else if (id === 'editModal') closeEditModal();
       else if (id === 'deleteModal') closeDeleteModal();
+      else if (id === 'customerModal') closeCustomerModal();
+      else if (id === 'customerCreatedModal') closeCustomerCreated();
     }
   });
 });
@@ -996,7 +1033,12 @@ document.addEventListener('keydown', (e) => {
     closeProductModal();
     closeEditModal();
     closeDeleteModal();
+    closeCustomerModal();
+    closeCustomerCreated();
     hideSuggestions();
+    hideCustSuggestions();
+    hideVillageSuggestions();
+    hideReferrerSuggestions();
     return;
   }
 
@@ -1006,6 +1048,17 @@ document.addEventListener('keydown', (e) => {
       confirmDelete();
     }
     return;
+  }
+
+  if (e.key === 'Enter' && document.getElementById('customerCreatedModal').style.display === 'flex') {
+    e.preventDefault();
+    useCreatedCustomer();
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && document.getElementById('step2').style.display === 'block') {
+    e.preventDefault();
+    saveBill();
   }
 });
 
@@ -1017,6 +1070,97 @@ document.getElementById('billDiscountValue').addEventListener('keydown', (e) => 
 // Uses the existing /api/customers/search endpoint.
 // No new backend endpoints required.
 
+function setupVillageSearch() {
+  const input = document.getElementById('newCustVillage');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    activeVillageSuggestionIndex = -1;
+    clearTimeout(villageSearchDebounce);
+    const q = input.value.trim();
+    if (!q) { hideVillageSuggestions(); return; }
+    villageSearchDebounce = setTimeout(() => fetchVillageSuggestions(q), 250);
+  });
+
+  input.addEventListener('focus', () => {
+    const q = input.value.trim();
+    if (q) fetchVillageSuggestions(q);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = document.querySelectorAll('#newCustVillageSuggestionList .suggestion-item');
+    const isOpen = document.getElementById('newCustVillageSuggestions').style.display !== 'none';
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen || !items.length) return;
+      activeVillageSuggestionIndex = Math.min(activeVillageSuggestionIndex + 1, items.length - 1);
+      highlightKeyboardSuggestions(items, activeVillageSuggestionIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen || !items.length) return;
+      activeVillageSuggestionIndex = Math.max(activeVillageSuggestionIndex - 1, -1);
+      highlightKeyboardSuggestions(items, activeVillageSuggestionIndex);
+    } else if ((e.key === 'Enter' || e.key === 'Tab') && isOpen && activeVillageSuggestionIndex >= 0 && items[activeVillageSuggestionIndex]) {
+      e.preventDefault();
+      items[activeVillageSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    } else if (e.key === 'Escape') {
+      hideVillageSuggestions();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#newCustVillageWrap')) hideVillageSuggestions();
+  });
+}
+
+async function fetchVillageSuggestions(q) {
+  try {
+    const res = await fetch(`/api/customers/villages?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderVillageSuggestions(data);
+  } catch (e) { console.error('Village search error', e); }
+}
+
+function renderVillageSuggestions(villages) {
+  const list = document.getElementById('newCustVillageSuggestionList');
+  const cont = document.getElementById('newCustVillageSuggestions');
+  if (!list || !cont) return;
+
+  list.innerHTML = '';
+  activeVillageSuggestionIndex = -1;
+
+  if (!villages.length) {
+    cont.style.display = 'none';
+    return;
+  }
+
+  villages.forEach(village => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.textContent = village;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectVillageSuggestion(village);
+    });
+    list.appendChild(div);
+  });
+
+  cont.style.display = 'block';
+}
+
+function selectVillageSuggestion(village) {
+  document.getElementById('newCustVillage').value = village;
+  hideVillageSuggestions();
+}
+
+function hideVillageSuggestions() {
+  activeVillageSuggestionIndex = -1;
+  const cont = document.getElementById('newCustVillageSuggestions');
+  if (cont) cont.style.display = 'none';
+}
+
 function setupReferrerSearch() {
   const input    = document.getElementById('referrerSearchInput');
   const clearBtn = document.getElementById('clearReferrerBtn');
@@ -1024,6 +1168,7 @@ function setupReferrerSearch() {
   if (!input) return;   // guard if DOM not ready
 
   input.addEventListener('input', () => {
+    activeReferrerSuggestionIndex = -1;
     clearTimeout(referrerSearchDebounce);
     const q = input.value.trim();
     if (!q) { hideReferrerSuggestions(); clearSelectedReferrer(false); return; }
@@ -1031,7 +1176,25 @@ function setupReferrerSearch() {
   });
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') hideReferrerSuggestions();
+    const items = document.querySelectorAll('#referrerSuggestionList .suggestion-item');
+    const isOpen = document.getElementById('referrerSuggestions').style.display !== 'none';
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen || !items.length) return;
+      activeReferrerSuggestionIndex = Math.min(activeReferrerSuggestionIndex + 1, items.length - 1);
+      highlightKeyboardSuggestions(items, activeReferrerSuggestionIndex);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen || !items.length) return;
+      activeReferrerSuggestionIndex = Math.max(activeReferrerSuggestionIndex - 1, -1);
+      highlightKeyboardSuggestions(items, activeReferrerSuggestionIndex);
+    } else if ((e.key === 'Enter' || e.key === 'Tab') && isOpen && activeReferrerSuggestionIndex >= 0 && items[activeReferrerSuggestionIndex]) {
+      e.preventDefault();
+      items[activeReferrerSuggestionIndex].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    } else if (e.key === 'Escape') {
+      hideReferrerSuggestions();
+    }
   });
 
   clearBtn.addEventListener('click', () => {
@@ -1056,10 +1219,15 @@ async function fetchReferrerSuggestions(q) {
   } catch (e) { console.error('Referrer search error', e); }
 }
 
+function formatReferrerDisplay(c) {
+  return [c?.name, c?.phone, c?.village].filter(Boolean).join(' - ');
+}
+
 function renderReferrerSuggestions(customers) {
   const list = document.getElementById('referrerSuggestionList');
   const cont = document.getElementById('referrerSuggestions');
   list.innerHTML = '';
+  activeReferrerSuggestionIndex = -1;
 
   if (!customers.length) {
     const div = document.createElement('div');
@@ -1073,6 +1241,12 @@ function renderReferrerSuggestions(customers) {
   }
 
   customers.forEach(c => {
+    const displayLabel = formatReferrerDisplay(c);
+    if (displayLabel) {
+      c.name = displayLabel;
+      c.phone = '';
+      c.village = '';
+    }
     const div = document.createElement('div');
     div.className = 'suggestion-item';
     div.innerHTML = `
@@ -1111,6 +1285,7 @@ function clearSelectedReferrer(resetInput = true) {
 }
 
 function hideReferrerSuggestions() {
+  activeReferrerSuggestionIndex = -1;
   const cont = document.getElementById('referrerSuggestions');
   if (cont) cont.style.display = 'none';
 }
@@ -1121,10 +1296,15 @@ let createdCustomer = null;
 function openCustomerModal() {
   // Reset referrer state each time modal opens
   clearSelectedReferrer(true);
+  hideVillageSuggestions();
+  hideReferrerSuggestions();
   document.getElementById("customerModal").style.display = "flex";
+  document.getElementById("newCustName").focus();
 }
 
 function closeCustomerModal() {
+  hideVillageSuggestions();
+  hideReferrerSuggestions();
   document.getElementById("customerModal").style.display = "none";
 }
 
@@ -1183,6 +1363,8 @@ async function createCustomer() {
     });
     document.getElementById('newCustType').value = 'regular';
     clearSelectedReferrer(true);
+    hideVillageSuggestions();
+    hideReferrerSuggestions();
 
   } catch (err) {
     console.error(err);
@@ -1204,4 +1386,47 @@ function useCreatedCustomer() {
   });
   closeCustomerCreated();
   showToast("Customer added to bill", "success");
+}
+
+function setupCustomerModalKeyboard() {
+  const nameInput = document.getElementById('newCustName');
+  const phoneInput = document.getElementById('newCustPhone');
+  const villageInput = document.getElementById('newCustVillage');
+  const addressInput = document.getElementById('newCustAddress');
+  const referrerInput = document.getElementById('referrerSearchInput');
+  const typeInput = document.getElementById('newCustType');
+
+  if (!nameInput || !phoneInput || !villageInput || !addressInput || !referrerInput || !typeInput) return;
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); phoneInput.focus(); }
+  });
+
+  phoneInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); villageInput.focus(); }
+  });
+
+  villageInput.addEventListener('keydown', (e) => {
+    const isOpen = document.getElementById('newCustVillageSuggestions').style.display !== 'none';
+    if (e.key === 'Enter' && !isOpen) { e.preventDefault(); addressInput.focus(); }
+  });
+
+  addressInput.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      createCustomer();
+    }
+  });
+
+  referrerInput.addEventListener('keydown', (e) => {
+    const isOpen = document.getElementById('referrerSuggestions').style.display !== 'none';
+    if (e.key === 'Enter' && !isOpen) { e.preventDefault(); typeInput.focus(); }
+  });
+
+  typeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      createCustomer();
+    }
+  });
 }

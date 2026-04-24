@@ -100,8 +100,8 @@
     }
 
     /* ── Referrer search ── */
-    #referrerSearchWrap { position: relative; margin-bottom: 4px; }
-    #referrerSuggestions {
+    #referrerSearchWrap, #newCustVillageWrap { position: relative; margin-bottom: 4px; }
+    #referrerSuggestions, #newCustVillageSuggestions {
       position: absolute;
       top: calc(100% + 4px);
       left: 0; right: 0;
@@ -569,7 +569,15 @@
 
         <div class="field-group">
           <label>Village</label>
-          <input type="text" id="newCustVillage">
+          <div id="newCustVillageWrap">
+            <input type="text" id="newCustVillage" autocomplete="off">
+            <div id="newCustVillageSuggestions" style="display:none;">
+              <div id="newCustVillageSuggestionList"></div>
+            </div>
+          </div>
+          <div style="margin-top:4px;font-size:11px;color:var(--text-muted);">
+            Suggestions come from existing customers, but you can type a new village too.
+          </div>
         </div>
 
         <div class="field-group">

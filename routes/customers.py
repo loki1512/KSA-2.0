@@ -102,6 +102,45 @@ def list_customers():
 
 
 # --------------------------------
+# SEARCH DISTINCT VILLAGES
+# --------------------------------
+@customers_bp.route("/api/customers/villages")
+@auth_required()
+def search_villages():
+
+    q = request.args.get("q", "").strip()
+
+    if not q:
+        return jsonify([])
+
+    tokens = q.lower().split()
+
+    results = (
+        db.session.query(
+            Customer.village.label("village"),
+            func.count(Customer.id).label("usage_count")
+        )
+        .filter(
+            Customer.village.isnot(None),
+            func.trim(Customer.village) != ""
+        )
+    )
+
+    for token in tokens:
+        results = results.filter(Customer.village.ilike(f"%{token}%"))
+
+    villages = (
+        results
+        .group_by(Customer.village)
+        .order_by(desc("usage_count"), Customer.village.asc())
+        .limit(12)
+        .all()
+    )
+
+    return jsonify([row.village for row in villages])
+
+
+# --------------------------------
 # SEARCH CUSTOMERS
 # --------------------------------
 @customers_bp.route("/api/customers/search")
@@ -124,6 +163,7 @@ def search_customers():
                 Customer.name.ilike(pattern),
                 Customer.phone.ilike(pattern),
                 Customer.village.ilike(pattern),
+                Customer.referral_code.ilike(pattern),
                 Customer.customer_type.ilike(pattern)
             )
         )
@@ -136,6 +176,7 @@ def search_customers():
             "name": c.name,
             "phone": c.phone,
             "village": c.village,
+            "referral_code": c.referral_code,
             "customer_type": c.customer_type,
             "wallet_balance": c.wallet.balance if c.wallet else 0.0
         }
@@ -377,6 +418,47 @@ def patch_customer(customer_id):
 
     db.session.commit()
     return jsonify({"message": "Customer updated successfully"})
+
+
+# --------------------------------
+# UPDATE REFERRER
+# --------------------------------
+@customers_bp.route("/api/customers/<int:customer_id>/referrer", methods=["PUT"])
+@auth_required()
+def update_referrer(customer_id):
+
+    customer = Customer.query.get_or_404(customer_id)
+    data = request.get_json(force=True)
+
+    referral_code = data.get("referral_code")
+    
+    if not referral_code:
+        # Clear the referrer
+        customer.referred_by_id = None
+        db.session.commit()
+        return jsonify({
+            "message": "Referrer removed successfully",
+            "referred_by_id": None,
+            "referred_by_name": None
+        })
+
+    # Look up the referrer by referral code
+    referrer = Customer.query.filter_by(referral_code=referral_code).first()
+    
+    if not referrer:
+        return jsonify({"message": "Invalid referral code"}), 400
+    
+    if referrer.id == customer_id:
+        return jsonify({"message": "Cannot refer yourself"}), 400
+
+    customer.referred_by_id = referrer.id
+    db.session.commit()
+
+    return jsonify({
+        "message": "Referrer updated successfully",
+        "referred_by_id": referrer.id,
+        "referred_by_name": referrer.name
+    })
 
 
 # --------------------------------

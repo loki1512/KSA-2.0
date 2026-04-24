@@ -4,10 +4,17 @@
 const CUSTOMER_ID = parseInt(location.pathname.split('/')[2]);
 
 let customerData = null;
+let editReferrerSearchDebounce = null;
+let selectedEditReferrer = null;
+let editReferrerDirty = false;
+let editReferrerCleared = false;
+let editVillageSearchDebounce = null;
 
 // ─── INIT ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadLedger();
+  setupEditVillageSearch();
+  setupEditReferrerSearch();
   setupModalKeyboard();
 });
 
@@ -60,8 +67,13 @@ function renderProfile(c) {
   typeEl.className   = `type-badge type-${(c.customer_type || 'regular').toLowerCase()}`;
 
   if (c.address) document.getElementById('profileAddress').textContent = c.address;
-  if (c.referred_by)
+  if (c.referred_by) {
     document.getElementById('profileReferral').textContent = `Referred by: ${c.referred_by}`;
+    document.getElementById('profileReferral').style.fontWeight = '600';
+  } else {
+    document.getElementById('profileReferral').textContent = 'No referrer';
+    document.getElementById('profileReferral').style.color = '#888';
+  }
 
   document.getElementById('newBillBtn').href = `/billing?customer_id=${c.id}`;
 }
@@ -81,6 +93,178 @@ function renderKPIs(ledger, bills) {
 }
 
 // ─── RENDER TRANSACTIONS ──────────────────────────────
+function formatReferrerDisplay(c) {
+  return [c?.name, c?.phone, c?.village].filter(Boolean).join(' - ');
+}
+
+function setEditReferrerHint(message) {
+  document.getElementById('editReferredByName').textContent = message;
+}
+
+function hideEditReferrerSuggestions() {
+  const cont = document.getElementById('editReferrerSuggestions');
+  if (cont) cont.style.display = 'none';
+}
+
+function renderEditReferrerSuggestions(customers) {
+  const list = document.getElementById('editReferrerSuggestionList');
+  const cont = document.getElementById('editReferrerSuggestions');
+  if (!list || !cont) return;
+
+  list.innerHTML = '';
+
+  const matches = customers.filter(c => c.id !== CUSTOMER_ID);
+  if (!matches.length) {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.style.color = 'var(--text-muted)';
+    div.style.pointerEvents = 'none';
+    div.textContent = 'No customers found';
+    list.appendChild(div);
+    cont.style.display = 'block';
+    return;
+  }
+
+  matches.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.innerHTML = `
+      <span class="suggestion-name">${esc(formatReferrerDisplay(c) || c.name || 'Unknown customer')}</span>
+      <span class="suggestion-meta">${c.referral_code ? `Code: ${esc(c.referral_code)}` : ''}</span>`;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectEditReferrer(c);
+    });
+    list.appendChild(div);
+  });
+
+  cont.style.display = 'block';
+}
+
+async function fetchEditReferrerSuggestions(q) {
+  try {
+    const res = await fetch(`/api/customers/search?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderEditReferrerSuggestions(data);
+  } catch (e) {
+    console.error('Edit referrer search error', e);
+  }
+}
+
+function selectEditReferrer(c) {
+  selectedEditReferrer = c;
+  editReferrerDirty = true;
+  editReferrerCleared = false;
+  document.getElementById('editReferredBy').value = formatReferrerDisplay(c) || c.name || '';
+  setEditReferrerHint(`Selected: ${formatReferrerDisplay(c) || c.name}${c.referral_code ? ` (Code: ${c.referral_code})` : ''}`);
+  hideEditReferrerSuggestions();
+}
+
+function setupEditReferrerSearch() {
+  const input = document.getElementById('editReferredBy');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    clearTimeout(editReferrerSearchDebounce);
+    selectedEditReferrer = null;
+    editReferrerCleared = false;
+
+    const q = input.value.trim();
+    if (!q) {
+      editReferrerDirty = false;
+      hideEditReferrerSuggestions();
+      setEditReferrerHint(customerData?.referred_by ? `Current: ${customerData.referred_by}` : 'No referrer');
+      return;
+    }
+
+    editReferrerDirty = true;
+    setEditReferrerHint('Choose a referrer from the suggestions below.');
+    editReferrerSearchDebounce = setTimeout(() => fetchEditReferrerSuggestions(q), 250);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideEditReferrerSuggestions();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#editReferrerSearchWrap')) hideEditReferrerSuggestions();
+  });
+}
+
+function hideEditVillageSuggestions() {
+  const cont = document.getElementById('editVillageSuggestions');
+  if (cont) cont.style.display = 'none';
+}
+
+function renderEditVillageSuggestions(villages) {
+  const list = document.getElementById('editVillageSuggestionList');
+  const cont = document.getElementById('editVillageSuggestions');
+  if (!list || !cont) return;
+
+  list.innerHTML = '';
+
+  if (!villages.length) {
+    cont.style.display = 'none';
+    return;
+  }
+
+  villages.forEach(village => {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.innerHTML = `
+      <span class="suggestion-name">${esc(village)}</span>
+      <span class="suggestion-meta">Existing village</span>`;
+    div.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      document.getElementById('editVillage').value = village;
+      hideEditVillageSuggestions();
+    });
+    list.appendChild(div);
+  });
+
+  cont.style.display = 'block';
+}
+
+async function fetchEditVillageSuggestions(q) {
+  try {
+    const res = await fetch(`/api/customers/villages?q=${encodeURIComponent(q)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderEditVillageSuggestions(data);
+  } catch (e) {
+    console.error('Edit village search error', e);
+  }
+}
+
+function setupEditVillageSearch() {
+  const input = document.getElementById('editVillage');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    clearTimeout(editVillageSearchDebounce);
+    const q = input.value.trim();
+    if (!q) {
+      hideEditVillageSuggestions();
+      return;
+    }
+    editVillageSearchDebounce = setTimeout(() => fetchEditVillageSuggestions(q), 250);
+  });
+
+  input.addEventListener('focus', () => {
+    const q = input.value.trim();
+    if (q) fetchEditVillageSuggestions(q);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideEditVillageSuggestions();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#editVillageWrap')) hideEditVillageSuggestions();
+  });
+}
+
 function renderTransactions(transactions) {
   const tbody = document.getElementById('txnBody');
   tbody.innerHTML = '';
@@ -208,14 +392,31 @@ function openEditCustomer() {
   document.getElementById('editAddress').value = customerData.address || '';
   document.getElementById('editType').value    = customerData.customer_type || 'regular';
   document.getElementById('editReferralCode').value = customerData.referral_code || '';
-  // Clear password fields on open
+  selectedEditReferrer = null;
+  editReferrerDirty = false;
+  editReferrerCleared = false;
+  hideEditVillageSuggestions();
+  hideEditReferrerSuggestions();
+  document.getElementById('editReferredBy').value = '';
+  setEditReferrerHint(customerData.referred_by ? `Current: ${customerData.referred_by}` : 'No referrer');
   document.getElementById('editPassword').value        = '';
   document.getElementById('editPasswordConfirm').value = '';
   document.getElementById('editCustomerModal').style.display = 'flex';
   document.getElementById('editName').focus();
 }
 
+function clearReferrer() {
+  selectedEditReferrer = null;
+  editReferrerDirty = true;
+  editReferrerCleared = true;
+  document.getElementById('editReferredBy').value = '';
+  hideEditReferrerSuggestions();
+  setEditReferrerHint('Referrer will be cleared');
+}
+
 function closeEditCustomer() {
+  hideEditVillageSuggestions();
+  hideEditReferrerSuggestions();
   document.getElementById('editCustomerModal').style.display = 'none';
 }
 
@@ -226,6 +427,7 @@ async function submitEditCustomer() {
   const address  = document.getElementById('editAddress').value.trim();
   const type     = document.getElementById('editType').value;
   const refCode  = document.getElementById('editReferralCode').value.trim();
+  const referredByQuery = document.getElementById('editReferredBy').value.trim();
   const password = document.getElementById('editPassword').value;
   const confirm  = document.getElementById('editPasswordConfirm').value;
 
@@ -238,11 +440,16 @@ async function submitEditCustomer() {
     showToast('Password must be at least 6 characters', 'error');
     return;
   }
+  if (referredByQuery && !selectedEditReferrer && !editReferrerCleared) {
+    showToast('Choose a referrer from the suggestions or clear the field', 'error');
+    return;
+  }
 
   const payload = { name, phone, village, address, customer_type: type, referral_code: refCode };
   if (password) payload.password = password;
 
   try {
+    // First update basic customer info
     const res = await fetch(`/api/customers/${CUSTOMER_ID}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -254,6 +461,22 @@ async function submitEditCustomer() {
       showToast(err.message || 'Update failed', 'error');
       return;
     }
+
+    if (editReferrerDirty) {
+      const referredByCode = editReferrerCleared ? '' : (selectedEditReferrer?.referral_code || '');
+      const referrerRes = await fetch(`/api/customers/${CUSTOMER_ID}/referrer`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referral_code: referredByCode })
+      });
+
+      if (!referrerRes.ok) {
+        const err = await referrerRes.json().catch(() => ({}));
+        showToast(err.message || 'Referrer update failed', 'error');
+        return;
+      }
+    }
+
     closeEditCustomer();
     showToast('Customer updated', 'success');
     loadLedger();

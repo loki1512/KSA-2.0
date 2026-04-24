@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify
-from extensions import db
-from models import Bill, BillItem, Customer, Transaction
+from flask_security import hash_password
+from extensions import db, security
+from models import Bill, BillItem, Customer, Transaction, User, Wallet
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import uuid
 
 
 
@@ -20,26 +22,83 @@ def save_bill():
     bill_discount = data.get("billDiscount") or {}
 
     customer = None
-    if data.get("customer_id"):
-        customer = db.session.get(Customer, data["customer_id"])
-    date_str = data.get("bill_date")
+    customer_id = data.get("customer_id")
+    
+    # Handle walk-in customer creation with referral support
+    if not customer_id and data.get("customer_name") and data.get("customer_phone"):
+        # New walk-in customer - create them with optional referral
+        name = data.get("customer_name", "").strip()
+        phone = data.get("customer_phone", "").strip()
+        address = data.get("customer_address", "").strip() or None
+        referral_code = data.get("referral_code")
+        
+        # Check if customer already exists
+        existing = Customer.query.filter_by(phone=phone).first()
+        if existing:
+            customer = existing
+        else:
+            # Look up referrer if referral code provided
+            referrer = None
+            if referral_code:
+                referrer = Customer.query.filter_by(referral_code=referral_code).first()
+            
+            # Generate auto-referral code (same logic as /api/customers)
+            name_part = (name or '')[:3]
+            phone_part = (phone or '')[:3]
+            auto_referral_code = name_part + phone_part
+            
+            # Create User account
+            fake_email = f"{phone}@ksa.local"
+            fake_password = uuid.uuid4().hex
+            user = User(
+                email=fake_email,
+                password=hash_password(fake_password),
+                active=True
+            )
+            db.session.add(user)
+            db.session.flush()
+            
+            # Create Customer with referral link
+            customer = Customer(
+                user_id=user.id,
+                name=name,
+                phone=phone,
+                address=address,
+                referred_by_id=referrer.id if referrer else None,
+                customer_type="walkin",
+                referral_code=auto_referral_code
+            )
+            db.session.add(customer)
+            db.session.flush()
+            
+            # Create Wallet
+            wallet = Wallet(customer_id=customer.id, balance=0.0)
+            db.session.add(wallet)
+    elif customer_id:
+        customer = db.session.get(Customer, customer_id)
+    
+    date_str = (data.get("bill_date") or "").strip()
     if date_str:
-        timestamp = datetime.strptime(date_str, "%Y-%m-%d")
+        try:
+            bill_timestamp = datetime.strptime(date_str, "%Y-%m-%d").replace(
+                hour=12, minute=0, second=0, microsecond=0
+            )
+        except ValueError:
+            return jsonify({"message": "Invalid bill date"}), 400
     else:
-        timestamp = datetime.now(ZoneInfo("Asia/Kolkata")).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        ).replace(tzinfo=None)
+        bill_timestamp = datetime.now(ZoneInfo("Asia/Kolkata"))
 
     bill = Bill(
         subtotal=data["subtotal"],
         final_amount=data["finalTotal"],
         bill_discount_type=bill_discount.get("type"),
         bill_discount_value=bill_discount.get("value"),
-        timestamp = timestamp ,
+        timestamp=bill_timestamp,
         customer=customer
     )
 
     # Add bill items
+    
     for it in data["items"]:
         discount = it.get("discount") or {}
 
@@ -77,6 +136,7 @@ def save_bill():
 
     return jsonify({
         "bill_id": bill.id,
+        "customer_id": customer.id if customer else None,
         "timestamp": bill.timestamp.astimezone(ZoneInfo("Asia/Kolkata")).isoformat()
     }), 201
 

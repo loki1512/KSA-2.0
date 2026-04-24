@@ -213,7 +213,13 @@
         <div class="field-row">
           <div class="field-group">
             <label>Village / Area</label>
-            <input type="text" id="editVillage" placeholder="Village or area">
+            <div id="editVillageWrap" class="referrer-search-wrap">
+              <input type="text" id="editVillage" placeholder="Village or area" autocomplete="off">
+              <div id="editVillageSuggestions" class="referrer-suggestions" style="display:none;">
+                <div id="editVillageSuggestionList"></div>
+              </div>
+            </div>
+            <div class="section-hint">Suggestions come from existing customers. New villages can still be typed manually.</div>
           </div>
           <div class="field-group">
             <label>Customer Type</label>
@@ -233,8 +239,21 @@
         <!-- Section: Referral -->
         <div class="modal-section-title" style="margin-top:14px;">Referral</div>
         <div class="field-group">
-          <label>Referral Code</label>
+          <label>My Referral Code</label>
           <input type="text" id="editReferralCode" placeholder="e.g. RAM9876MUM">
+        </div>
+        <div class="field-group">
+          <label>Referred By</label>
+          <div class="referrer-search-row">
+            <div id="editReferrerSearchWrap" class="referrer-search-wrap">
+              <input type="text" id="editReferredBy" placeholder="Search by name, phone, village, or referral code" autocomplete="off">
+              <div id="editReferrerSuggestions" class="referrer-suggestions" style="display:none;">
+                <div id="editReferrerSuggestionList"></div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-settle" onclick="clearReferrer()" style="padding:8px 12px;">Clear</button>
+          </div>
+          <div id="editReferredByName" class="section-hint" style="margin-top:4px;"></div>
         </div>
 
         <!-- Section: Password Change -->
