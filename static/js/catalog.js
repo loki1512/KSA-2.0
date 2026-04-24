@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchDebounce = setTimeout(applyCatalogSearch, 150);
   });
 
-  ['catItemName', 'catItemCategory', 'catItemDefaultPrice', 'catItemMaxPrice', 'catItemFinalPrice']
+  ['catItemName', 'catItemCategory', 'catItemDefaultPrice', 'catItemMaxPrice', 'catItemFinalPrice', 'catItemCostPrice']
     .forEach(id => {
       document.getElementById(id)?.addEventListener('keydown', event => {
         if (event.key === 'Enter') {
@@ -89,6 +89,7 @@ function renderItems(items) {
       <td class="num">${formatMoney(item.default_price)}</td>
       <td class="num">${item.max_price != null ? formatMoney(item.max_price) : '-'}</td>
       <td class="num">${item.final_price != null ? formatMoney(item.final_price) : '-'}</td>
+      <td class="num">${item.cost_price != null ? formatMoney(item.cost_price) : '-'}</td>
       <td class="num table-updated">${fmtDate(item.updated_at)}</td>
       <td class="actions-col">
         <button class="btn-view" onclick="viewItem(${item.id})">View</button>
@@ -201,6 +202,7 @@ async function saveCatalogItem() {
   const defaultPrice = parseFloat(document.getElementById('catItemDefaultPrice').value);
   const maxPrice = parseNumberOrNull(document.getElementById('catItemMaxPrice').value);
   const finalPrice = parseNumberOrNull(document.getElementById('catItemFinalPrice').value);
+  const costPrice = parseNumberOrNull(document.getElementById('catItemCostPrice').value);
 
   if (!name) {
     alert('Item name is required');
@@ -224,7 +226,8 @@ async function saveCatalogItem() {
     category,
     default_price: defaultPrice,
     max_price: maxPrice,
-    final_price: finalPrice
+    final_price: finalPrice,
+    cost_price: costPrice
   };
 
   const url = id ? `/api/items/${id}` : '/api/items';
@@ -265,6 +268,7 @@ function startEdit(id) {
   document.getElementById('catItemDefaultPrice').value = item.default_price;
   document.getElementById('catItemMaxPrice').value = item.max_price ?? '';
   document.getElementById('catItemFinalPrice').value = item.final_price ?? '';
+  document.getElementById('catItemCostPrice').value = item.cost_price ?? '';
 
   document.getElementById('formTitle').textContent = 'Edit Item';
   document.getElementById('cancelEditBtn').style.display = 'inline-flex';

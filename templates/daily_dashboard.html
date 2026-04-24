@@ -217,8 +217,6 @@
                         <th>Name</th>
                         <th>Phone</th>
                         <th>Spent</th>
-                        <th>Paid</th>
-                        <th>Settled</th>
                         <th>Balance</th>
                         <th>Ledger</th>
                     </tr>
@@ -239,13 +237,7 @@
                             {{ c.customer_phone or '—' }}
                         </td>
                         <td style="font-family:var(--font-mono); font-weight:600; color:var(--success); text-align:right;">
-                            ₹ {{ c.total_spent }}
-                        </td>
-                        <td style="font-family:var(--font-mono); font-weight:600; color:var(--accent); text-align:right;">
                             ₹ {{ c.total_paid }}
-                        </td>
-                        <td style="font-family:var(--font-mono); font-weight:600; color:#059669; text-align:right;">
-                            ₹ {{ c.settled_amount }}
                         </td>
                         <td style="font-family:var(--font-mono); font-weight:600; color:#dc2626; text-align:right;">
                             ₹ {{ c.balance }}
@@ -259,7 +251,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:24px;">No customers yet today</td></tr>
+                    <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">No customers yet today</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

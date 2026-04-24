@@ -101,6 +101,11 @@
             <label>Final / Selling Price (&#8377;)</label>
             <input id="catItemFinalPrice" type="number" min="0" step="0.01" placeholder="Least price offered">
           </div>
+
+          <div class="form-field">
+            <label>Cost Price (&#8377;)</label>
+            <input id="catItemCostPrice" type="number" min="0" step="0.01" placeholder="Your cost">
+          </div>
         </div>
 
         <div class="editor-actions">
@@ -124,6 +129,7 @@
             <th class="num">Default &#8377;</th>
             <th class="num">Max &#8377;</th>
             <th class="num">Final &#8377;</th>
+            <th class="num">Cost &#8377;</th>
             <th class="num">Updated</th>
             <th class="actions-col">Actions</th>
           </tr>
@@ -146,6 +152,7 @@
           <span class="chip required-chip">default_price *</span>
           <span class="chip">max_price</span>
           <span class="chip">final_price</span>
+          <span class="chip">cost_price</span>
         </div>
         <p class="hint-note">Columns marked <strong>*</strong> are required. Existing items matched by name will be updated. Optional columns may be omitted.</p>
       </div>

@@ -69,7 +69,8 @@ def get_items():
             "category": i.category,
             "default_price": i.default_price,
             "max_price": i.max_price,
-            "final_price": i.final_price
+            "final_price": i.final_price,
+            "cost_price": float(i.cost_price) if i.cost_price else None
         }
         for i in items
     ])
@@ -89,6 +90,7 @@ def add_item():
     default_price = data.get("default_price")
     max_price     = data.get("max_price")
     final_price   = data.get("final_price")
+    cost_price    = data.get("cost_price")
 
     if not name or not isinstance(default_price, (int, float)):
         return jsonify({"error": "name and default_price are required"}), 400
@@ -108,8 +110,11 @@ def add_item():
         category=category,
         default_price=default_price,
         max_price=max_price,
-        final_price=final_price
+        final_price=final_price,
+        cost_price=cost_price
     )
+
+    db.session.add(item)
 
     db.session.add(item)
     db.session.commit()
@@ -132,6 +137,7 @@ def update_item(item_id):
     default_price = data.get("default_price")
     max_price     = data.get("max_price")
     final_price   = data.get("final_price")
+    cost_price    = data.get("cost_price")
 
     if not name or not isinstance(default_price, (int, float)):
         return jsonify({"error": "name and default_price are required"}), 400
@@ -154,6 +160,7 @@ def update_item(item_id):
     item.default_price = default_price
     item.max_price     = max_price
     item.final_price   = final_price
+    item.cost_price    = cost_price
 
     db.session.commit()
 
@@ -233,6 +240,7 @@ def import_items():
             default_price = float(row["default_price"])
             max_price     = float(row["max_price"])   if pd.notna(row.get("max_price"))   else None
             final_price   = float(row["final_price"]) if pd.notna(row.get("final_price")) else None
+            cost_price    = float(row["cost_price"])  if pd.notna(row.get("cost_price"))  else None
         except Exception:
             skipped += 1
             continue
@@ -256,6 +264,7 @@ def import_items():
             item.default_price = default_price
             item.max_price     = max_price
             item.final_price   = final_price
+            item.cost_price    = cost_price
             updated += 1
         else:
             db.session.add(Item(
@@ -263,7 +272,8 @@ def import_items():
                 category=category,
                 default_price=default_price,
                 max_price=max_price,
-                final_price=final_price
+                final_price=final_price,
+                cost_price=cost_price
             ))
             added += 1
 
