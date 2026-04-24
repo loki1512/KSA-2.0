@@ -237,10 +237,10 @@
                             {{ c.customer_phone or '—' }}
                         </td>
                         <td style="font-family:var(--font-mono); font-weight:600; color:var(--success); text-align:right;">
-                            ₹ {{ c.total_paid }}
+                            ₹ {{ "%.2f"|format(c.total_paid) }}
                         </td>
                         <td style="font-family:var(--font-mono); font-weight:600; color:#dc2626; text-align:right;">
-                            ₹ {{ c.balance }}
+                            ₹ {{ "%.2f"|format(c.balance) }}
                         </td>
                         <td style="text-align:center;">
                             {% if c.customer_id %}
