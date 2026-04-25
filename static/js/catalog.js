@@ -376,6 +376,44 @@ async function importCatalog() {
   }
 }
 
+function downloadCatalogExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Excel download library is not available. Please refresh and try again.');
+    return;
+  }
+
+  if (!allItems.length) {
+    alert('No catalogue items to download.');
+    return;
+  }
+
+  const rows = allItems.map(item => ({
+    name: item.name || '',
+    category: item.category || '',
+    default_price: numberOrBlank(item.default_price),
+    max_price: numberOrBlank(item.max_price),
+    final_price: numberOrBlank(item.final_price),
+    cost_price: numberOrBlank(item.cost_price)
+  }));
+
+  const headers = ['name', 'category', 'default_price', 'max_price', 'final_price', 'cost_price'];
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+  ws['!cols'] = [
+    { wch: 34 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Catalogue');
+
+  const date = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `catalogue_${date}.xlsx`);
+}
+
 function findExactItem(query) {
   if (!query) return null;
   const normalizedQuery = normalizeText(query);
@@ -397,6 +435,12 @@ function parseNumberOrNull(value) {
   if (value === '' || value == null) return null;
   const numeric = parseFloat(value);
   return Number.isNaN(numeric) ? null : numeric;
+}
+
+function numberOrBlank(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : '';
 }
 
 function formatMoney(value) {
@@ -433,5 +477,6 @@ window.startEdit = startEdit;
 window.cancelEdit = cancelEdit;
 window.deleteItem = deleteItem;
 window.importCatalog = importCatalog;
+window.downloadCatalogExcel = downloadCatalogExcel;
 window.viewItem = viewItem;
 window.prepareNewItemFromSearch = prepareNewItemFromSearch;

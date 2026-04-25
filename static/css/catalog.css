@@ -264,6 +264,17 @@ button:active { transform: scale(0.98); }
   box-shadow: 0 4px 12px rgba(59,91,219,0.28);
 }
 
+.btn-export {
+  background: var(--success);
+  color: #fff;
+  text-decoration: none;
+}
+
+.btn-export:hover {
+  background: var(--success-hover);
+  box-shadow: 0 4px 12px rgba(15,158,110,0.24);
+}
+
 .btn-ghost {
   background: var(--surface-2);
   color: var(--text-secondary);
