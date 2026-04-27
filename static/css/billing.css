@@ -416,6 +416,12 @@ select {
 .search-wrap { margin-bottom: 14px; position: relative; }
 .search-wrap > label { display: block; margin-bottom: 5px; }
 
+/* Static keyword input - no search icon needed */
+#staticKeywordWrap input {
+  padding-left: 10px;
+  padding-right: 36px;
+}
+
 .search-input-wrap {
   position: relative;
   display: flex;

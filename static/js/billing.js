@@ -28,8 +28,9 @@ let activeReferrerSuggestionIndex = -1;
 let reverseMode = 'mrp';
 
 // ─── DOM REFS ─────────────────────────────────────────
-const itemNameInput    = document.getElementById('itemName');
-const qtyInput         = document.getElementById('qty');
+const itemNameInput       = document.getElementById('itemName');
+const staticKeywordInput  = document.getElementById('staticKeyword');
+const qtyInput            = document.getElementById('qty');
 const priceInput       = document.getElementById('price');
 const itemDiscountType = document.getElementById('itemDiscountType');
 const itemDiscountVal  = document.getElementById('itemDiscountValue');
@@ -44,6 +45,19 @@ const itemCountEl      = document.getElementById('itemCount');
 
 // ─── INIT ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Load saved static keyword from localStorage
+  const savedKeyword = localStorage.getItem('billingStaticKeyword');
+  if (savedKeyword && staticKeywordInput) {
+    staticKeywordInput.value = savedKeyword;
+  }
+
+  // Save static keyword when it changes
+  if (staticKeywordInput) {
+    staticKeywordInput.addEventListener('input', () => {
+      localStorage.setItem('billingStaticKeyword', staticKeywordInput.value);
+    });
+  }
+
   setupCustomerToggle();
   setupCustomerSearch();
   setupSearchListeners();
@@ -261,10 +275,14 @@ function highlightKeyboardSuggestions(items, index) {
 }
 
 async function fetchSuggestions(q, forModal) {
+  // Prepend static keyword if provided
+  const staticKeyword = staticKeywordInput ? staticKeywordInput.value.trim() : '';
+  const searchQuery = staticKeyword && q ? `${staticKeyword} ${q}` : (q || '');
+  
   try {
-    const res   = await fetch(`/api/items/search?q=${encodeURIComponent(q)}`);
+    const res   = await fetch(`/api/items/search?q=${encodeURIComponent(searchQuery)}`);
     const items = await res.json();
-    if (forModal) renderModalResults(items, q);
+    if (forModal) renderModalResults(items, searchQuery);
     else renderSuggestions(items);
   } catch (err) { console.error('Search error:', err); }
 }
@@ -338,6 +356,18 @@ function setupClearBtn() {
     if (discountBox.style.display !== 'none') toggleDiscount();
     itemNameInput.focus();
   });
+
+  // Static keyword clear button
+  const clearStaticBtn = document.getElementById('clearStaticKeywordBtn');
+  if (clearStaticBtn) {
+    clearStaticBtn.addEventListener('click', () => {
+      staticKeywordInput.value = '';
+      // Trigger new search with current item name
+      if (itemNameInput.value.trim()) {
+        itemNameInput.dispatchEvent(new Event('input'));
+      }
+    });
+  }
 }
 
 // ─── PRODUCT MODAL ────────────────────────────────────
