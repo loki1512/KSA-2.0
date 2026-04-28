@@ -416,10 +416,26 @@ select {
 .search-wrap { margin-bottom: 14px; position: relative; }
 .search-wrap > label { display: block; margin-bottom: 5px; }
 
-/* Static keyword input - no search icon needed */
+/* Static keyword is a compact search modifier, not the primary search box */
+.static-keyword-search {
+  width: min(360px, 100%);
+  margin-bottom: 10px;
+}
+
+.static-keyword-search > label {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
 #staticKeywordWrap input {
-  padding-left: 10px;
-  padding-right: 36px;
+  min-height: 34px;
+  padding: 6px 34px 6px 10px;
+  background: var(--surface-2);
+  border-style: dashed;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .search-input-wrap {

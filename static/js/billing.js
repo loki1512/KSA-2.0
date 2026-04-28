@@ -45,18 +45,8 @@ const itemCountEl      = document.getElementById('itemCount');
 
 // ─── INIT ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Load saved static keyword from localStorage
-  const savedKeyword = localStorage.getItem('billingStaticKeyword');
-  if (savedKeyword && staticKeywordInput) {
-    staticKeywordInput.value = savedKeyword;
-  }
-
-  // Save static keyword when it changes
-  if (staticKeywordInput) {
-    staticKeywordInput.addEventListener('input', () => {
-      localStorage.setItem('billingStaticKeyword', staticKeywordInput.value);
-    });
-  }
+  localStorage.removeItem('billingStaticKeyword');
+  if (staticKeywordInput) staticKeywordInput.value = '';
 
   setupCustomerToggle();
   setupCustomerSearch();
@@ -348,7 +338,7 @@ function setupClearBtn() {
   clearBtn.addEventListener('click', () => {
     itemNameInput.value = '';
     priceInput.value    = '';
-    qtyInput.value      = 1;
+    qtyInput.value      = '';
     itemDiscountVal.value = '';
     hideSuggestions();
     resetReverseInputs();
@@ -698,7 +688,7 @@ function addItem() {
 function resetItemForm() {
   itemNameInput.value   = '';
   priceInput.value      = '';
-  qtyInput.value        = 1;
+  qtyInput.value        = '';
   itemDiscountVal.value = '';
   hideSuggestions();
   currentItemMaxPrice = null;
