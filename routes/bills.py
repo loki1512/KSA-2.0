@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_security import hash_password
 from extensions import db, security
-from models import Bill, BillItem, Customer, Transaction, User, Wallet
+from models import Bill, BillItem, Customer, Transaction, User, Wallet, Item, Item
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import uuid
@@ -102,9 +102,14 @@ def save_bill():
     for it in data["items"]:
         discount = it.get("discount") or {}
 
+        # Look up item to get cost_price
+        item_obj = Item.query.filter_by(name=it["name"]).first()
+        cost_price = item_obj.cost_price if item_obj and item_obj.cost_price else None
+
         item = BillItem(
             item_name=it["name"],
             qty=it["qty"],
+            cost_price=cost_price,
             unit_price=it["rate"],
             item_discount_type=discount.get("type"),
             item_discount_value=discount.get("value"),

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_security import auth_required
 from extensions import db
-from models import Return, ReturnItem, Customer, Wallet, Transaction
+from models import Return, ReturnItem, Customer, Wallet, Transaction, Item
 from datetime import datetime
 
 returns_bp = Blueprint("returns", __name__)
@@ -24,9 +24,14 @@ def create_return(customer_id):
     )
 
     for it in data["items"]:
+        # Look up item to get cost_price
+        item_obj = Item.query.filter_by(name=it["name"]).first()
+        cost_price = item_obj.cost_price if item_obj and item_obj.cost_price else None
+
         item = ReturnItem(
             item_name=it["name"],
             qty=it["qty"],
+            cost_price=cost_price,
             unit_price=it["rate"],
             refund_amount=it["lineTotal"]
         )
