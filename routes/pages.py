@@ -118,3 +118,8 @@ def my_account():
 def view_return(return_id):
     ret = Return.query.get_or_404(return_id)
     return render_template("return_detail.html", ret=ret)
+
+#-----------------Health Check-----------------
+@pages_bp.route("/health")
+def health_check():
+    return "OK"
