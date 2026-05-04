@@ -10,14 +10,11 @@
 <body>
     <div class="app-shell">
         <header class="app-header">
-            <h1>Leads Management</h1>
+            <h1>Lead Pipeline</h1>
             <nav class="app-nav">
                 <a href="/" class="nav-link">Dashboard</a>
-                <a href="/billing" class="nav-link">Billing</a>
-                <a href="/customers" class="nav-link">Customers</a>
-                <a href="/catalog" class="nav-link">Catalog</a>
-                <a href="/offers" class="nav-link">Offers</a>
                 <a href="/leads" class="nav-link active">Leads</a>
+                <a href="/offers" class="nav-link">Offers</a>
             </nav>
         </header>
 
@@ -29,37 +26,38 @@
                 </div>
                 <div class="metric">
                     <div class="metric-value">{{ converted_leads }}</div>
-                    <div class="metric-label">Converted Leads</div>
+                    <div class="metric-label">Converted</div>
                 </div>
                 <div class="metric">
-                    <div class="metric-value">{{ "%.1f"|format(conversion_rate) }}%</div>
+                    <div class="metric-value">{{ conversion_rate|round(1) }}%</div>
                     <div class="metric-label">Conversion Rate</div>
                 </div>
             </div>
 
             <div class="leads-list">
-                {% if leads %}
-                    {% for lead, customer, offer in leads %}
-                        <div class="lead-item">
-                            <div class="lead-header">
-                                <h3>{{ customer.name }} - {{ offer.product_name }}</h3>
-                                <span class="lead-status {{ 'converted' if lead.status == 'Converted' else 'interested' }}">{{ lead.status }}</span>
-                            </div>
-                            <div class="lead-details">
-                                <p><strong>Phone:</strong> {{ customer.phone }}</p>
-                                <p><strong>Offer:</strong> {{ offer.offer_description }}</p>
-                                <p><strong>Lead Time:</strong> {{ lead.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-                            </div>
-                            <div class="lead-actions">
-                                <button onclick="updateStatus({{ lead.id }}, 'Interested')" class="btn btn-secondary">Mark Interested</button>
-                                <button onclick="updateStatus({{ lead.id }}, 'Contacted')" class="btn btn-info">Mark Contacted</button>
-                                <button onclick="updateStatus({{ lead.id }}, 'Converted')" class="btn btn-success">Mark Converted</button>
-                            </div>
+                {% for lead, customer, offer in leads %}
+                <div class="lead-item">
+                    <div class="lead-header">
+                        <div>
+                            <h3>{{ customer.name }}</h3>
+                            <span class="lead-status {% if lead.status == 'Converted' %}converted{% else %}interested{% endif %}">{{ lead.status }}</span>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <p>No leads yet.</p>
-                {% endif %}
+                        <div class="lead-actions">
+                            <select onchange="updateStatus({{ lead.id }}, this.value)" class="btn btn-secondary">
+                                <option value="Interested" {% if lead.status == 'Interested' %}selected{% endif %}>Interested</option>
+                                <option value="Contacted" {% if lead.status == 'Contacted' %}selected{% endif %}>Contacted</option>
+                                <option value="Converted" {% if lead.status == 'Converted' %}selected{% endif %}>Converted</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="lead-details">
+                        <p><strong>Phone:</strong> {{ customer.phone }}</p>
+                        <p><strong>Offer:</strong> {{ offer.product_name }}</p>
+                        <p><strong>Interested On:</strong> {{ lead.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <p><strong>Description:</strong> {{ offer.offer_description }}</p>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </main>
     </div>

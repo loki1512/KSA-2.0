@@ -58,7 +58,7 @@ def admin_required(fn):
 def create_customer_user(name, phone, email=None, password=None, address=None, village=None, customer_type="regular"):
     """Create a new customer with associated user account."""
     from extensions import db
-    from models import User, Customer, Wallet
+    from models import User, Customer, Wallet, Role
     from flask_security import hash_password
     import uuid
 
@@ -72,7 +72,6 @@ def create_customer_user(name, phone, email=None, password=None, address=None, v
         return existing
 
     login_email = email or customer_placeholder_email(phone)
-    # Assume no conflict for now, or handle
 
     user = User(
         email=login_email,
@@ -80,7 +79,6 @@ def create_customer_user(name, phone, email=None, password=None, address=None, v
         active=True
     )
     # Add customer role
-    from models import Role
     customer_role = Role.query.filter_by(name="customer").first()
     if customer_role:
         user.roles.append(customer_role)

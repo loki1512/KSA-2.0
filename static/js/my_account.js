@@ -1,3 +1,5 @@
+'use strict';
+
 document.addEventListener('DOMContentLoaded', function() {
   loadAccount();
 
@@ -91,20 +93,6 @@ function renderOffers(offers) {
       }
     });
   });
-}
-
-async function loadAccount() {
-  try {
-    const res = await fetch('/api/my-account');
-    const data = await res.json();
-    if (!res.ok) {
-      showError(data.message || 'Could not load your account.');
-      return;
-    }
-    renderAccount(data);
-  } catch {
-    showError('Could not connect. Please try again.');
-  }
 }
 
 function renderAccount(data) {

@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, jsonify
 from auth_helpers import admin_required
 from datetime import datetime, date, timedelta
 from calendar import monthrange
 from sqlalchemy import func, cast, Date, distinct, and_
-from models import Bill, BillItem, Customer, Payment, Transaction, Wallet
+from models import Bill, BillItem, Customer, Payment, Transaction, Wallet, Lead, Offer
 from extensions import db
 
 
@@ -410,7 +410,6 @@ def yearly_dashboard():
 @dashboard_bp.route("/leads")
 @admin_required
 def leads_page():
-    from models import Lead, Offer
     leads = (
         db.session.query(Lead, Customer, Offer)
         .join(Customer, Lead.customer_id == Customer.id)
@@ -439,7 +438,6 @@ def leads_page():
 @dashboard_bp.route("/api/leads/<int:lead_id>", methods=["PUT"])
 @admin_required
 def update_lead(lead_id):
-    from models import Lead
     lead = Lead.query.get_or_404(lead_id)
     data = request.get_json(force=True)
     status = data.get("status")

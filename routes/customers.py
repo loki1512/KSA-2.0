@@ -79,18 +79,6 @@ def _customer_payload(customer):
 
 
 # --------------------------------
-# LOOKUP CUSTOMER (public)
-# --------------------------------
-@customers_bp.route("/api/customers/lookup")
-def lookup_customer():
-    phone = request.args.get("phone", "").strip()
-    if not phone:
-        return jsonify({"exists": False})
-    customer = Customer.query.filter_by(phone=phone).first()
-    return jsonify({"exists": customer is not None})
-
-
-# --------------------------------
 # CREATE CUSTOMER  (auto-creates User)
 # --------------------------------
 @customers_bp.route("/api/customers", methods=["POST"])
@@ -345,8 +333,9 @@ def get_customer_offers():
         return jsonify([])
     from models import Offer
     from datetime import datetime
+    from zoneinfo import ZoneInfo
     offers = Offer.query.filter_by(is_active=True).all()
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
     active_offers = [o for o in offers if not o.expiry_date or o.expiry_date > now]
     return jsonify([
         {
@@ -370,6 +359,7 @@ def customer_offers_interest():
         return jsonify({"message": "Admins cannot show interest"}), 403
     from models import Offer, Lead
     from datetime import datetime
+    from zoneinfo import ZoneInfo
 
     data = request.get_json(force=True)
     offer_id = data.get("offer_id")
@@ -380,7 +370,8 @@ def customer_offers_interest():
     if not offer or not offer.is_active:
         return jsonify({"message": "Offer not available"}), 400
 
-    if offer.expiry_date and offer.expiry_date < datetime.now():
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    if offer.expiry_date and offer.expiry_date < now:
         return jsonify({"message": "Offer expired"}), 400
 
     existing = Lead.query.filter_by(customer_id=current_user.customer.id, offer_id=offer_id).first()

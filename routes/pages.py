@@ -1,10 +1,9 @@
-from flask import Blueprint, render_template, abort, redirect
+from flask import Blueprint, render_template, abort, redirect, request
 from flask_security import auth_required
-from auth_helpers import admin_required, is_admin
+from auth_helpers import admin_required, is_admin, create_customer_user
 from models import Bill, BillItem, Customer, Transaction, Return, Offer, Lead
 from sqlalchemy import func, desc
 from extensions import db
-from auth_helpers import create_customer_user
 
 pages_bp = Blueprint("pages", __name__)
 
@@ -101,15 +100,6 @@ def customer_returns():
     return render_template("returns.html")
 
 
-# ---- Public: customer self-service portal ----
-@pages_bp.route("/my-account")
-@auth_required()
-def my_account():
-    if is_admin():
-        return redirect("/")
-    return render_template("my_account.html")
-
-
 # ---- Admin: offers management ----
 @pages_bp.route("/offers")
 @admin_required
@@ -126,7 +116,9 @@ def offer_landing(offer_id):
         return render_template("offer_landing.html", error="This offer is not active.")
 
     from datetime import datetime
-    if offer.expiry_date and offer.expiry_date < datetime.now():
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    if offer.expiry_date and offer.expiry_date < now:
         return render_template("offer_landing.html", error="This offer has expired.")
 
     if request.method == "POST":
@@ -158,6 +150,14 @@ def offer_landing(offer_id):
 
     return render_template("offer_landing.html", offer=offer)
 
+
+# ---- Public: customer self-service portal ----
+@pages_bp.route("/my-account")
+@auth_required()
+def my_account():
+    if is_admin():
+        return redirect("/")
+    return render_template("my_account.html")
 
 #-----------------View Returns-----------------
 @pages_bp.route("/returns/view/<int:return_id>")

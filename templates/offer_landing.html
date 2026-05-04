@@ -47,7 +47,6 @@
                     const phone = this.value.trim();
                     const nameGroup = document.getElementById('name-group');
                     if (phone) {
-                        // Check if customer exists (simple check, could be improved)
                         fetch(`/api/customers/lookup?phone=${encodeURIComponent(phone)}`)
                             .then(response => response.json())
                             .then(data => {
