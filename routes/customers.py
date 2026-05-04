@@ -1,24 +1,96 @@
 from flask import Blueprint, request, jsonify
-from flask_security import auth_required, hash_password
-from extensions import db, security
-from models import Customer, Wallet, Bill, Transaction, User
+from flask_security import auth_required, current_user, hash_password
+from email_validator import EmailNotValidError, validate_email
+from auth_helpers import (
+    admin_required,
+    customer_placeholder_email,
+    is_internal_email,
+    public_customer_email,
+)
+from extensions import db
+from models import Customer, Wallet, Bill, Transaction, User, Role
 from sqlalchemy import func, desc, or_
 import uuid
 
 customers_bp = Blueprint("customers", __name__)
 
 
+def _normalize_optional_email(value):
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        return validate_email(value, check_deliverability=False).normalized.lower()
+    except EmailNotValidError:
+        return False
+
+
+def _email_conflict(email, user_id=None):
+    if not email:
+        return None
+    query = User.query.filter(func.lower(User.email) == email.lower())
+    if user_id:
+        query = query.filter(User.id != user_id)
+    return query.first()
+
+
+def _customer_role():
+    role = Role.query.filter_by(name="customer").first()
+    if not role:
+        role = Role(name="customer", description="Customer")
+        db.session.add(role)
+        db.session.flush()
+    return role
+
+
+def _ensure_customer_role(user):
+    role = _customer_role()
+    if role not in user.roles:
+        user.roles.append(role)
+
+
+def _customer_payload(customer):
+    transactions = (
+        Transaction.query
+        .filter_by(customer_id=customer.id)
+        .order_by(Transaction.timestamp.desc())
+        .all()
+    )
+    balance = sum(t.amount for t in transactions)
+    return {
+        "id": customer.id,
+        "name": customer.name,
+        "phone": customer.phone,
+        "email": public_customer_email(customer.user),
+        "wallet_balance": customer.wallet.balance if customer.wallet else 0.0,
+        "ledger_balance": balance,
+        "transactions": [
+            {
+                "id": t.id,
+                "type": t.transaction_type,
+                "amount": t.amount,
+                "reference_type": t.reference_type,
+                "reference_id": t.reference_id,
+                "timestamp": t.timestamp.isoformat()
+            }
+            for t in transactions
+        ]
+    }
+
+
 # --------------------------------
 # CREATE CUSTOMER  (auto-creates User)
 # --------------------------------
 @customers_bp.route("/api/customers", methods=["POST"])
-@auth_required()
+@admin_required
 def create_customer():
 
     data = request.get_json(force=True)
 
     name          = data.get("name", "").strip()
     phone         = data.get("phone", "").strip()
+    email         = _normalize_optional_email(data.get("email"))
+    password      = data.get("password", "").strip()
     address       = data.get("address")
     village       = data.get("village")
     referral_code = data.get("referral_code")
@@ -27,22 +99,30 @@ def create_customer():
     if not name or not phone:
         return jsonify({"message": "Name and phone required"}), 400
 
+    if email is False:
+        return jsonify({"message": "Valid email required"}), 400
+
+    if password and len(password) < 6:
+        return jsonify({"message": "Password must be at least 6 characters"}), 400
+
     existing = Customer.query.filter_by(phone=phone).first()
     if existing:
         return jsonify({"message": "Customer with this phone already exists"}), 400
+
+    login_email = email or customer_placeholder_email(phone)
+    if _email_conflict(login_email):
+        return jsonify({"message": "Email already in use"}), 400
 
     referrer = None
     if referral_code:
         referrer = Customer.query.filter_by(referral_code=referral_code).first()
 
-    fake_email    = f"{phone}@ksa.local"
-    fake_password = uuid.uuid4().hex
-
     user = User(
-        email=fake_email,
-        password=hash_password(fake_password),
+        email=login_email,
+        password=hash_password(password or uuid.uuid4().hex),
         active=True
     )
+    _ensure_customer_role(user)
 
     db.session.add(user)
     db.session.flush()
@@ -83,7 +163,7 @@ def create_customer():
 # LIST ALL CUSTOMERS
 # --------------------------------
 @customers_bp.route("/api/customers", methods=["GET"])
-@auth_required()
+@admin_required
 def list_customers():
 
     customers = Customer.query.order_by(Customer.name).all()
@@ -105,7 +185,7 @@ def list_customers():
 # SEARCH DISTINCT VILLAGES
 # --------------------------------
 @customers_bp.route("/api/customers/villages")
-@auth_required()
+@admin_required
 def search_villages():
 
     q = request.args.get("q", "").strip()
@@ -144,7 +224,7 @@ def search_villages():
 # SEARCH CUSTOMERS
 # --------------------------------
 @customers_bp.route("/api/customers/search")
-@auth_required()
+@admin_required
 def search_customers():
 
     q = request.args.get("q", "").strip()
@@ -188,6 +268,7 @@ def search_customers():
 # PUBLIC: LOOKUP BY PHONE (for customer portal — no auth)
 # --------------------------------
 @customers_bp.route("/api/customers/lookup")
+@admin_required
 def lookup_by_phone():
     """Public endpoint — customer enters their phone to see their ledger."""
     phone = request.args.get("phone", "").strip()
@@ -230,10 +311,22 @@ def lookup_by_phone():
 
 
 # --------------------------------
+# CUSTOMER: OWN ACCOUNT LEDGER
+# --------------------------------
+@customers_bp.route("/api/my-account", methods=["GET"])
+@auth_required()
+def my_account_data():
+    customer = current_user.customer
+    if not customer:
+        return jsonify({"message": "No customer account linked to this login"}), 404
+    return jsonify(_customer_payload(customer))
+
+
+# --------------------------------
 # GET CUSTOMER
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>", methods=["GET"])
-@auth_required()
+@admin_required
 def get_customer(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)
@@ -253,7 +346,7 @@ def get_customer(customer_id):
 
     return jsonify({
         "id": customer.id,
-        "email": customer.user.email if customer.user else None,
+        "email": public_customer_email(customer.user),
         "name": customer.name,
         "phone": customer.phone,
         "address": customer.address,
@@ -271,7 +364,7 @@ def get_customer(customer_id):
 # GET CUSTOMER BILLS
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>/bills", methods=["GET"])
-@auth_required()
+@admin_required
 def get_customer_bills(customer_id):
 
     Customer.query.get_or_404(customer_id)
@@ -298,7 +391,7 @@ def get_customer_bills(customer_id):
 # RECENT CUSTOMERS (last 200 by bill activity)
 # --------------------------------
 @customers_bp.route("/api/customers/recent", methods=["GET"])
-@auth_required()
+@admin_required
 def recent_customers():
 
     bills = (
@@ -331,7 +424,7 @@ def recent_customers():
 # TOP CUSTOMERS BY TOTAL SPEND
 # --------------------------------
 @customers_bp.route("/api/customers/top", methods=["GET"])
-@auth_required()
+@admin_required
 def top_customers():
     """Returns top 200 customers by total spend."""
     rows = (
@@ -366,17 +459,42 @@ def top_customers():
 # UPDATE CUSTOMER (full replace)
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>", methods=["PUT"])
-@auth_required()
+@admin_required
 def update_customer(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)
     data = request.get_json(force=True)
+    user = User.query.get(customer.user_id)
+
+    new_phone = data.get("phone", customer.phone)
+    if new_phone != customer.phone:
+        conflict = Customer.query.filter(
+            Customer.phone == new_phone,
+            Customer.id != customer_id
+        ).first()
+        if conflict:
+            return jsonify({"message": "Customer with this phone already exists"}), 400
+
+    email = _normalize_optional_email(data.get("email"))
+    if email is False:
+        return jsonify({"message": "Valid email required"}), 400
+
+    if user and email and _email_conflict(email, user.id):
+        return jsonify({"message": "Email already in use"}), 400
 
     customer.name          = data.get("name",          customer.name)
-    customer.phone         = data.get("phone",         customer.phone)
+    customer.phone         = new_phone
     customer.address       = data.get("address",       customer.address)
     customer.village       = data.get("village",       customer.village)
     customer.customer_type = data.get("customer_type", customer.customer_type)
+
+    if user:
+        if email:
+            user.email = email
+        elif "email" in data:
+            user.email = customer_placeholder_email(new_phone, customer.id)
+        elif is_internal_email(user.email) and new_phone:
+            user.email = customer_placeholder_email(new_phone, customer.id)
 
     # Allow referral_code to be updated directly
     if "referral_code" in data and data["referral_code"]:
@@ -394,9 +512,9 @@ def update_customer(customer_id):
     if password:
         if len(password) < 6:
             return jsonify({"message": "Password must be at least 6 characters"}), 400
-        user = User.query.get(customer.user_id)
         if user:
             user.password = hash_password(password)
+            _ensure_customer_role(user)
 
     db.session.commit()
     return jsonify({"message": "Customer updated successfully"})
@@ -406,7 +524,7 @@ def update_customer(customer_id):
 # PATCH CUSTOMER (partial update)
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>", methods=["PATCH"])
-@auth_required()
+@admin_required
 def patch_customer(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)
@@ -424,7 +542,7 @@ def patch_customer(customer_id):
 # UPDATE REFERRER
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>/referrer", methods=["PUT"])
-@auth_required()
+@admin_required
 def update_referrer(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)
@@ -465,7 +583,7 @@ def update_referrer(customer_id):
 # DELETE CUSTOMER
 # --------------------------------
 @customers_bp.route("/api/customers/<int:customer_id>", methods=["DELETE"])
-@auth_required()
+@admin_required
 def delete_customer(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request
-from flask_security import auth_required
+from auth_helpers import admin_required
 from datetime import datetime, date, timedelta
 from calendar import monthrange
 from sqlalchemy import func, cast, Date, distinct, and_
@@ -76,7 +76,7 @@ dashboard_bp = Blueprint("dashboard", __name__)
 # DAILY DASHBOARD
 # ─────────────────────────────────────────────────────────
 @dashboard_bp.route("/")
-@auth_required()
+@admin_required
 def daily_dashboard():
     date_param = request.args.get("date")
     today = datetime.strptime(date_param, "%Y-%m-%d").date() if date_param else date.today()
@@ -329,7 +329,7 @@ def _period_dashboard_data(start_date, end_date):
 # MONTHLY
 # ─────────────────────────────────────────────────────────
 @dashboard_bp.route("/dashboard/monthly")
-@auth_required()
+@admin_required
 def monthly_dashboard():
     year  = request.args.get("year",  date.today().year,  type=int)
     month = request.args.get("month", date.today().month, type=int)
@@ -356,7 +356,7 @@ def monthly_dashboard():
 # QUARTERLY
 # ─────────────────────────────────────────────────────────
 @dashboard_bp.route("/dashboard/quarterly")
-@auth_required()
+@admin_required
 def quarterly_dashboard():
     year    = request.args.get("year",    date.today().year, type=int)
     quarter = request.args.get("quarter", (date.today().month - 1) // 3 + 1, type=int)
@@ -387,7 +387,7 @@ def quarterly_dashboard():
 # YEARLY
 # ─────────────────────────────────────────────────────────
 @dashboard_bp.route("/dashboard/yearly")
-@auth_required()
+@admin_required
 def yearly_dashboard():
     year       = request.args.get("year", date.today().year, type=int)
     start_date = date(year, 1, 1)

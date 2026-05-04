@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Profile - KSA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
+  <link rel="stylesheet" href="/static/css/admin_profile.css">
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
+</head>
+<body>
+<div class="page">
+  <header class="site-header">
+    <div class="header-left">
+      <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart billing system</span>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/returns/new">Returns</a>
+      <a href="/admin/profile" class="active">Profile</a>
+      <a href="/logout" class="nav-logout">Logout</a>
+    </nav>
+  </header>
+
+  <main class="profile-shell">
+    <div class="page-header">
+      <div class="page-header-content">
+        <p class="page-kicker">Admin Account</p>
+        <h2 class="page-title">Profile</h2>
+        <p class="page-summary">Update the login email or password for the current admin account.</p>
+      </div>
+    </div>
+
+    <section class="profile-panel">
+      <div class="field-group">
+        <label>Email</label>
+        <input type="email" id="profileEmail" autocomplete="email">
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label>New Password</label>
+          <input type="password" id="profilePassword" autocomplete="new-password" placeholder="Leave blank to keep current">
+        </div>
+        <div class="field-group">
+          <label>Confirm New Password</label>
+          <input type="password" id="profilePasswordConfirm" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Current Password *</label>
+        <input type="password" id="profileCurrentPassword" autocomplete="current-password">
+      </div>
+
+      <div id="profileMessage" class="profile-message" style="display:none;"></div>
+
+      <div class="profile-actions">
+        <a class="btn btn-ghost" href="/">Cancel</a>
+        <button class="btn btn-primary" id="profileSaveBtn" type="button">Save Changes</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/static/js/admin_profile.js"></script>
+</body>
+</html>

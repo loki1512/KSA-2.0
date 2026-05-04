@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>My Account — Kumara Swami Agencies</title>
+  <title>My Account - Kumara Swami Agencies</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/my_account.css">
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
 </head>
 <body>
 
@@ -17,62 +18,44 @@
   </header>
 
   <main class="pub-container">
-
-    <!-- LOOKUP FORM -->
-    <div id="lookupSection">
-      <div class="pub-card lookup-card">
-        <div class="lookup-icon">📱</div>
-        <h2>View Your Account</h2>
-        <p class="lookup-hint">Enter your registered mobile number to see your transactions and balance.</p>
-
-        <div class="lookup-field">
-          <input type="tel" id="phoneInput" maxlength="10"
-            placeholder="10-digit mobile number"
-            inputmode="numeric" autocomplete="tel">
-          <button id="lookupBtn" onclick="lookupAccount()">View Account →</button>
-        </div>
-        <p id="lookupError" class="lookup-error" style="display:none;"></p>
-      </div>
+    <div id="loadingSection" class="pub-card lookup-card">
+      <h2>Loading Your Account</h2>
+      <p class="lookup-hint">Fetching your latest ledger and balance.</p>
+      <p id="lookupError" class="lookup-error" style="display:none;"></p>
     </div>
 
-    <!-- ACCOUNT VIEW (hidden until lookup) -->
     <div id="accountSection" style="display:none;">
-
-      <!-- Profile summary -->
       <div class="pub-card profile-summary">
         <div class="prof-avatar" id="profAvatar"></div>
         <div class="prof-details">
           <div class="prof-name" id="profName"></div>
           <div class="prof-phone" id="profPhone"></div>
+          <div class="prof-phone" id="profEmail"></div>
         </div>
-        <button class="btn-logout" onclick="logout()">← Change Number</button>
+        <a class="btn-logout" href="/logout">Logout</a>
       </div>
 
-      <!-- Balance cards -->
       <div class="pub-balance-grid">
         <div class="pub-bal-card pub-bal-ledger">
           <div class="pub-bal-label">Outstanding Balance</div>
-          <div class="pub-bal-value" id="pubLedgerBal">₹0.00</div>
+          <div class="pub-bal-value" id="pubLedgerBal">Rs.0.00</div>
           <div class="pub-bal-hint" id="pubLedgerHint"></div>
         </div>
         <div class="pub-bal-card pub-bal-wallet">
           <div class="pub-bal-label">Store Credit / Wallet</div>
-          <div class="pub-bal-value" id="pubWalletBal">₹0.00</div>
+          <div class="pub-bal-value" id="pubWalletBal">Rs.0.00</div>
         </div>
       </div>
 
-      <!-- Transactions -->
       <div class="pub-card txn-card">
         <h3>Transaction History</h3>
         <div class="txn-list" id="txnList"></div>
       </div>
-
     </div>
-
   </main>
 
   <footer class="pub-footer">
-    <p>📞 9490608943 &nbsp;|&nbsp; Kumara Swami Agencies, </p>
+    <p>Phone: 9490608943 | Kumara Swami Agencies</p>
   </footer>
 
 <script src="/static/js/my_account.js"></script>

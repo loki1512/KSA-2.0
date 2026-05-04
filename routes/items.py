@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_security import auth_required
+from auth_helpers import admin_required
 from extensions import db
 from models import Item
 from sqlalchemy import func, and_
@@ -12,7 +12,7 @@ items_bp = Blueprint("items", __name__)
 # SEARCH ITEMS (Billing search)
 # --------------------------------
 @items_bp.route("/api/items/search")
-@auth_required()
+@admin_required
 def search_items():
 
     q = request.args.get("q", "").strip()
@@ -57,7 +57,7 @@ def search_items():
 # GET ALL ITEMS
 # --------------------------------
 @items_bp.route("/api/items", methods=["GET"])
-@auth_required()
+@admin_required
 def get_items():
 
     items = Item.query.order_by(Item.name).all()
@@ -80,7 +80,7 @@ def get_items():
 # ADD ITEM
 # --------------------------------
 @items_bp.route("/api/items", methods=["POST"])
-@auth_required()
+@admin_required
 def add_item():
 
     data = request.get_json()
@@ -126,7 +126,7 @@ def add_item():
 # UPDATE ITEM (full)
 # --------------------------------
 @items_bp.route("/api/items/<int:item_id>", methods=["PUT"])
-@auth_required()
+@admin_required
 def update_item(item_id):
 
     item = Item.query.get_or_404(item_id)
@@ -171,7 +171,7 @@ def update_item(item_id):
 # PATCH ITEM PRICE (dashboard quick-edit)
 # --------------------------------
 @items_bp.route("/api/items/<int:item_id>/price", methods=["PATCH"])
-@auth_required()
+@admin_required
 def patch_item_price(item_id):
     """Lightweight endpoint — only updates prices, not name/category."""
 
@@ -206,7 +206,7 @@ def patch_item_price(item_id):
 # DELETE ITEM
 # --------------------------------
 @items_bp.route("/api/items/<int:item_id>", methods=["DELETE"])
-@auth_required()
+@admin_required
 def delete_item(item_id):
 
     item = Item.query.get_or_404(item_id)
@@ -221,7 +221,7 @@ def delete_item(item_id):
 # Excel columns: name | category | default_price | max_price | final_price
 # --------------------------------
 @items_bp.route("/api/items/import", methods=["POST"])
-@auth_required()
+@admin_required
 def import_items():
 
     file = request.files.get("file")

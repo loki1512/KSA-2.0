@@ -28,6 +28,7 @@
     <a href="/customers">Customers</a>
     <a href="/transactions">Transactions</a>
     <a href="/returns/new">Returns</a>
+    <a href="/admin/profile">Profile</a>
     <a href="/logout" class="nav-logout">Logout</a>
   </nav>
 </header>
@@ -78,21 +79,21 @@
         <tr
           class="bill-row"
           data-id="{{ bill.id }}"
-          data-customer="{{ (bill.customer_name or 'Walk-in') | lower }}"
-          data-mobile="{{ bill.customer_phone or '' }}"
+          data-customer="{{ (bill.customer.name if bill.customer else 'Walk-in') | lower }}"
+          data-mobile="{{ bill.customer.phone if bill.customer else '' }}"
           data-date="{{ bill.timestamp.strftime('%Y-%m-%d') }}"
           data-text="{{ (
                             bill.id ~ ' ' ~
-                            (bill.customer_name or 'walk-in') ~ ' ' ~
-                            (bill.customer_phone or '') ~ ' ' ~
+                            (bill.customer.name if bill.customer else 'walk-in') ~ ' ' ~
+                            (bill.customer.phone if bill.customer else '') ~ ' ' ~
                             bill.final_amount
                         ) | lower }}"
           onclick="window.location='/bills/{{ bill.id }}'"
         >
           <td>#{{ bill.id }}</td>
           <td>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</td>
-          <td>{{ bill.customer.name or 'Walk-in' }}</td>
-          <td>{{ bill.customer.phone or '-' }}</td>
+          <td>{{ bill.customer.name if bill.customer else 'Walk-in' }}</td>
+          <td>{{ bill.customer.phone if bill.customer else '-' }}</td>
           <td>₹{{ "%.2f"|format(bill.final_amount) }}</td>
           <td class="view-link">
             <a href="/bills/{{ bill.id }}">View</a>

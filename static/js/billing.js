@@ -1340,6 +1340,8 @@ async function createCustomer() {
   const payload = {
     name:          name,
     phone:         phone,
+    email:         document.getElementById("newCustEmail").value.trim(),
+    password:      document.getElementById("newCustPassword").value,
     village:       document.getElementById("newCustVillage").value.trim(),
     address:       document.getElementById("newCustAddress").value.trim(),
     // Send the referrer's referral_code if a referrer was selected, else empty string
@@ -1378,7 +1380,7 @@ async function createCustomer() {
     document.getElementById("customerCreatedModal").style.display = "flex";
 
     // Clear form fields for next use
-    ['newCustName','newCustPhone','newCustVillage','newCustAddress'].forEach(id => {
+    ['newCustName','newCustPhone','newCustEmail','newCustPassword','newCustVillage','newCustAddress'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('newCustType').value = 'regular';
@@ -1411,18 +1413,28 @@ function useCreatedCustomer() {
 function setupCustomerModalKeyboard() {
   const nameInput = document.getElementById('newCustName');
   const phoneInput = document.getElementById('newCustPhone');
+  const emailInput = document.getElementById('newCustEmail');
+  const passwordInput = document.getElementById('newCustPassword');
   const villageInput = document.getElementById('newCustVillage');
   const addressInput = document.getElementById('newCustAddress');
   const referrerInput = document.getElementById('referrerSearchInput');
   const typeInput = document.getElementById('newCustType');
 
-  if (!nameInput || !phoneInput || !villageInput || !addressInput || !referrerInput || !typeInput) return;
+  if (!nameInput || !phoneInput || !emailInput || !passwordInput || !villageInput || !addressInput || !referrerInput || !typeInput) return;
 
   nameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); phoneInput.focus(); }
   });
 
   phoneInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); emailInput.focus(); }
+  });
+
+  emailInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); passwordInput.focus(); }
+  });
+
+  passwordInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); villageInput.focus(); }
   });
 

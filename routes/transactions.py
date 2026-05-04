@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_security import auth_required
+from auth_helpers import admin_required
 from extensions import db
 from models import Transaction, Customer, Bill, Return, Payment
 from datetime import datetime
@@ -8,7 +8,7 @@ transactions_bp = Blueprint("transactions", __name__)
 
 
 @transactions_bp.route("/api/transactions", methods=["GET"])
-@auth_required()
+@admin_required
 def all_transactions():
     page  = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 100))

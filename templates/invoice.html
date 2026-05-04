@@ -47,12 +47,12 @@
 
     <section class="customer">
       <strong>Customer:</strong>
-      <p>{{ bill.customer_name or 'Walk-in' }}</p>
-      {% if bill.customer_phone %}
-        <p>{{ bill.customer_phone }}</p>
+      <p>{{ customer.name if customer else 'Walk-in' }}</p>
+      {% if customer and customer.phone %}
+        <p>{{ customer.phone }}</p>
       {% endif %}
-      {% if bill.customer_address %}
-        <p>{{ bill.customer_address }}</p>
+      {% if customer and customer.address %}
+        <p>{{ customer.address }}</p>
       {% endif %}
     </section>
 

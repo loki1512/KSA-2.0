@@ -85,7 +85,7 @@
 <body>
   <div class="login-card">
     <h1>Kumara Swami Agencies</h1>
-    <p class="subtitle">Admin Login</p>
+    <p class="subtitle">Account Login</p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -95,11 +95,10 @@
       {% endif %}
     {% endwith %}
 
-    <form method="POST" action="{{ url_for('security.login') }}">
-      {{ login_user_form.hidden_tag() }}
+    <form method="POST" action="/login">
 
-      <label for="email">Email</label>
-      <input type="text" id="email" name="email" placeholder="Email" required autofocus />
+      <label for="email">Phone or Email</label>
+      <input type="text" id="email" name="email" placeholder="Phone or email" required autofocus />
 
       <label for="password">Password</label>
       <input type="password" id="password" name="password" placeholder="Password" required />

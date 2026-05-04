@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
-from flask_security import auth_required
+from flask_security import auth_required, current_user
+from auth_helpers import admin_required, forbidden_response, is_admin
 from extensions import db
 from models import Transaction, Customer, Wallet, Bill, Return, Payment
 
@@ -10,6 +11,7 @@ ledger_bp = Blueprint("ledger", __name__)
 # GET CUSTOMER LEDGER
 # --------------------------------
 @ledger_bp.route("/api/ledgers/<int:customer_id>", methods=["GET"])
+@admin_required
 def get_ledger(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)
@@ -41,8 +43,11 @@ def get_ledger(customer_id):
 
 #-----------------customer copy of ledger-----------------
 @ledger_bp.route("/api/customers/<int:customer_id>/ledger", methods=["GET"])
+@auth_required()
 def get_customer_ledger(customer_id):
     customer = Customer.query.get_or_404(customer_id)
+    if not is_admin() and (not current_user.customer or current_user.customer.id != customer.id):
+        return forbidden_response()
 
     transactions = (
         Transaction.query
@@ -73,6 +78,7 @@ def get_customer_ledger(customer_id):
 # CLEAR CUSTOMER LEDGER
 # --------------------------------
 @ledger_bp.route("/api/ledgers/<int:customer_id>/transactions", methods=["DELETE"])
+@admin_required
 def clear_ledger(customer_id):
 
     Customer.query.get_or_404(customer_id)
@@ -101,6 +107,7 @@ def clear_ledger(customer_id):
 # SETTLE LEDGER
 # --------------------------------
 @ledger_bp.route("/api/ledgers/<int:customer_id>/settle", methods=["POST"])
+@admin_required
 def settle_ledger(customer_id):
 
     Customer.query.get_or_404(customer_id)
@@ -146,6 +153,7 @@ def settle_ledger(customer_id):
 # LEDGER STATUS
 # --------------------------------
 @ledger_bp.route("/api/ledgers/<int:customer_id>/status", methods=["GET"])
+@admin_required
 def ledger_status(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)
@@ -165,7 +173,7 @@ def ledger_status(customer_id):
 # DELETE CUSTOMER VIA LEDGER
 # --------------------------------
 @ledger_bp.route("/api/ledgers/<int:customer_id>/customer", methods=["DELETE"])
-@auth_required()
+@admin_required
 def delete_customer_from_ledger(customer_id):
 
     customer = Customer.query.get_or_404(customer_id)

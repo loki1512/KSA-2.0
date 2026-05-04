@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_security import auth_required
+from auth_helpers import admin_required
 from extensions import db
 from models import Return, ReturnItem, Customer, Wallet, Transaction, Item
 from datetime import datetime
@@ -11,7 +11,7 @@ returns_bp = Blueprint("returns", __name__)
 # CREATE RETURN
 # --------------------------------
 @returns_bp.route("/api/returns/<int:customer_id>", methods=["POST"])
-@auth_required()
+@admin_required
 def create_return(customer_id):
 
     data = request.get_json(force=True)
@@ -73,7 +73,7 @@ def create_return(customer_id):
 # GET RETURN
 # --------------------------------
 @returns_bp.route("/api/returns/<int:return_id>", methods=["GET"])
-@auth_required()
+@admin_required
 def get_return(return_id):
 
     ret = Return.query.get_or_404(return_id)
@@ -101,7 +101,7 @@ def get_return(return_id):
 # LIST RETURNS FOR CUSTOMER
 # --------------------------------
 @returns_bp.route("/api/returns", methods=["GET"])
-@auth_required()
+@admin_required
 def list_returns():
 
     customer_id = request.args.get("customer_id", type=int)
@@ -129,7 +129,7 @@ def list_returns():
 # DELETE RETURN
 # --------------------------------
 @returns_bp.route("/api/returns/<int:return_id>", methods=["DELETE"])
-@auth_required()
+@admin_required
 def delete_return(return_id):
 
     ret = Return.query.get_or_404(return_id)

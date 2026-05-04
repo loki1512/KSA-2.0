@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_security import hash_password
-from extensions import db, security
-from models import Bill, BillItem, Customer, Transaction, User, Wallet, Item, Item
+from auth_helpers import admin_required, customer_placeholder_email
+from extensions import db
+from models import Bill, BillItem, Customer, Transaction, User, Wallet, Item, Role
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import uuid
@@ -11,10 +12,20 @@ import uuid
 bills_bp = Blueprint("bills", __name__)
 
 
+def _customer_role():
+    role = Role.query.filter_by(name="customer").first()
+    if not role:
+        role = Role(name="customer", description="Customer")
+        db.session.add(role)
+        db.session.flush()
+    return role
+
+
 # --------------------------------
 # CREATE BILL
 # --------------------------------
 @bills_bp.route("/api/bills", methods=["POST"])
+@admin_required
 def save_bill():
 
     data = request.get_json(force=True)
@@ -48,13 +59,13 @@ def save_bill():
             auto_referral_code = name_part + phone_part
             
             # Create User account
-            fake_email = f"{phone}@ksa.local"
             fake_password = uuid.uuid4().hex
             user = User(
-                email=fake_email,
+                email=customer_placeholder_email(phone),
                 password=hash_password(fake_password),
                 active=True
             )
+            user.roles.append(_customer_role())
             db.session.add(user)
             db.session.flush()
             
@@ -150,6 +161,7 @@ def save_bill():
 # LIST BILLS
 # --------------------------------
 @bills_bp.route("/api/bills", methods=["GET"])
+@admin_required
 def list_bills():
 
     bills = Bill.query.order_by(Bill.timestamp.desc()).all()
@@ -169,6 +181,7 @@ def list_bills():
 # BILL DETAILS
 # --------------------------------
 @bills_bp.route("/api/bills/<int:bill_id>", methods=["GET"])
+@admin_required
 def get_bill(bill_id):
 
     bill = Bill.query.get_or_404(bill_id)
@@ -208,6 +221,7 @@ def get_bill(bill_id):
 # UPDATE BILL
 # --------------------------------
 @bills_bp.route("/api/bills/<int:bill_id>", methods=["PUT"])
+@admin_required
 def update_bill(bill_id):
 
     bill = Bill.query.get_or_404(bill_id)
@@ -271,6 +285,7 @@ def update_bill(bill_id):
 # DELETE BILL
 # --------------------------------
 @bills_bp.route("/api/bills/<int:bill_id>", methods=["DELETE"])
+@admin_required
 def delete_bill(bill_id):
 
     bill = Bill.query.get_or_404(bill_id)

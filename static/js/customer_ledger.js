@@ -388,6 +388,7 @@ function openEditCustomer() {
   if (!customerData) return;
   document.getElementById('editName').value    = customerData.name    || '';
   document.getElementById('editPhone').value   = customerData.phone   || '';
+  document.getElementById('editEmail').value   = customerData.email   || '';
   document.getElementById('editVillage').value = customerData.village || '';
   document.getElementById('editAddress').value = customerData.address || '';
   document.getElementById('editType').value    = customerData.customer_type || 'regular';
@@ -423,6 +424,7 @@ function closeEditCustomer() {
 async function submitEditCustomer() {
   const name     = document.getElementById('editName').value.trim();
   const phone    = document.getElementById('editPhone').value.trim();
+  const email    = document.getElementById('editEmail').value.trim();
   const village  = document.getElementById('editVillage').value.trim();
   const address  = document.getElementById('editAddress').value.trim();
   const type     = document.getElementById('editType').value;
@@ -445,7 +447,7 @@ async function submitEditCustomer() {
     return;
   }
 
-  const payload = { name, phone, village, address, customer_type: type, referral_code: refCode };
+  const payload = { name, phone, email, village, address, customer_type: type, referral_code: refCode };
   if (password) payload.password = password;
 
   try {

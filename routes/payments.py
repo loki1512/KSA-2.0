@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_security import auth_required
+from auth_helpers import admin_required
 from extensions import db
 from models import Payment, Customer, Wallet, Transaction
 from datetime import datetime
@@ -13,7 +13,7 @@ APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
 # RECORD PAYMENT
 # --------------------------------
 @payments_bp.route("/api/payments", methods=["POST"])
-@auth_required()
+@admin_required
 def record_payment():
 
     data = request.get_json(force=True)
@@ -68,7 +68,7 @@ def record_payment():
 # LIST PAYMENTS FOR CUSTOMER
 # --------------------------------
 @payments_bp.route("/api/payments", methods=["GET"])
-@auth_required()
+@admin_required
 def list_payments():
 
     customer_id = request.args.get("customer_id", type=int)
