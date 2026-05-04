@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offers Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app_shell.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/offers.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="app-header">
+            <h1>Offers Management</h1>
+            <nav class="app-nav">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/billing" class="nav-link">Billing</a>
+                <a href="/customers" class="nav-link">Customers</a>
+                <a href="/catalog" class="nav-link">Catalog</a>
+                <a href="/offers" class="nav-link active">Offers</a>
+            </nav>
+        </header>
+
+        <main class="app-main">
+            <div class="toolbar">
+                <button id="create-offer-btn" class="btn btn-primary">Create New Offer</button>
+                <label>
+                    <input type="checkbox" id="show-inactive"> Show Inactive Offers
+                </label>
+            </div>
+
+            <div id="offers-list" class="offers-list">
+                <!-- Offers will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="offer-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">Create Offer</h2>
+            <form id="offer-form">
+                <div class="form-group">
+                    <label for="product_name">Product Name *</label>
+                    <input type="text" id="product_name" name="product_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="offer_description">Offer Description *</label>
+                    <textarea id="offer_description" name="offer_description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="expiry_date">Expiry Date (optional)</label>
+                    <input type="datetime-local" id="expiry_date" name="expiry_date">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="is_active" name="is_active"> Active
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/offers.js') }}"></script>
+</body>
+</html>

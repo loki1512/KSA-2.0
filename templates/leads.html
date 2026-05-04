@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leads Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app_shell.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/leads.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="app-header">
+            <h1>Leads Management</h1>
+            <nav class="app-nav">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/billing" class="nav-link">Billing</a>
+                <a href="/customers" class="nav-link">Customers</a>
+                <a href="/catalog" class="nav-link">Catalog</a>
+                <a href="/offers" class="nav-link">Offers</a>
+                <a href="/leads" class="nav-link active">Leads</a>
+            </nav>
+        </header>
+
+        <main class="app-main">
+            <div class="analytics">
+                <div class="metric">
+                    <div class="metric-value">{{ total_leads }}</div>
+                    <div class="metric-label">Total Leads</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{{ converted_leads }}</div>
+                    <div class="metric-label">Converted Leads</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{{ "%.1f"|format(conversion_rate) }}%</div>
+                    <div class="metric-label">Conversion Rate</div>
+                </div>
+            </div>
+
+            <div class="leads-list">
+                {% if leads %}
+                    {% for lead, customer, offer in leads %}
+                        <div class="lead-item">
+                            <div class="lead-header">
+                                <h3>{{ customer.name }} - {{ offer.product_name }}</h3>
+                                <span class="lead-status {{ 'converted' if lead.status == 'Converted' else 'interested' }}">{{ lead.status }}</span>
+                            </div>
+                            <div class="lead-details">
+                                <p><strong>Phone:</strong> {{ customer.phone }}</p>
+                                <p><strong>Offer:</strong> {{ offer.offer_description }}</p>
+                                <p><strong>Lead Time:</strong> {{ lead.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+                            </div>
+                            <div class="lead-actions">
+                                <button onclick="updateStatus({{ lead.id }}, 'Interested')" class="btn btn-secondary">Mark Interested</button>
+                                <button onclick="updateStatus({{ lead.id }}, 'Contacted')" class="btn btn-info">Mark Contacted</button>
+                                <button onclick="updateStatus({{ lead.id }}, 'Converted')" class="btn btn-success">Mark Converted</button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No leads yet.</p>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/leads.js') }}"></script>
+</body>
+</html>

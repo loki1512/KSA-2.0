@@ -79,6 +79,18 @@ def _customer_payload(customer):
 
 
 # --------------------------------
+# LOOKUP CUSTOMER (public)
+# --------------------------------
+@customers_bp.route("/api/customers/lookup")
+def lookup_customer():
+    phone = request.args.get("phone", "").strip()
+    if not phone:
+        return jsonify({"exists": False})
+    customer = Customer.query.filter_by(phone=phone).first()
+    return jsonify({"exists": customer is not None})
+
+
+# --------------------------------
 # CREATE CUSTOMER  (auto-creates User)
 # --------------------------------
 @customers_bp.route("/api/customers", methods=["POST"])
@@ -320,6 +332,65 @@ def my_account_data():
     if not customer:
         return jsonify({"message": "No customer account linked to this login"}), 404
     return jsonify(_customer_payload(customer))
+
+
+# --------------------------------
+# CUSTOMER: GET OFFERS
+# --------------------------------
+@customers_bp.route("/api/my-account/offers", methods=["GET"])
+@auth_required()
+def get_customer_offers():
+    from auth_helpers import is_admin
+    if is_admin():
+        return jsonify([])
+    from models import Offer
+    from datetime import datetime
+    offers = Offer.query.filter_by(is_active=True).all()
+    now = datetime.now()
+    active_offers = [o for o in offers if not o.expiry_date or o.expiry_date > now]
+    return jsonify([
+        {
+            "id": o.id,
+            "product_name": o.product_name,
+            "offer_description": o.offer_description,
+            "expiry_date": o.expiry_date.isoformat() if o.expiry_date else None
+        }
+        for o in active_offers
+    ])
+
+
+# --------------------------------
+# CUSTOMER: SHOW INTEREST IN OFFER
+# --------------------------------
+@customers_bp.route("/api/my-account/offers-interest", methods=["POST"])
+@auth_required()
+def customer_offers_interest():
+    from auth_helpers import is_admin
+    if is_admin():
+        return jsonify({"message": "Admins cannot show interest"}), 403
+    from models import Offer, Lead
+    from datetime import datetime
+
+    data = request.get_json(force=True)
+    offer_id = data.get("offer_id")
+    if not offer_id:
+        return jsonify({"message": "Offer ID required"}), 400
+
+    offer = Offer.query.get(offer_id)
+    if not offer or not offer.is_active:
+        return jsonify({"message": "Offer not available"}), 400
+
+    if offer.expiry_date and offer.expiry_date < datetime.now():
+        return jsonify({"message": "Offer expired"}), 400
+
+    existing = Lead.query.filter_by(customer_id=current_user.customer.id, offer_id=offer_id).first()
+    if existing:
+        return jsonify({"message": "Already shown interest"}), 400
+
+    lead = Lead(customer_id=current_user.customer.id, offer_id=offer_id)
+    db.session.add(lead)
+    db.session.commit()
+    return jsonify({"message": "Interest recorded"})
 
 
 # --------------------------------

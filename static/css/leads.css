@@ -1,0 +1,79 @@
+/* leads.css */
+
+.analytics {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.metric {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.metric-label {
+    font-size: 1rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.leads-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.lead-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.lead-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.lead-header h3 {
+    margin: 0;
+}
+
+.lead-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.lead-status.interested {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.lead-status.converted {
+    background: #d4edda;
+    color: #155724;
+}
+
+.lead-details p {
+    margin: 0.5rem 0;
+}
+
+.lead-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}

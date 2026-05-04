@@ -53,3 +53,62 @@ def admin_required(fn):
         return fn(*args, **kwargs)
 
     return wrapper
+
+
+def create_customer_user(name, phone, email=None, password=None, address=None, village=None, customer_type="regular"):
+    """Create a new customer with associated user account."""
+    from extensions import db
+    from models import User, Customer, Wallet
+    from flask_security import hash_password
+    import uuid
+
+    name = (name or "").strip()
+    phone = (phone or "").strip()
+    if not name or not phone:
+        raise ValueError("Name and phone required")
+
+    existing = Customer.query.filter_by(phone=phone).first()
+    if existing:
+        return existing
+
+    login_email = email or customer_placeholder_email(phone)
+    # Assume no conflict for now, or handle
+
+    user = User(
+        email=login_email,
+        password=hash_password(password or uuid.uuid4().hex),
+        active=True
+    )
+    # Add customer role
+    from models import Role
+    customer_role = Role.query.filter_by(name="customer").first()
+    if customer_role:
+        user.roles.append(customer_role)
+
+    db.session.add(user)
+    db.session.flush()
+
+    # Auto referral code
+    name_part = name[:3]
+    phone_part = phone[-3:]
+    village_part = (village or "")[:3]
+    auto_referral_code = name_part + phone_part + village_part
+
+    customer = Customer(
+        user_id=user.id,
+        name=name,
+        phone=phone,
+        address=address,
+        village=village,
+        customer_type=customer_type,
+        referral_code=auto_referral_code
+    )
+
+    db.session.add(customer)
+    db.session.flush()
+
+    wallet = Wallet(customer_id=customer.id, balance=0.0)
+    db.session.add(wallet)
+    db.session.commit()
+
+    return customer

@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, abort, redirect
 from flask_security import auth_required
 from auth_helpers import admin_required, is_admin
-from models import Bill, BillItem, Customer, Transaction, Return
+from models import Bill, BillItem, Customer, Transaction, Return, Offer, Lead
 from sqlalchemy import func, desc
 from extensions import db
+from auth_helpers import create_customer_user
 
 pages_bp = Blueprint("pages", __name__)
 
@@ -107,6 +108,56 @@ def my_account():
     if is_admin():
         return redirect("/")
     return render_template("my_account.html")
+
+
+# ---- Admin: offers management ----
+@pages_bp.route("/offers")
+@admin_required
+def offers_page():
+    return render_template("offers.html")
+
+
+# ---- Public: offer landing page ----
+@pages_bp.route("/offer/<int:offer_id>", methods=["GET", "POST"])
+def offer_landing(offer_id):
+    offer = Offer.query.get_or_404(offer_id)
+
+    if not offer.is_active:
+        return render_template("offer_landing.html", error="This offer is not active.")
+
+    from datetime import datetime
+    if offer.expiry_date and offer.expiry_date < datetime.now():
+        return render_template("offer_landing.html", error="This offer has expired.")
+
+    if request.method == "POST":
+        phone = request.form.get("phone", "").strip()
+        name = request.form.get("name", "").strip()
+
+        if not phone:
+            return render_template("offer_landing.html", offer=offer, error="Phone number required.")
+
+        customer = Customer.query.filter_by(phone=phone).first()
+        if not customer:
+            if not name:
+                return render_template("offer_landing.html", offer=offer, phone=phone, error="Name required for new customer.")
+            try:
+                customer = create_customer_user(name, phone)
+            except ValueError as e:
+                return render_template("offer_landing.html", offer=offer, error=str(e))
+
+        # Check if lead already exists
+        existing_lead = Lead.query.filter_by(customer_id=customer.id, offer_id=offer.id).first()
+        if existing_lead:
+            return render_template("offer_landing.html", offer=offer, success="You have already shown interest in this offer.")
+
+        lead = Lead(customer_id=customer.id, offer_id=offer.id)
+        db.session.add(lead)
+        db.session.commit()
+
+        return render_template("offer_landing.html", offer=offer, success="Thank you! Your interest has been recorded.")
+
+    return render_template("offer_landing.html", offer=offer)
+
 
 #-----------------View Returns-----------------
 @pages_bp.route("/returns/view/<int:return_id>")

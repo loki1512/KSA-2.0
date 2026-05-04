@@ -402,3 +402,49 @@ def yearly_dashboard():
         next_url=f"/dashboard/yearly?year={year + 1}",
         **data,
     )
+
+
+# --------------------------------
+# LEADS MANAGEMENT
+# --------------------------------
+@dashboard_bp.route("/leads")
+@admin_required
+def leads_page():
+    from models import Lead, Offer
+    leads = (
+        db.session.query(Lead, Customer, Offer)
+        .join(Customer, Lead.customer_id == Customer.id)
+        .join(Offer, Lead.offer_id == Offer.id)
+        .order_by(Lead.timestamp.desc())
+        .all()
+    )
+
+    # Conversion analytics: count leads that have bills
+    total_leads = len(leads)
+    converted_leads = 0
+    for lead, customer, offer in leads:
+        # Check if customer has bills after lead timestamp
+        bill_after = Bill.query.filter(
+            Bill.customer_id == customer.id,
+            Bill.timestamp > lead.timestamp
+        ).first()
+        if bill_after:
+            converted_leads += 1
+
+    conversion_rate = (converted_leads / total_leads * 100) if total_leads > 0 else 0
+
+    return render_template("leads.html", leads=leads, total_leads=total_leads, converted_leads=converted_leads, conversion_rate=conversion_rate)
+
+
+@dashboard_bp.route("/api/leads/<int:lead_id>", methods=["PUT"])
+@admin_required
+def update_lead(lead_id):
+    from models import Lead
+    lead = Lead.query.get_or_404(lead_id)
+    data = request.get_json(force=True)
+    status = data.get("status")
+    if status not in ["Interested", "Contacted", "Converted"]:
+        return jsonify({"message": "Invalid status"}), 400
+    lead.status = status
+    db.session.commit()
+    return jsonify({"message": "Lead updated"})
