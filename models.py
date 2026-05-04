@@ -210,6 +210,7 @@ class Payment(db.Model):
 # -----------------------------
 
 class Offer(db.Model):
+    __tablename__ = 'offers'
     id = db.Column(db.Integer, primary_key=True)
     product_name = db.Column(db.String(255), nullable=False)
     offer_description = db.Column(db.Text, nullable=False)
@@ -219,9 +220,10 @@ class Offer(db.Model):
 
 
 class Lead(db.Model):
+    __tablename__ = 'leads'
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), nullable=False)
-    offer_id = db.Column(db.Integer, db.ForeignKey("offer.id"), nullable=True)
+    offer_id = db.Column(db.Integer, db.ForeignKey("offers.id"), nullable=True)
     status = db.Column(db.String(50), default="Interested")
     timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     customer = db.relationship("Customer", backref="leads")
