@@ -203,28 +203,3 @@ class Payment(db.Model):
     notes = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     customer = db.relationship("Customer", back_populates="payments")
-
-
-# -----------------------------
-# OFFERS AND LEADS
-# -----------------------------
-
-class Offer(db.Model):
-    __tablename__ = 'offers'
-    id = db.Column(db.Integer, primary_key=True)
-    product_name = db.Column(db.String(255), nullable=False)
-    offer_description = db.Column(db.Text, nullable=False)
-    is_active = db.Column(db.Boolean, default=False)
-    expiry_date = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
-
-
-class Lead(db.Model):
-    __tablename__ = 'leads'
-    id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey("customer.id"), nullable=False)
-    offer_id = db.Column(db.Integer, db.ForeignKey("offers.id"), nullable=True)
-    status = db.Column(db.String(50), default="Interested")
-    timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
-    customer = db.relationship("Customer", backref="leads")
-    offer = db.relationship("Offer", backref="leads")

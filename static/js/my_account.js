@@ -1,16 +1,6 @@
 'use strict';
 
-document.addEventListener('DOMContentLoaded', function() {
-  loadAccount();
-
-  // Tab switching
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const tab = this.getAttribute('data-tab');
-      switchTab(tab);
-    });
-  });
-});
+document.addEventListener('DOMContentLoaded', loadAccount);
 
 async function loadAccount() {
   try {
@@ -24,75 +14,6 @@ async function loadAccount() {
   } catch {
     showError('Could not connect. Please try again.');
   }
-}
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-  document.getElementById(`${tab}-tab`).style.display = 'block';
-
-  if (tab === 'offers') {
-    loadOffers();
-  }
-}
-
-async function loadOffers() {
-  try {
-    const res = await fetch('/api/my-account/offers');
-    const offers = await res.json();
-    renderOffers(offers);
-  } catch (error) {
-    document.getElementById('offersList').innerHTML = 'Error loading offers.';
-    console.error('Error loading offers:', error);
-  }
-}
-
-function renderOffers(offers) {
-  const container = document.getElementById('offersList');
-  container.innerHTML = '';
-
-  if (offers.length === 0) {
-    container.innerHTML = '<p>No special offers available at the moment.</p>';
-    return;
-  }
-
-  offers.forEach(offer => {
-    const offerEl = document.createElement('div');
-    offerEl.className = 'offer-item';
-    offerEl.innerHTML = `
-      <h4>${esc(offer.product_name)}</h4>
-      <p>${esc(offer.offer_description)}</p>
-      ${offer.expiry_date ? `<p><small>Expires: ${new Date(offer.expiry_date).toLocaleDateString()}</small></p>` : ''}
-      <button class="btn-interest" data-offer-id="${offer.id}">I'm Interested</button>
-    `;
-    container.appendChild(offerEl);
-  });
-
-  // Add event listeners for interest buttons
-  document.querySelectorAll('.btn-interest').forEach(btn => {
-    btn.addEventListener('click', async function() {
-      const offerId = this.getAttribute('data-offer-id');
-      try {
-        const res = await fetch('/api/my-account/offers-interest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ offer_id: parseInt(offerId) })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          this.textContent = 'Interest Recorded!';
-          this.disabled = true;
-        } else {
-          alert(data.message || 'Error recording interest');
-        }
-      } catch (error) {
-        alert('Error recording interest');
-        console.error(error);
-      }
-    });
-  });
 }
 
 function renderAccount(data) {
