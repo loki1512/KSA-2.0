@@ -83,17 +83,20 @@
               | replace('&', 'and') %}
 
         {# Pre-filled WhatsApp message #}
-        {% set wa_msg = "Hi! I'm interested in the " ~ offer.product_name ~ " offer. Please let me know more details." %}
+        {% set offer_link = "/offers#" ~ slug %}
+        {% set wa_msg = "Hi! I'm interested in the " ~ offer.product_name ~ " offer. Please share the latest price and availability. Offer link: " ~ offer_link %}
 
         <section class="offer-section" id="{{ slug }}" data-slug="{{ slug }}" data-name="{{ offer.product_name }}">
 
           <!-- IMAGE HALF -->
           <div class="offer-image-half">
+            <div class="offer-image-frame">
             {% if offer.image_path %}
               <img src="{{ offer_image_url(offer) }}" alt="{{ offer.product_name }}">
             {% else %}
               <div class="offer-image-placeholder">KSA</div>
             {% endif %}
+            </div>
           </div>
 
           <!-- CONTENT HALF -->
@@ -200,6 +203,16 @@
 
       const dots = Array.from(dotNav.querySelectorAll('.dot-nav-item'));
 
+      function goToSection(index) {
+        const boundedIndex = Math.max(0, Math.min(index, sections.length - 1));
+        const target = sections[boundedIndex];
+        if (!target) return;
+        target.scrollIntoView({ behavior: 'smooth' });
+        if (target.id) {
+          history.pushState(null, '', '#' + target.id);
+        }
+      }
+
       /* IntersectionObserver — active dot + slide-in class */
       const io = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
@@ -228,6 +241,38 @@
           if (target) {
             setTimeout(function () { target.scrollIntoView({ behavior: 'smooth' }); }, 120);
           }
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        const activeTag = document.activeElement && document.activeElement.tagName;
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement.isContentEditable) {
+          return;
+        }
+
+        const currentIndex = dots.findIndex(function (dot) {
+          return dot.classList.contains('active');
+        });
+        const resolvedIndex = currentIndex >= 0 ? currentIndex : 0;
+
+        if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+          event.preventDefault();
+          goToSection(resolvedIndex + 1);
+        }
+
+        if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+          event.preventDefault();
+          goToSection(resolvedIndex - 1);
+        }
+
+        if (event.key === 'Home') {
+          event.preventDefault();
+          goToSection(0);
+        }
+
+        if (event.key === 'End') {
+          event.preventDefault();
+          goToSection(sections.length - 1);
         }
       });
 
