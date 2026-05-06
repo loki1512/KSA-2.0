@@ -4,6 +4,438 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;700&display=swap');
 
+/* Admin page only: keep the public offer experience untouched while
+   restoring the shared admin shell visual language for /admin/offers. */
+body:not(.public-offers-body) {
+  --admin-bg: #f0f2f7;
+  --admin-surface: #ffffff;
+  --admin-surface-muted: #f8f9fc;
+  --admin-border: #e2e5ed;
+  --admin-border-strong: #d7dce7;
+  --admin-text: #0f1117;
+  --admin-text-secondary: #5a6178;
+  --admin-text-muted: #9399aa;
+  --admin-accent: #3b5bdb;
+  --admin-accent-hover: #2f4ac7;
+  --admin-accent-soft: #eef1fd;
+  --admin-success: #0f9e6e;
+  --admin-success-soft: #e6f7f2;
+  --admin-danger: #e03131;
+  --admin-danger-soft: #fff0f0;
+  --admin-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --admin-shadow-md: 0 10px 30px rgba(15, 17, 23, 0.08);
+  --admin-radius: 12px;
+  --admin-radius-sm: 8px;
+  --admin-radius-xs: 6px;
+  --admin-font: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  font-family: var(--admin-font);
+  background:
+    radial-gradient(circle at top left, rgba(59, 91, 219, 0.06), transparent 24%),
+    linear-gradient(180deg, #f6f7fb 0%, #eef1f6 100%);
+  color: var(--admin-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body:not(.public-offers-body) .site-header {
+  position: sticky;
+  top: 0;
+  left: auto;
+  right: auto;
+  z-index: 100;
+  padding: 0 24px;
+  background: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+body:not(.public-offers-body) .header-left,
+body:not(.public-offers-body) .header-nav {
+  direction: ltr;
+}
+
+body:not(.public-offers-body) .header-left h1 {
+  font-family: var(--admin-font);
+  color: var(--admin-text);
+}
+
+body:not(.public-offers-body) .header-sub {
+  color: var(--admin-text-muted);
+}
+
+body:not(.public-offers-body) .offers-admin-shell {
+  max-width: 1120px;
+  padding-top: 24px;
+}
+
+body:not(.public-offers-body) .page-header {
+  background:
+    linear-gradient(135deg, rgba(59, 91, 219, 0.08) 0%, rgba(59, 91, 219, 0.02) 100%),
+    var(--admin-surface);
+  border-color: var(--admin-border);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+body:not(.public-offers-body) .offer-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.84fr) minmax(420px, 1.16fr);
+  gap: 18px;
+  align-items: start;
+}
+
+body:not(.public-offers-body) .offer-panel {
+  position: relative;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow-sm);
+  padding: 20px;
+  backdrop-filter: blur(10px);
+}
+
+body:not(.public-offers-body) .offer-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  border-radius: var(--admin-radius) var(--admin-radius) 0 0;
+  background: linear-gradient(90deg, var(--admin-accent), rgba(59, 91, 219, 0.2));
+  opacity: 0.7;
+}
+
+body:not(.public-offers-body) .panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+body:not(.public-offers-body) .panel-heading h3 {
+  margin: 0;
+  font-family: var(--admin-font);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+body:not(.public-offers-body) .field-group {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+body:not(.public-offers-body) .field-group label,
+body:not(.public-offers-body) .toggle-row {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--admin-text-secondary);
+}
+
+body:not(.public-offers-body) .field-group input,
+body:not(.public-offers-body) .field-group textarea {
+  width: 100%;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-xs);
+  color: var(--admin-text);
+  background: var(--admin-surface-muted);
+  font: inherit;
+  padding: 11px 12px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+body:not(.public-offers-body) .field-group textarea {
+  resize: vertical;
+  min-height: 132px;
+  line-height: 1.6;
+}
+
+body:not(.public-offers-body) .field-group input:focus,
+body:not(.public-offers-body) .field-group textarea:focus {
+  border-color: var(--admin-accent);
+  background: var(--admin-surface);
+  box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.12);
+}
+
+body:not(.public-offers-body) input[type="file"] {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+body:not(.public-offers-body) input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid var(--admin-border-strong);
+  border-radius: var(--admin-radius-xs);
+  background: var(--admin-surface);
+  color: var(--admin-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+body:not(.public-offers-body) input[type="file"]::file-selector-button:hover {
+  background: var(--admin-accent-soft);
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+body:not(.public-offers-body) .field-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--admin-text-muted);
+}
+
+body:not(.public-offers-body) .toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 18px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+}
+
+body:not(.public-offers-body) .toggle-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--admin-accent);
+}
+
+body:not(.public-offers-body) .form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+body:not(.public-offers-body) .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--admin-radius-xs);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+body:not(.public-offers-body) .btn-primary {
+  background: var(--admin-accent);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(59, 91, 219, 0.22);
+}
+
+body:not(.public-offers-body) .btn-primary:hover {
+  background: var(--admin-accent-hover);
+}
+
+body:not(.public-offers-body) .btn-ghost {
+  background: var(--admin-surface-muted);
+  border-color: var(--admin-border);
+  color: var(--admin-text-secondary);
+}
+
+body:not(.public-offers-body) .btn-ghost:hover {
+  background: var(--admin-accent-soft);
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+body:not(.public-offers-body) .btn-danger {
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+body:not(.public-offers-body) .btn-danger:hover {
+  background: var(--admin-danger);
+  color: #fff;
+}
+
+body:not(.public-offers-body) .form-message {
+  border-radius: var(--admin-radius-xs);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+}
+
+body:not(.public-offers-body) .form-message.success {
+  background: var(--admin-success-soft);
+  color: var(--admin-success);
+}
+
+body:not(.public-offers-body) .form-message.error {
+  background: var(--admin-danger-soft);
+  color: var(--admin-danger);
+}
+
+body:not(.public-offers-body) .offer-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--admin-surface-muted);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+body:not(.public-offers-body) .admin-offer-list {
+  display: grid;
+  gap: 12px;
+}
+
+body:not(.public-offers-body) .admin-offer-item {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  background: var(--admin-surface-muted);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+body:not(.public-offers-body) .admin-offer-item:hover {
+  border-color: rgba(59, 91, 219, 0.28);
+  box-shadow: var(--admin-shadow-sm);
+  transform: translateY(-1px);
+}
+
+body:not(.public-offers-body) .admin-offer-thumb {
+  aspect-ratio: 1 / 0.84;
+  border-radius: var(--admin-radius-xs);
+  border: 1px solid var(--admin-border);
+  background: linear-gradient(135deg, #f6f8ff 0%, #edf1fb 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+body:not(.public-offers-body) .admin-offer-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body:not(.public-offers-body) .admin-offer-main h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+body:not(.public-offers-body) .admin-offer-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+body:not(.public-offers-body) .admin-offer-main p {
+  margin: 6px 0 0;
+  color: var(--admin-text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+body:not(.public-offers-body) .admin-offer-meta {
+  margin-top: 8px;
+  color: var(--admin-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+body:not(.public-offers-body) .admin-offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+body:not(.public-offers-body) .status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+}
+
+body:not(.public-offers-body) .status-pill.active {
+  background: var(--admin-success-soft);
+  color: var(--admin-success);
+}
+
+body:not(.public-offers-body) .status-pill.inactive {
+  background: #fff6e8;
+  color: #b7791f;
+}
+
+body:not(.public-offers-body) .empty-offers.compact {
+  padding: 26px 18px;
+  background: var(--admin-surface-muted);
+  border: 1px dashed var(--admin-border-strong);
+  color: var(--admin-text-secondary);
+}
+
+@media (max-width: 900px) {
+  body:not(.public-offers-body) .offer-admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  body:not(.public-offers-body) .offers-admin-shell {
+    padding-top: 18px;
+  }
+
+  body:not(.public-offers-body) .offer-panel {
+    padding: 16px;
+  }
+
+  body:not(.public-offers-body) .panel-heading,
+  body:not(.public-offers-body) .admin-offer-topline,
+  body:not(.public-offers-body) .admin-offer-item {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body:not(.public-offers-body) .form-actions,
+  body:not(.public-offers-body) .form-actions .btn,
+  body:not(.public-offers-body) .admin-offer-actions .btn {
+    width: 100%;
+  }
+}
+
 /* ── TOKENS ─────────────────────────────────────────── */
 :root {
   --cream:         #fdf5e8;
