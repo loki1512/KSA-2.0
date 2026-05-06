@@ -59,6 +59,10 @@ def create_app():
     app.config["WTF_CSRF_ENABLED"] = False
     app.config["SECURITY_CSRF_PROTECT_MECHANISMS"] = []
 
+    app.config["SUPABASE_URL"] = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    app.config["SUPABASE_SERVICE_ROLE_KEY"] = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    app.config["SUPABASE_STORAGE_BUCKET"] = os.environ.get("SUPABASE_STORAGE_BUCKET", "offer-images")
+
     db.init_app(app)
 
     # --------------------------------

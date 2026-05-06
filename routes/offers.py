@@ -1,4 +1,6 @@
+import mimetypes
 import os
+from urllib import error, parse, request as urllib_request
 
 from flask import Blueprint, current_app, jsonify, render_template, request, url_for
 from werkzeug.utils import secure_filename
@@ -23,17 +25,93 @@ def _allowed_image(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
 
+def _supabase_enabled():
+    return bool(
+        current_app.config.get("SUPABASE_URL")
+        and current_app.config.get("SUPABASE_SERVICE_ROLE_KEY")
+        and current_app.config.get("SUPABASE_STORAGE_BUCKET")
+    )
+
+
+def _supabase_bucket():
+    return current_app.config.get("SUPABASE_STORAGE_BUCKET", "offer-images")
+
+
+def _supabase_public_url(path):
+    if not path:
+        return None
+    base_url = current_app.config.get("SUPABASE_URL", "").rstrip("/")
+    bucket = _supabase_bucket()
+    encoded_path = parse.quote(path.lstrip("/"), safe="/")
+    return f"{base_url}/storage/v1/object/public/{bucket}/{encoded_path}"
+
+
+def _upload_to_supabase(file_storage, object_path):
+    payload = file_storage.read()
+    content_type = file_storage.mimetype or mimetypes.guess_type(object_path)[0] or "application/octet-stream"
+    bucket = parse.quote(_supabase_bucket(), safe="")
+    encoded_path = parse.quote(object_path, safe="/")
+    endpoint = f"{current_app.config['SUPABASE_URL']}/storage/v1/object/{bucket}/{encoded_path}"
+    token = current_app.config["SUPABASE_SERVICE_ROLE_KEY"]
+
+    req = urllib_request.Request(
+        endpoint,
+        data=payload,
+        method="POST",
+        headers={
+            "apikey": token,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": content_type,
+            "x-upsert": "false",
+            "Cache-Control": "3600",
+        },
+    )
+
+    try:
+        with urllib_request.urlopen(req, timeout=30) as response:
+            response.read()
+    except error.HTTPError as exc:
+        details = exc.read().decode("utf-8", errors="ignore").strip()
+        raise ValueError(details or "Supabase upload failed") from exc
+    except error.URLError as exc:
+        raise ValueError("Could not reach Supabase Storage") from exc
+
+
 def _save_offer_image(file_storage):
     if not file_storage or not file_storage.filename:
-        return None
+        return None, None
     if not _allowed_image(file_storage.filename):
-        return False
+        return None, "Upload a PNG, JPG, JPEG, WEBP, or GIF image"
 
     filename = secure_filename(file_storage.filename)
     root, ext = os.path.splitext(filename)
     unique_name = f"{root[:60]}-{os.urandom(4).hex()}{ext.lower()}"
+
+    if _supabase_enabled():
+        object_path = f"offers/{unique_name}"
+        try:
+            _upload_to_supabase(file_storage, object_path)
+        except ValueError as exc:
+            return None, str(exc)
+        return object_path, None
+
     file_storage.save(os.path.join(_upload_dir(), unique_name))
-    return f"offer_images/{unique_name}"
+    return f"offer_images/{unique_name}", None
+
+
+def _offer_image_url(offer):
+    image_path = (offer.image_path or "").strip()
+    if not image_path:
+        return None
+
+    if image_path.startswith(("http://", "https://")):
+        return image_path
+
+    if image_path.startswith("offer_images/") or image_path.startswith("static/offer_images/"):
+        normalized = image_path.removeprefix("static/")
+        return url_for("static", filename=normalized)
+
+    return _supabase_public_url(image_path)
 
 
 def _offer_payload(offer):
@@ -42,7 +120,7 @@ def _offer_payload(offer):
         "product_name": offer.product_name,
         "offer_description": offer.offer_description,
         "image_path": offer.image_path,
-        "image_url": url_for("static", filename=offer.image_path) if offer.image_path else None,
+        "image_url": _offer_image_url(offer),
         "is_active": bool(offer.is_active),
         "created_at": offer.created_at.isoformat() if offer.created_at else None,
     }
@@ -56,7 +134,7 @@ def public_offers_page():
         .order_by(Offer.created_at.desc())
         .all()
     )
-    return render_template("offers.html", offers=offers)
+    return render_template("offers.html", offers=offers, offer_image_url=_offer_image_url)
 
 
 @offers_bp.route("/admin/offers")
@@ -93,9 +171,9 @@ def create_offer():
     if not product_name or not offer_description:
         return jsonify({"error": "Product name and offer description are required"}), 400
 
-    image_path = _save_offer_image(request.files.get("image"))
-    if image_path is False:
-        return jsonify({"error": "Upload a PNG, JPG, JPEG, WEBP, or GIF image"}), 400
+    image_path, upload_error = _save_offer_image(request.files.get("image"))
+    if upload_error:
+        return jsonify({"error": upload_error}), 400
 
     offer = Offer(
         product_name=product_name,
@@ -119,9 +197,9 @@ def update_offer(offer_id):
     if not product_name or not offer_description:
         return jsonify({"error": "Product name and offer description are required"}), 400
 
-    image_path = _save_offer_image(request.files.get("image"))
-    if image_path is False:
-        return jsonify({"error": "Upload a PNG, JPG, JPEG, WEBP, or GIF image"}), 400
+    image_path, upload_error = _save_offer_image(request.files.get("image"))
+    if upload_error:
+        return jsonify({"error": upload_error}), 400
 
     offer.product_name = product_name
     offer.offer_description = offer_description

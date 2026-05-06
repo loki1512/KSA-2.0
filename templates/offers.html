@@ -90,7 +90,7 @@
           <!-- IMAGE HALF -->
           <div class="offer-image-half">
             {% if offer.image_path %}
-              <img src="{{ url_for('static', filename=offer.image_path) }}" alt="{{ offer.product_name }}">
+              <img src="{{ offer_image_url(offer) }}" alt="{{ offer.product_name }}">
             {% else %}
               <div class="offer-image-placeholder">KSA</div>
             {% endif %}
