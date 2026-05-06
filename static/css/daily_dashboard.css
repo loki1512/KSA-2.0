@@ -225,13 +225,13 @@ a.kpi-card:hover .kpi-value { color: var(--accent); }
 }
 
 /* New Bill quick-action card */
-a.kpi-card:last-child .kpi-value {
+a.kpi-card[href="/billing"] .kpi-value {
   font-size: 17px;
   color: var(--success);
 }
 
-a.kpi-card:last-child:hover .kpi-value { color: var(--success-hover); }
-a.kpi-card:last-child:hover { border-color: var(--success); box-shadow: 0 4px 16px rgba(15,158,110,0.15); }
+a.kpi-card[href="/billing"]:hover .kpi-value { color: var(--success-hover); }
+a.kpi-card[href="/billing"]:hover { border-color: var(--success); box-shadow: 0 4px 16px rgba(15,158,110,0.15); }
 
 /* ---- TWO-COLUMN LAYOUT ---- */
 .layout {

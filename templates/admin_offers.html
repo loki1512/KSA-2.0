@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offers - KSA Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
+  <link rel="stylesheet" href="/static/css/offers.css">
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-left">
+      <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart billing system</span>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/returns/new">Returns</a>
+      <a href="/admin/offers" class="active">Offers</a>
+      <a href="/admin/profile">Profile</a>
+      <a href="/logout" class="nav-logout">Logout</a>
+    </nav>
+  </header>
+
+  <main class="page-shell offers-admin-shell">
+    <div class="page-header">
+      <div class="page-header-content">
+        <p class="page-kicker">Promotions</p>
+        <h2 class="page-title">Offer Management</h2>
+        <p class="page-summary">Create offers for the public offers page and control which promotions are visible.</p>
+      </div>
+      <div class="page-header-actions">
+        <a class="back-link" href="/offers" target="_blank">View Public Page</a>
+        <a class="back-link" href="/">Dashboard</a>
+      </div>
+    </div>
+
+    <section class="offer-admin-grid">
+      <form class="offer-panel offer-form-panel" id="offerForm">
+        <div class="panel-heading">
+          <h3 id="offerFormTitle">Create Offer</h3>
+          <button class="btn btn-ghost" id="cancelEditBtn" type="button" style="display:none;">Cancel Edit</button>
+        </div>
+
+        <input type="hidden" id="editingOfferId">
+
+        <div class="field-group">
+          <label for="productName">Product Name *</label>
+          <input id="productName" name="product_name" type="text" autocomplete="off" required>
+        </div>
+
+        <div class="field-group">
+          <label for="offerDescription">Offer Description *</label>
+          <textarea id="offerDescription" name="offer_description" rows="5" required></textarea>
+        </div>
+
+        <div class="field-group">
+          <label for="offerImage">Image</label>
+          <input id="offerImage" name="image" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+          <p class="field-hint">PNG, JPG, WEBP, or GIF. Existing image stays when editing without a new upload.</p>
+        </div>
+
+        <label class="toggle-row">
+          <input id="offerActive" name="is_active" type="checkbox" checked>
+          <span>Show this offer publicly</span>
+        </label>
+
+        <p class="form-message" id="offerMessage" style="display:none;"></p>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" id="saveOfferBtn" type="submit">Save Offer</button>
+        </div>
+      </form>
+
+      <section class="offer-panel offer-list-panel">
+        <div class="panel-heading">
+          <h3>All Offers</h3>
+          <span class="offer-count" id="offerCount">-</span>
+        </div>
+        <div class="admin-offer-list" id="adminOfferList"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/js/admin_offers.js"></script>
+</body>
+</html>

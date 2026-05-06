@@ -82,6 +82,13 @@ class Customer(db.Model):
         order_by="Transaction.timestamp.desc()"
     )
 
+    leads = db.relationship(
+    "Lead",
+    back_populates="customer",
+    cascade="all, delete-orphan",
+    order_by="Lead.timestamp.desc()"
+    )
+
 
 # -----------------------------
 # WALLET
@@ -203,3 +210,92 @@ class Payment(db.Model):
     notes = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, default=datetime.now(ZoneInfo("Asia/Kolkata")))
     customer = db.relationship("Customer", back_populates="payments")
+
+
+# -----------------------------
+# OFFERS SYSTEM
+# -----------------------------
+
+class Offer(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    product_name = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    offer_description = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    # Path inside static folder
+    # Example:
+    # offer_images/summer_sale.jpg
+    image_path = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        default=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.now(ZoneInfo("Asia/Kolkata"))
+    )
+
+    # Relationships
+    leads = db.relationship(
+        "Lead",
+        back_populates="offer",
+        passive_deletes=True
+    )
+
+
+# -----------------------------
+# LEADS SYSTEM
+# -----------------------------
+
+class Lead(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    customer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("customer.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    offer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("offer.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
+    status = db.Column(
+        db.String(50),
+        default="Interested"
+    )
+    # Example statuses:
+    # Interested
+    # Contacted
+    # Converted
+    # Rejected
+
+    timestamp = db.Column(
+        db.DateTime,
+        default=datetime.now(ZoneInfo("Asia/Kolkata"))
+    )
+
+    # Relationships
+    customer = db.relationship(
+        "Customer",
+        back_populates="leads"
+    )
+
+    offer = db.relationship(
+        "Offer",
+        back_populates="leads"
+    )

@@ -131,6 +131,7 @@ def create_app():
     from routes.payments import payments_bp
     from routes.transactions import transactions_bp
     from routes.account import account_bp
+    from routes.offers import offers_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(pages_bp)
@@ -143,6 +144,7 @@ def create_app():
     app.register_blueprint(payments_bp)
     app.register_blueprint(transactions_bp)
     app.register_blueprint(account_bp)
+    app.register_blueprint(offers_bp)
 
     # --------------------------------
     # Health Endpoint (for Render)
@@ -162,7 +164,8 @@ def create_app():
             print("No tables found — initializing database...")
             db.create_all()
         else:
-            print("Database already initialized — skipping create_all()")
+            print("Database already initialized — ensuring missing tables exist...")
+            db.create_all()
 
         admin_role = user_datastore.find_or_create_role(
             name="admin",
