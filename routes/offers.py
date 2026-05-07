@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from auth_helpers import admin_required
 from extensions import db
 from models import Offer
-
+import re
 
 offers_bp = Blueprint("offers", __name__)
 
