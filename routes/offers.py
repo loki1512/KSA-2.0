@@ -1,6 +1,8 @@
 import os
+import re
 
 from flask import Blueprint, current_app, jsonify, render_template, request, url_for
+from markupsafe import Markup, escape
 from werkzeug.utils import secure_filename
 
 from auth_helpers import admin_required
@@ -11,6 +13,54 @@ from models import Offer
 offers_bp = Blueprint("offers", __name__)
 
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
+
+
+def _markdown_inline(text):
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"__([^_]+)__", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", text)
+    text = re.sub(r"(?<!_)_([^_\n]+)_(?!_)", r"<em>\1</em>", text)
+    text = re.sub(
+        r"\[([^\]]+)\]\((https?://[^)\s]+)\)",
+        r'<a href="\2" target="_blank" rel="noopener">\1</a>',
+        text,
+    )
+    return text
+
+
+@offers_bp.app_template_filter("offer_markdown")
+def offer_markdown(value):
+    escaped = str(escape(value or "")).replace("\r\n", "\n").replace("\r", "\n")
+    blocks = []
+    list_items = []
+
+    def flush_list():
+        if list_items:
+            blocks.append("<ul>" + "".join(list_items) + "</ul>")
+            list_items.clear()
+
+    for raw_line in escaped.split("\n"):
+        line = raw_line.strip()
+        if not line:
+            flush_list()
+            continue
+
+        heading = re.match(r"^(#{1,3})\s+(.+)$", line)
+        bullet = re.match(r"^[-*]\s+(.+)$", line)
+
+        if heading:
+            flush_list()
+            level = len(heading.group(1))
+            blocks.append(f"<h{level}>{_markdown_inline(heading.group(2))}</h{level}>")
+        elif bullet:
+            list_items.append(f"<li>{_markdown_inline(bullet.group(1))}</li>")
+        else:
+            flush_list()
+            blocks.append(f"<p>{_markdown_inline(line)}</p>")
+
+    flush_list()
+    return Markup("".join(blocks))
 
 
 def _upload_dir():

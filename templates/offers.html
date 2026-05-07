@@ -103,12 +103,16 @@
 
             <span class="offer-badge">Special Offer</span>
 
-            <h2 class="offer-name">
-              {{ offer.product_name }}
-              <span class="offer-name-underline"></span>
-            </h2>
+            <div class="offer-name-block">
+              <h2 class="offer-name">
+                {{ offer.product_name }}
+                <span class="offer-name-underline"></span>
+              </h2>
+            </div>
 
-            <p class="offer-desc">{{ offer.offer_description }}</p>
+            <div class="offer-desc-block">
+              <div class="offer-desc">{{ offer.offer_description | offer_markdown }}</div>
+            </div>
 
             <div class="offer-cta-group">
               <a href="https://wa.me/919490608943?text={{ wa_msg | urlencode }}"
