@@ -1,6 +1,5 @@
 import mimetypes
 import os
-import re
 from urllib import error, parse, request as urllib_request
 
 from flask import Blueprint, current_app, jsonify, render_template, request, url_for

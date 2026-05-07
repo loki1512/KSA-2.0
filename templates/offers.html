@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/css/offers.css">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
+  <!-- marked.js: client-side markdown fallback -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"
+          integrity="sha512-NcNwDegvtbR/iBzwJpjPILYFPilLdg8xOEqAzLHZzxP0M6TnmpJkH9wgVmBCQmcRnP0jAf0wfopCl0J+PUqw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body class="public-offers-body">
 
@@ -27,14 +31,10 @@
     </a>
   </header>
 
-  <!-- ══════════════════════════════════════════
-       DOT NAVIGATION (built by JS)
-       ══════════════════════════════════════════ -->
+  <!-- DOT NAVIGATION (built by JS) -->
   <nav class="offer-progress" id="dotNav" aria-label="Offer navigation"></nav>
 
-  <!-- ══════════════════════════════════════════
-       SCROLL ROOT
-       ══════════════════════════════════════════ -->
+  <!-- SCROLL ROOT -->
   <div class="scroll-root" id="scrollRoot">
 
     <!-- HERO LANDING SECTION -->
@@ -58,11 +58,6 @@
         </div>
       </div>
     </section>
-
-    <!-- ══════════════════════════════════════════
-         OFFER SECTIONS — one per page
-         URL anchor: /offers#slug-from-product-name
-         ══════════════════════════════════════════ -->
 
     {% if offers %}
 
@@ -90,7 +85,7 @@
           <div class="offer-image-half">
             <div class="offer-image-frame">
             {% if offer.image_path %}
-              <img src="{{ offer_image_url(offer) }}" alt="{{ offer.product_name }}">
+              <img src="{{ offer_image_url(offer) }}" alt="{{ offer.product_name }}" loading="lazy">
             {% else %}
               <div class="offer-image-placeholder">KSA</div>
             {% endif %}
@@ -111,8 +106,15 @@
               </h2>
             </div>
 
+            <!--
+              offer_markdown filter renders markdown → HTML server-side.
+              The data-raw attribute holds the original markdown so the
+              client-side fallback can re-render it if the filter returned
+              plain/unrendered text (e.g. during development).
+            -->
             <div class="offer-desc-block">
-              <div class="offer-desc">{{ offer.offer_description | offer_markdown }}</div>
+              <div class="offer-desc"
+                   data-raw="{{ offer.offer_description | e }}">{{ offer.offer_description | offer_markdown }}</div>
             </div>
 
             <div class="offer-cta-group">
@@ -159,9 +161,7 @@
 
   </div><!-- /scroll-root -->
 
-  <!-- ══════════════════════════════════════════
-       STICKY WhatsApp FLOAT
-       ══════════════════════════════════════════ -->
+  <!-- STICKY WhatsApp FLOAT -->
   <a href="https://wa.me/919490608943" target="_blank" rel="noopener"
      class="sticky-wa" aria-label="Chat on WhatsApp">
     <div class="sticky-wa-pulse"></div>
@@ -171,24 +171,56 @@
     <span>Chat with us</span>
   </a>
 
-  <!-- ══════════════════════════════════════════
-       JAVASCRIPT
-       ══════════════════════════════════════════ -->
   <script>
     (function () {
-      const scrollRoot = document.getElementById('scrollRoot');
-      const dotNav     = document.getElementById('dotNav');
 
-      /* collect all snap sections */
-      const sections = Array.from(
+      /* ─────────────────────────────────────────────────────
+         CLIENT-SIDE MARKDOWN FALLBACK
+         If the server-side offer_markdown filter returned raw
+         markdown (detectable by the presence of syntax chars),
+         render it with marked.js.
+         ───────────────────────────────────────────────────── */
+      function looksLikeRawMarkdown(html) {
+        // Heuristic: if the content has no block-level HTML tags but
+        // does contain markdown patterns, treat it as raw.
+        var hasBlockTags = /<(p|h[1-6]|ul|ol|li|blockquote|pre|table|hr|strong|em|code)\b/i.test(html);
+        if (hasBlockTags) return false;
+        var mdPatterns = [/^#{1,6}\s/m, /\*\*.+?\*\*/, /^\s*[-*+]\s/m, /^\|.+\|/m, /\[.+\]\(.+\)/];
+        return mdPatterns.some(function (re) { return re.test(html); });
+      }
+
+      if (typeof marked !== 'undefined') {
+        marked.use({
+          gfm: true,
+          breaks: true,
+          headerIds: false,
+          mangle: false
+        });
+
+        document.querySelectorAll('.offer-desc').forEach(function (el) {
+          var rawMd = el.getAttribute('data-raw') || '';
+          var rendered = el.innerHTML.trim();
+          if (looksLikeRawMarkdown(rendered)) {
+            el.innerHTML = marked.parse(rawMd);
+          }
+        });
+      }
+
+      /* ─────────────────────────────────────────────────────
+         SCROLL / SNAP / DOT NAV
+         ───────────────────────────────────────────────────── */
+      var scrollRoot = document.getElementById('scrollRoot');
+      var dotNav     = document.getElementById('dotNav');
+
+      var sections = Array.from(
         scrollRoot.querySelectorAll('.hero-section, .offer-section, .empty-section')
       );
 
       /* build dot nav */
       sections.forEach(function (sec, i) {
-        const label = sec.dataset.name || (i === 0 ? 'Home' : null);
-        const slug  = sec.id;
-        const dot   = document.createElement('a');
+        var label = sec.dataset.name || (i === 0 ? 'Home' : null);
+        var slug  = sec.id;
+        var dot   = document.createElement('a');
         dot.className = 'dot-nav-item' + (i === 0 ? ' active' : '');
         dot.href      = '#' + slug;
         dot.setAttribute('aria-label', label || slug);
@@ -203,24 +235,22 @@
         dotNav.appendChild(dot);
       });
 
-      const dots = Array.from(dotNav.querySelectorAll('.dot-nav-item'));
+      var dots = Array.from(dotNav.querySelectorAll('.dot-nav-item'));
 
       function goToSection(index) {
-        const boundedIndex = Math.max(0, Math.min(index, sections.length - 1));
-        const target = sections[boundedIndex];
+        var bounded = Math.max(0, Math.min(index, sections.length - 1));
+        var target  = sections[bounded];
         if (!target) return;
         target.scrollIntoView({ behavior: 'smooth' });
-        if (target.id) {
-          history.pushState(null, '', '#' + target.id);
-        }
+        if (target.id) history.pushState(null, '', '#' + target.id);
       }
 
-      /* IntersectionObserver — active dot + slide-in class */
-      const io = new IntersectionObserver(function (entries) {
+      /* IntersectionObserver — active dot + slide-in animation */
+      var io = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           if (!entry.isIntersecting) return;
 
-          const idx = sections.indexOf(entry.target);
+          var idx = sections.indexOf(entry.target);
           dots.forEach(function (d, i) { d.classList.toggle('active', i === idx); });
 
           if (entry.target.classList.contains('offer-section')) {
@@ -231,56 +261,38 @@
             history.replaceState(null, '', '#' + entry.target.id);
           }
         });
-      }, { root: scrollRoot, threshold: 0.55 });
+      }, { root: scrollRoot, threshold: 0.45 });
 
       sections.forEach(function (sec) { io.observe(sec); });
 
-      /* on load: scroll to hash if present */
+      /* scroll to hash on load */
       window.addEventListener('load', function () {
-        const hash = window.location.hash;
+        var hash = window.location.hash;
         if (hash) {
-          const target = document.querySelector(hash);
+          var target = document.querySelector(hash);
           if (target) {
-            setTimeout(function () { target.scrollIntoView({ behavior: 'smooth' }); }, 120);
+            setTimeout(function () { target.scrollIntoView({ behavior: 'smooth' }); }, 150);
           }
         }
       });
 
-      document.addEventListener('keydown', function (event) {
-        const activeTag = document.activeElement && document.activeElement.tagName;
-        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement.isContentEditable) {
-          return;
-        }
+      /* keyboard navigation */
+      document.addEventListener('keydown', function (e) {
+        var tag = document.activeElement && document.activeElement.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return;
 
-        const currentIndex = dots.findIndex(function (dot) {
-          return dot.classList.contains('active');
-        });
-        const resolvedIndex = currentIndex >= 0 ? currentIndex : 0;
+        var cur = dots.findIndex(function (d) { return d.classList.contains('active'); });
+        var idx = cur >= 0 ? cur : 0;
 
-        if (event.key === 'ArrowDown' || event.key === 'PageDown') {
-          event.preventDefault();
-          goToSection(resolvedIndex + 1);
-        }
-
-        if (event.key === 'ArrowUp' || event.key === 'PageUp') {
-          event.preventDefault();
-          goToSection(resolvedIndex - 1);
-        }
-
-        if (event.key === 'Home') {
-          event.preventDefault();
-          goToSection(0);
-        }
-
-        if (event.key === 'End') {
-          event.preventDefault();
-          goToSection(sections.length - 1);
-        }
+        if (e.key === 'ArrowDown' || e.key === 'PageDown') { e.preventDefault(); goToSection(idx + 1); }
+        if (e.key === 'ArrowUp'   || e.key === 'PageUp')   { e.preventDefault(); goToSection(idx - 1); }
+        if (e.key === 'Home') { e.preventDefault(); goToSection(0); }
+        if (e.key === 'End')  { e.preventDefault(); goToSection(sections.length - 1); }
       });
 
       /* copy offer permalink */
       window.copyOfferLink = function (btn, slug) {
-        const url = window.location.origin + window.location.pathname + '#' + slug;
+        var url = window.location.origin + window.location.pathname + '#' + slug;
         navigator.clipboard.writeText(url).then(function () {
           btn.classList.add('copied');
           btn.querySelector('span').textContent = 'Copied!';
@@ -292,6 +304,7 @@
           prompt('Copy this link:', url);
         });
       };
+
     })();
   </script>
 

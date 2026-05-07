@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Invoice #{{ bill.id }} | Kumara Swami Agencies</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <link rel="stylesheet" href="/static/css/bill_detail.css">
   <style>
     @media print {
@@ -47,12 +48,12 @@
 
     <section class="customer">
       <strong>Customer:</strong>
-      <p>{{ customer.name if customer else 'Walk-in' }}</p>
-      {% if customer and customer.phone %}
-        <p>{{ customer.phone }}</p>
+      <p>{{ bill.customer_name or 'Walk-in' }}</p>
+      {% if bill.customer_phone %}
+        <p>{{ bill.customer_phone }}</p>
       {% endif %}
-      {% if customer and customer.address %}
-        <p>{{ customer.address }}</p>
+      {% if bill.customer_address %}
+        <p>{{ bill.customer_address }}</p>
       {% endif %}
     </section>
 
