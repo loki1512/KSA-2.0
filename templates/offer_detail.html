@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ offer.product_name }} - Offer | Kumara Swami Agencies</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/offers.css">
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"
+          integrity="sha512-NcNwDegvtbR/iBzwJpjPILYFPilLdg8xOEqAzLHZzxP0M6TnmpJkH9wgVmBCQmcRnP0jAf0wfopCl0J+PUqw=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body class="public-offers-body offer-detail-body">
+
+  {% set offer_link = request.url %}
+  {% set wa_msg = "Hi! I'm interested in the " ~ offer.product_name ~ " offer. Please share the latest price and availability. Offer link: " ~ offer_link %}
+
+  <header class="site-header">
+    <div class="brand">
+      <img src="/static/images/head-logo.png" alt="KSA Logo" class="brand-logo"
+           onerror="this.style.display='none'">
+      <div class="brand-text">
+        <h1>Kumara Swami Agencies</h1>
+        <p>Near SBI ATM, Ravindra Nagar, Galiveedu</p>
+      </div>
+    </div>
+    <a href="/offers" class="header-back">All offers</a>
+  </header>
+
+  <main class="offer-detail-page">
+    <section class="offer-detail-hero">
+      <div class="offer-detail-media">
+        {% if offer.image_path %}
+          <img src="{{ offer_image_url(offer) }}" alt="{{ offer.product_name }}">
+        {% else %}
+          <div class="offer-image-placeholder">KSA</div>
+        {% endif %}
+      </div>
+
+      <article class="offer-detail-content">
+        <span class="offer-badge">Special Offer</span>
+        <h1 class="offer-detail-title">{{ offer.product_name }}</h1>
+        <div class="offer-name-underline"></div>
+
+        <div class="offer-desc offer-detail-desc"
+             data-raw="{{ offer.offer_description | e }}">{{ offer.offer_description | offer_markdown }}</div>
+
+        <div class="offer-cta-group offer-detail-actions">
+          <a href="https://wa.me/919490608943?text={{ wa_msg | urlencode }}"
+             target="_blank" rel="noopener" class="btn-wa">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+            </svg>
+            Order on WhatsApp
+          </a>
+          <a href="/offers" class="btn-copy">Back to offers</a>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      function looksLikeRawMarkdown(html) {
+        var hasBlockTags = /<(p|h[1-6]|ul|ol|li|blockquote|pre|table|hr|strong|em|code)\b/i.test(html);
+        if (hasBlockTags) return false;
+        return [/^#{1,6}\s/m, /\*\*.+?\*\*/, /^\s*[-*+]\s/m, /^\|.+\|/m, /\[.+\]\(.+\)/].some(function (re) {
+          return re.test(html);
+        });
+      }
+
+      if (typeof marked !== 'undefined') {
+        marked.use({ gfm: true, breaks: true, headerIds: false, mangle: false });
+        document.querySelectorAll('.offer-desc').forEach(function (el) {
+          var rawMd = el.getAttribute('data-raw') || '';
+          if (looksLikeRawMarkdown(el.innerHTML.trim())) {
+            el.innerHTML = marked.parse(rawMd);
+          }
+        });
+      }
+    })();
+  </script>
+
+</body>
+</html>

@@ -186,6 +186,12 @@ def public_offers_page():
     return render_template("offers.html", offers=offers, offer_image_url=_offer_image_url)
 
 
+@offers_bp.route("/offers/<int:offer_id>")
+def offer_detail_page(offer_id):
+    offer = Offer.query.filter_by(id=offer_id, is_active=True).first_or_404()
+    return render_template("offer_detail.html", offer=offer, offer_image_url=_offer_image_url)
+
+
 @offers_bp.route("/admin/offers")
 @admin_required
 def admin_offers_page():

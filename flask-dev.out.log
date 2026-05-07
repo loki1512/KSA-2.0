@@ -1,0 +1,3 @@
+Database already initialized — ensuring missing tables exist...
+ * Serving Flask app 'app'
+ * Debug mode: off
