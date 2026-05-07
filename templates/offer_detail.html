@@ -38,6 +38,9 @@
       </div>
 
       <article class="offer-detail-content">
+        <div class="offer-detail-welcome hidden" id="offerWelcome">
+          <strong id="offerWelcomeText"></strong>
+        </div>
         <span class="offer-badge">Special Offer</span>
         <h1 class="offer-detail-title">{{ offer.product_name }}</h1>
         <div class="offer-name-underline"></div>
@@ -78,6 +81,32 @@
           }
         });
       }
+
+      function loadPersonalGreeting() {
+        try {
+          var saved = localStorage.getItem('ksaOfferCustomer');
+          if (!saved) return;
+          var data = JSON.parse(saved);
+          if (!data || data.offer_id !== {{ offer.id }}) return;
+
+          var welcome = document.getElementById('offerWelcome');
+          var welcomeText = document.getElementById('offerWelcomeText');
+          if (!welcome || !welcomeText) return;
+
+          if (data.existing) {
+            welcomeText.textContent = 'Welcome back, ' + (data.name || 'valued customer') + '! Your exclusive offer is ready.';
+          } else {
+            welcomeText.textContent = 'Hi ' + (data.name || 'there') + ', thanks for joining us! Your exclusive offer is reserved for you.';
+          }
+
+          welcome.classList.remove('hidden');
+          localStorage.removeItem('ksaOfferCustomer');
+        } catch (err) {
+          // ignore
+        }
+      }
+
+      loadPersonalGreeting();
     })();
   </script>
 

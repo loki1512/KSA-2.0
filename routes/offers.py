@@ -8,7 +8,8 @@ from werkzeug.utils import secure_filename
 
 from auth_helpers import admin_required
 from extensions import db
-from models import Offer
+from models import Offer, Customer, Wallet, Lead
+from sqlalchemy import func
 import re
 
 offers_bp = Blueprint("offers", __name__)
@@ -173,6 +174,123 @@ def _offer_payload(offer):
         "is_active": bool(offer.is_active),
         "created_at": offer.created_at.isoformat() if offer.created_at else None,
     }
+
+
+def _normalize_phone(value):
+    return "".join(ch for ch in (value or "") if ch.isdigit())
+
+
+def _find_customer_by_phone(phone):
+    if not phone:
+        return None
+
+    normalized = _normalize_phone(phone)
+    candidates = []
+
+    if phone:
+        candidates.append(phone)
+    if normalized:
+        candidates.append(normalized)
+        if not phone.startswith("+"):
+            candidates.append(f"+{normalized}")
+
+    candidates = [value for i, value in enumerate(candidates) if value and value not in candidates[:i]]
+    if not candidates:
+        return None
+
+    return Customer.query.filter(Customer.phone.in_(candidates)).first()
+
+
+def _create_customer(phone, name, village):
+    normalized_phone = _normalize_phone(phone) or phone
+    customer = Customer(
+        name=name.strip() if name else "Guest",
+        phone=normalized_phone,
+        village=village.strip() if village else None,
+    )
+    db.session.add(customer)
+    db.session.flush()
+
+    wallet = Wallet(customer_id=customer.id, balance=0.0)
+    db.session.add(wallet)
+    return customer
+
+
+@offers_bp.route("/api/offers/customer-lookup")
+def lookup_customer():
+    phone = (request.args.get("phone") or "").strip()
+    if not phone:
+        return jsonify({"error": "Phone number required"}), 400
+
+    customer = _find_customer_by_phone(phone)
+    if not customer:
+        return jsonify({"error": "No customer found"}), 404
+
+    return jsonify({
+        "id": customer.id,
+        "name": customer.name,
+        "village": customer.village,
+    })
+
+
+@offers_bp.route("/api/offers/villages")
+def suggest_villages():
+    q = (request.args.get("q") or "").strip()
+    if not q:
+        return jsonify([])
+
+    tokens = q.lower().split()
+    results = db.session.query(Customer.village).filter(
+        Customer.village.isnot(None),
+        func.trim(Customer.village) != ""
+    )
+
+    for token in tokens:
+        results = results.filter(Customer.village.ilike(f"%{token}%"))
+
+    villages = results.distinct().order_by(Customer.village).limit(12).all()
+    return jsonify([row.village for row in villages if row.village])
+
+
+@offers_bp.route("/api/offers/lead", methods=["POST"])
+def create_offer_lead():
+    data = request.get_json(force=True)
+    offer_id = data.get("offer_id")
+    phone = (data.get("phone") or "").strip()
+    name = (data.get("name") or "").strip()
+    village = (data.get("village") or "").strip()
+
+    if not offer_id:
+        return jsonify({"error": "Offer id is required"}), 400
+
+    if not phone:
+        return jsonify({"error": "Mobile number is required"}), 400
+
+    offer = Offer.query.get_or_404(offer_id)
+    customer = _find_customer_by_phone(phone)
+    existing_customer = bool(customer)
+
+    if not customer:
+        if not name or not village:
+            return jsonify({"error": "Name and village are required for new customers"}), 400
+        customer = _create_customer(phone, name, village)
+    else:
+        if not customer.name and name:
+            customer.name = name
+        if not customer.village and village:
+            customer.village = village
+
+    lead = Lead(customer_id=customer.id, offer_id=offer.id)
+    db.session.add(lead)
+    db.session.commit()
+
+    return jsonify({
+        "customer_id": customer.id,
+        "customer_name": customer.name or "",
+        "existing_customer": existing_customer,
+        "offer_id": offer.id,
+        "redirect_url": url_for("offers.offer_detail_page", offer_id=offer.id),
+    })
 
 
 @offers_bp.route("/offers")

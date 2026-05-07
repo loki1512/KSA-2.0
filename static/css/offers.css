@@ -927,6 +927,135 @@ body {
 .offer-section.in-view .offer-desc-block{ animation: slideIn 0.55s 0.25s ease both; }
 .offer-section.in-view .offer-cta-group { animation: slideIn 0.55s 0.35s ease both; }
 
+.customer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.customer-modal-backdrop.hidden {
+  display: none;
+}
+
+.customer-modal {
+  width: min(560px, 100%);
+  background: rgba(16, 10, 4, 0.96);
+  border: 1px solid rgba(245, 228, 160, 0.12);
+  border-radius: 24px;
+  box-shadow: 0 36px 80px rgba(0, 0, 0, 0.45);
+  padding: 28px 28px 22px;
+  overflow: hidden;
+}
+
+.customer-modal.hidden {
+  display: none;
+}
+
+.customer-modal .modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  border: none;
+  background: transparent;
+  color: var(--cream);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.72;
+}
+
+.customer-modal .modal-close:hover {
+  opacity: 1;
+}
+
+.customer-modal-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.customer-modal-panel h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.1;
+  color: var(--gold-pale);
+}
+
+.customer-modal-panel p {
+  margin: 0;
+  color: rgba(253, 245, 232, 0.76);
+  line-height: 1.7;
+}
+
+.modal-field {
+  display: grid;
+  gap: 8px;
+}
+
+.modal-field label {
+  color: rgba(253, 245, 232, 0.65);
+  font-size: 13px;
+}
+
+.modal-field input {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(253, 245, 232, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  padding: 14px 16px;
+  font: inherit;
+  outline: none;
+}
+
+.modal-field input:focus {
+  border-color: rgba(224, 123, 12, 0.5);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.modal-message {
+  min-height: 24px;
+  color: var(--gold-pale);
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.field-note {
+  margin: 0;
+  color: rgba(253, 245, 232, 0.55);
+  font-size: 13px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.offer-detail-welcome {
+  display: block;
+  margin-bottom: 22px;
+  padding: 18px 20px;
+  border: 1px solid rgba(245, 228, 160, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  color: var(--cream);
+}
+
+.offer-detail-welcome strong {
+  display: block;
+  font-size: 18px;
+  color: var(--gold-pale);
+}
 
 /* ════════════════════════════════════════════════════════
    RESPONSIVE — tablet / large phone (≤ 860 px)

@@ -31,6 +31,42 @@
     </a>
   </header>
 
+  <div class="customer-modal-backdrop hidden" id="customerModal" aria-hidden="true">
+    <div class="customer-modal" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">
+      <button class="modal-close" id="customerModalClose" type="button" aria-label="Close customer lookup">×</button>
+      <div class="customer-modal-panel">
+        <h2 id="customerModalTitle">Tell us your mobile number</h2>
+        <p id="customerModalSubtitle">We use it to personalize your offer and save your interest.</p>
+
+        <form id="customerModalForm">
+          <div class="modal-field" id="modalPhoneField">
+            <label for="modalPhone">Mobile number</label>
+            <input id="modalPhone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" required placeholder="Enter mobile number">
+          </div>
+
+          <div class="modal-field hidden" id="newCustomerFields">
+            <label for="modalName">Your name</label>
+            <input id="modalName" name="name" type="text" autocomplete="name" placeholder="Name">
+          </div>
+
+          <div class="modal-field hidden" id="villageField">
+            <label for="modalVillage">Village</label>
+            <input id="modalVillage" name="village" type="text" autocomplete="address-level2" placeholder="Village" list="villageSuggestions">
+            <datalist id="villageSuggestions"></datalist>
+            <p class="field-note">Select an existing village or add a new one.</p>
+          </div>
+
+          <div class="modal-message" id="customerModalMessage"></div>
+
+          <div class="modal-actions">
+            <button class="btn-wa" id="customerModalSubmit" type="submit">Continue</button>
+            <button class="btn-copy" id="customerModalCancel" type="button">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- DOT NAVIGATION (built by JS) -->
   <nav class="offer-progress" id="dotNav" aria-label="Offer navigation"></nav>
 
@@ -114,7 +150,7 @@
               plain/unrendered text (e.g. during development).
             -->
             <div class="offer-cta-group">
-              <a href="{{ detail_path }}" class="btn-detail">
+              <a href="{{ detail_path }}" class="btn-detail" data-offer-id="{{ offer.id }}" data-offer-name="{{ offer.product_name }}">
                 <span>Click to unlock the special deal, Only for you!!</span>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M5 12h14"/>
@@ -308,6 +344,210 @@
           prompt('Copy this link:', url);
         });
       };
+
+      /* CUSTOMER LEAD FLOW */
+      var customerModal = document.getElementById('customerModal');
+      var customerModalClose = document.getElementById('customerModalClose');
+      var customerModalCancel = document.getElementById('customerModalCancel');
+      var customerModalForm = document.getElementById('customerModalForm');
+      var customerModalTitle = document.getElementById('customerModalTitle');
+      var customerModalSubtitle = document.getElementById('customerModalSubtitle');
+      var customerModalMessage = document.getElementById('customerModalMessage');
+      var modalPhone = document.getElementById('modalPhone');
+      var modalName = document.getElementById('modalName');
+      var modalVillage = document.getElementById('modalVillage');
+      var newCustomerFields = document.getElementById('newCustomerFields');
+      var villageField = document.getElementById('villageField');
+      var villageSuggestions = document.getElementById('villageSuggestions');
+      var customerModalSubmit = document.getElementById('customerModalSubmit');
+      var selectedOfferId = null;
+      var selectedOfferPath = null;
+      var selectedOfferName = null;
+      var currentCustomer = null;
+      var lookupComplete = false;
+
+      function showModal() {
+        customerModal.classList.remove('hidden');
+        customerModal.setAttribute('aria-hidden', 'false');
+        modalPhone.focus();
+      }
+
+      function closeModal() {
+        customerModal.classList.add('hidden');
+        customerModal.setAttribute('aria-hidden', 'true');
+        resetModal();
+      }
+
+      function resetModal() {
+        currentCustomer = null;
+        lookupComplete = false;
+        modalPhone.disabled = false;
+        modalPhone.value = '';
+        modalName.value = '';
+        modalVillage.value = '';
+        villageSuggestions.innerHTML = '';
+        newCustomerFields.classList.add('hidden');
+        villageField.classList.add('hidden');
+        customerModalTitle.textContent = 'Tell us your mobile number';
+        customerModalSubtitle.textContent = 'We use it to personalize your offer and save your interest.';
+        customerModalSubmit.textContent = 'Continue';
+        customerModalMessage.textContent = '';
+      }
+
+      function setModalMessage(message, isError) {
+        customerModalMessage.textContent = message || '';
+        customerModalMessage.style.color = isError ? '#ffb3a7' : '#f5e4a0';
+      }
+
+      async function lookupCustomerByPhone() {
+        var phone = modalPhone.value.trim();
+        if (!phone) {
+          setModalMessage('Please enter your mobile number.', true);
+          return;
+        }
+
+        setModalMessage('Checking your number...', false);
+
+        try {
+          var res = await fetch('/api/offers/customer-lookup?phone=' + encodeURIComponent(phone));
+          if (res.ok) {
+            currentCustomer = await res.json();
+            lookupComplete = true;
+            prepareExistingCustomer();
+            return;
+          }
+
+          if (res.status === 404) {
+            lookupComplete = true;
+            prepareNewCustomer();
+            return;
+          }
+
+          var errorPayload = await res.json();
+          setModalMessage(errorPayload.error || 'Unable to verify this number.', true);
+        } catch (err) {
+          setModalMessage('Network error. Please try again.', true);
+        }
+      }
+
+      function prepareExistingCustomer() {
+        modalPhone.disabled = true;
+        customerModalTitle.textContent = 'Welcome back, ' + (currentCustomer.name || 'valued customer');
+        customerModalSubtitle.textContent = 'Your exclusive offer is ready. Tap continue to open it now.';
+        customerModalSubmit.textContent = 'Continue to offer';
+        newCustomerFields.classList.add('hidden');
+        villageField.classList.add('hidden');
+        setModalMessage('We found your account. Your interest has been saved.', false);
+      }
+
+      function prepareNewCustomer() {
+        modalPhone.disabled = true;
+        customerModalTitle.textContent = 'New here? Let’s get started';
+        customerModalSubtitle.textContent = 'Enter your name and village so we can personalize this offer for you.';
+        customerModalSubmit.textContent = 'Create and continue';
+        newCustomerFields.classList.remove('hidden');
+        villageField.classList.remove('hidden');
+        setModalMessage('No account found. We will create one for you.', false);
+      }
+
+      async function fetchVillageOptions(query) {
+        if (!query) {
+          villageSuggestions.innerHTML = '';
+          return;
+        }
+
+        try {
+          var res = await fetch('/api/offers/villages?q=' + encodeURIComponent(query));
+          if (!res.ok) return;
+          var villages = await res.json();
+          villageSuggestions.innerHTML = villages.map(function (v) {
+            return '<option value="' + escapeHtml(v) + '">';
+          }).join('');
+        } catch (err) {
+          villageSuggestions.innerHTML = '';
+        }
+      }
+
+      async function submitLead() {
+        var phone = modalPhone.value.trim();
+        if (!phone) {
+          setModalMessage('Please enter your mobile number.', true);
+          return;
+        }
+
+        var body = {
+          offer_id: selectedOfferId,
+          phone: phone,
+        };
+
+        if (!currentCustomer) {
+          var name = modalName.value.trim();
+          var village = modalVillage.value.trim();
+          if (!name || !village) {
+            setModalMessage('Please enter your name and village.', true);
+            return;
+          }
+          body.name = name;
+          body.village = village;
+        }
+
+        setModalMessage('Saving your interest...', false);
+        customerModalSubmit.disabled = true;
+
+        try {
+          var res = await fetch('/api/offers/lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+
+          var payload = await res.json();
+          if (!res.ok) {
+            setModalMessage(payload.error || 'Unable to save your interest.', true);
+            return;
+          }
+
+          localStorage.setItem('ksaOfferCustomer', JSON.stringify({
+            id: payload.customer_id,
+            name: payload.customer_name,
+            existing: payload.existing_customer,
+            offer_id: payload.offer_id,
+          }));
+
+          window.location.href = payload.redirect_url;
+        } catch (err) {
+          setModalMessage('Network error. Please try again.', true);
+        } finally {
+          customerModalSubmit.disabled = false;
+        }
+      }
+
+      document.querySelectorAll('.btn-detail').forEach(function (btn) {
+        btn.addEventListener('click', function (event) {
+          event.preventDefault();
+          selectedOfferId = btn.dataset.offerId;
+          selectedOfferName = btn.dataset.offerName;
+          selectedOfferPath = btn.getAttribute('href');
+          resetModal();
+          showModal();
+        });
+      });
+
+      customerModalClose.addEventListener('click', closeModal);
+      customerModalCancel.addEventListener('click', closeModal);
+
+      modalVillage.addEventListener('input', function () {
+        fetchVillageOptions(this.value.trim());
+      });
+
+      customerModalForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        if (!lookupComplete) {
+          lookupCustomerByPhone();
+          return;
+        }
+        submitLead();
+      });
 
     })();
   </script>
