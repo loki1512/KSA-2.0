@@ -89,6 +89,32 @@
         <div class="admin-offer-list" id="adminOfferList"></div>
       </section>
     </section>
+
+    <section class="offer-panel lead-panel">
+      <div class="panel-heading">
+        <h3>Recent Leads</h3>
+        <span class="offer-count" id="leadCount">-</span>
+      </div>
+      <p class="form-message" id="leadMessage" style="display:none;"></p>
+      <div class="lead-table-wrapper">
+        <table class="lead-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Village</th>
+              <th>Offer</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminLeadTable">
+            <tr><td colspan="7" class="empty-leads">Loading leads...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script src="/static/js/admin_offers.js"></script>

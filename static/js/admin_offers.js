@@ -10,7 +10,12 @@ const saveOfferBtn = document.getElementById('saveOfferBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const adminOfferList = document.getElementById('adminOfferList');
 const offerCount = document.getElementById('offerCount');
+const leadMessage = document.getElementById('leadMessage');
+const adminLeadTable = document.getElementById('adminLeadTable');
+const leadCount = document.getElementById('leadCount');
 let offersById = new Map();
+let leadsById = new Map();
+const leadStatusOptions = ['Interested', 'Contacted', 'Converted', 'Rejected'];
 
 function setMessage(message, type = 'success') {
   offerMessage.textContent = message;
@@ -85,6 +90,108 @@ async function loadOffers() {
   `).join('');
 }
 
+async function setLeadMessage(message, type = 'success') {
+  if (!leadMessage) return;
+  leadMessage.textContent = message;
+  leadMessage.className = `form-message ${type}`;
+  leadMessage.style.display = 'block';
+}
+
+function clearLeadMessage() {
+  if (!leadMessage) return;
+  leadMessage.style.display = 'none';
+  leadMessage.textContent = '';
+}
+
+function renderLeadRow(lead) {
+  const statusOptions = leadStatusOptions.map(status => `
+      <option value="${status}" ${status === lead.status ? 'selected' : ''}>${status}</option>
+    `).join('');
+
+  return `
+    <tr>
+      <td>${escapeHtml(lead.customer_name || 'Unknown')}</td>
+      <td>${escapeHtml(lead.customer_phone || '-')}</td>
+      <td>${escapeHtml(lead.customer_village || '-')}</td>
+      <td>${escapeHtml(lead.offer_name || '(removed)')}</td>
+      <td>
+        <select class="lead-status-select" onchange="changeLeadStatus(${lead.id}, this.value)">
+          ${statusOptions}
+        </select>
+      </td>
+      <td>${escapeHtml(formatDate(lead.created_at))}</td>
+      <td>
+        <button class="btn btn-danger" type="button" onclick="deleteLead(${lead.id})">Delete</button>
+      </td>
+    </tr>
+  `;
+}
+
+async function loadLeads() {
+  adminLeadTable.innerHTML = '<tr><td colspan="7" class="empty-leads">Loading leads...</td></tr>';
+
+  try {
+    const res = await fetch('/api/admin/leads');
+    if (!res.ok) {
+      adminLeadTable.innerHTML = '<tr><td colspan="7" class="empty-leads">Unable to load leads.</td></tr>';
+      return;
+    }
+    const leads = await res.json();
+    leadsById = new Map(leads.map(lead => [lead.id, lead]));
+    leadCount.textContent = leads.length;
+
+    if (!leads.length) {
+      adminLeadTable.innerHTML = '<tr><td colspan="7" class="empty-leads">No leads captured yet.</td></tr>';
+      return;
+    }
+
+    adminLeadTable.innerHTML = leads.map(renderLeadRow).join('');
+  } catch (err) {
+    adminLeadTable.innerHTML = '<tr><td colspan="7" class="empty-leads">Failed to load leads.</td></tr>';
+  }
+}
+
+window.changeLeadStatus = async function(id, status) {
+  clearLeadMessage();
+  try {
+    const res = await fetch(`/api/admin/leads/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+
+    if (!res.ok) {
+      const payload = await res.json();
+      setLeadMessage(payload.error || 'Unable to update lead status', 'error');
+      return;
+    }
+
+    setLeadMessage('Lead status updated successfully');
+    await loadLeads();
+  } catch (err) {
+    setLeadMessage('Network error while updating lead status', 'error');
+  }
+};
+
+window.deleteLead = async function(id) {
+  if (!confirm('Delete this lead?')) return;
+  clearLeadMessage();
+
+  try {
+    const res = await fetch(`/api/admin/leads/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const payload = await res.json();
+      setLeadMessage(payload.error || 'Unable to delete lead', 'error');
+      return;
+    }
+
+    setLeadMessage('Lead deleted successfully');
+    await loadLeads();
+  } catch (err) {
+    setLeadMessage('Network error while deleting lead', 'error');
+  }
+};
+
 window.editOffer = function(id) {
   const offer = offersById.get(id);
   if (!offer) return;
@@ -152,3 +259,4 @@ offerForm.addEventListener('submit', async event => {
 
 cancelEditBtn.addEventListener('click', resetForm);
 loadOffers();
+loadLeads();

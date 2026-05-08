@@ -176,6 +176,52 @@ def _offer_payload(offer):
     }
 
 
+def _lead_payload(lead):
+    return {
+        "id": lead.id,
+        "customer_id": lead.customer_id,
+        "customer_name": lead.customer.name if lead.customer else None,
+        "customer_phone": lead.customer.phone if lead.customer else None,
+        "customer_village": lead.customer.village if lead.customer else None,
+        "offer_id": lead.offer_id,
+        "offer_name": lead.offer.product_name if lead.offer else "(removed offer)",
+        "status": lead.status,
+        "created_at": lead.timestamp.isoformat() if lead.timestamp else None,
+    }
+
+
+@offers_bp.route("/api/admin/leads")
+@admin_required
+def admin_list_leads():
+    leads = Lead.query.order_by(Lead.timestamp.desc()).all()
+    return jsonify([_lead_payload(lead) for lead in leads])
+
+
+@offers_bp.route("/api/admin/leads/<int:lead_id>", methods=["PUT"])
+@admin_required
+def update_lead(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+    data = request.get_json(force=True)
+    status = (data.get("status") or "").strip()
+    valid_statuses = ["Interested", "Contacted", "Converted", "Rejected"]
+
+    if status not in valid_statuses:
+        return jsonify({"error": "Invalid lead status"}), 400
+
+    lead.status = status
+    db.session.commit()
+    return jsonify(_lead_payload(lead))
+
+
+@offers_bp.route("/api/admin/leads/<int:lead_id>", methods=["DELETE"])
+@admin_required
+def delete_lead(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+    db.session.delete(lead)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
 def _normalize_phone(value):
     return "".join(ch for ch in (value or "") if ch.isdigit())
 

@@ -125,6 +125,54 @@ body:not(.public-offers-body) .offer-count {
   font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600;
 }
 body:not(.public-offers-body) .admin-offer-list { display:grid; gap:12px; }
+body:not(.public-offers-body) .lead-panel {
+  grid-column: 1 / -1;
+}
+body:not(.public-offers-body) .lead-table-wrapper {
+  overflow-x: auto;
+}
+body:not(.public-offers-body) .lead-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+body:not(.public-offers-body) .lead-table th,
+body:not(.public-offers-body) .lead-table td {
+  padding: 12px 14px;
+  border: 1px solid rgba(15,17,23,.08);
+  color: var(--admin-text);
+  text-align: left;
+  vertical-align: middle;
+  font-size: 13px;
+}
+body:not(.public-offers-body) .lead-table th {
+  background: var(--admin-surface-muted);
+  color: var(--admin-text-secondary);
+  font-weight: 700;
+}
+body:not(.public-offers-body) .lead-table td {
+  background: var(--admin-surface);
+}
+body:not(.public-offers-body) .lead-status-select {
+  width: 100%;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-xs);
+  background: var(--admin-surface-muted);
+  color: var(--admin-text);
+  padding: 8px 10px;
+}
+body:not(.public-offers-body) .lead-table .btn-danger {
+  min-width: auto;
+  padding: 8px 12px;
+}
+body:not(.public-offers-body) .empty-leads {
+  padding: 20px;
+  color: var(--admin-text-muted);
+  text-align: center;
+}
+body:not(.public-offers-body) .lead-panel .form-message {
+  margin-bottom: 16px;
+}
 body:not(.public-offers-body) .admin-offer-item {
   display:grid; grid-template-columns:112px 1fr; gap:14px; align-items:start;
   padding:14px; background:var(--admin-surface-muted); border:1px solid var(--admin-border);
