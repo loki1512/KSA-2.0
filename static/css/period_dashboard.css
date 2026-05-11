@@ -2,6 +2,86 @@
 /* Layered on top of daily_dashboard.css — only overrides & additions */
 
 /* ======================================================
+   PAGE HEADER — same gradient as daily
+   ====================================================== */
+.page-header {
+  background: linear-gradient(130deg, #1a2d8f 0%, #3b5bdb 55%, #5b78f5 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 22px 28px;
+  box-shadow: 0 6px 28px rgba(59,91,219,0.32);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-header::after {
+  content: '';
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+
+.page-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  opacity: 0.72;
+  margin-bottom: 4px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.page-summary {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+.page-header-actions {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  text-decoration: none;
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.15);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-xs);
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.back-link:hover {
+  background: rgba(255,255,255,0.25);
+  border-color: rgba(255,255,255,0.6);
+  color: #fff;
+}
+
+/* ======================================================
    PERIOD NAVIGATION
    ====================================================== */
 .period-nav {
@@ -10,18 +90,21 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--accent);
   border-radius: var(--radius);
   padding: 12px 20px;
   box-shadow: var(--shadow-sm);
 }
 
 .period-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--accent);
   text-align: center;
   flex: 1;
+  font-family: var(--font-mono);
+  letter-spacing: -0.3px;
 }
 
 .period-btn {
@@ -32,11 +115,11 @@
   font-weight: 600;
   color: var(--text-secondary);
   text-decoration: none;
-  padding: 7px 14px;
+  padding: 7px 16px;
   background: var(--surface-2);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-xs);
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
   white-space: nowrap;
 }
 
@@ -44,18 +127,19 @@
   background: var(--accent-light);
   color: var(--accent);
   border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 /* ======================================================
-   TAB SWITCHER
+   TAB SWITCHER — underline pill style
    ====================================================== */
 .tab-switcher {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 6px;
+  padding: 5px;
   box-shadow: var(--shadow-sm);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -73,7 +157,8 @@
   color: var(--text-secondary);
   padding: 8px 16px;
   border-radius: var(--radius-xs);
-  transition: background 0.15s, color 0.15s;
+  border-bottom: 2px solid transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
   white-space: nowrap;
 }
 
@@ -83,19 +168,17 @@
 }
 
 .tab.active {
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(59,91,219,0.25);
+  background: var(--accent-light);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 700;
 }
 
 /* ======================================================
-   KPI GRID — 4 cards, compact
+   KPI GRID — override to 6-col like daily
    ====================================================== */
-/* Inherits .kpi-grid and .kpi-card from daily_dashboard.css */
-/* Lock to exactly 4 equal columns on desktop */
-.period-nav ~ .kpi-grid,   /* sibling selector fallback */
 .container > .kpi-grid {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
 }
 
 /* ======================================================
@@ -110,10 +193,8 @@
   letter-spacing: 0.2px;
 }
 
-/* chart-container height is set inline in the template (280px) */
-
 /* ======================================================
-   TABLES GRID — 2×2
+   TABLES GRID — 2×2 with top-border color badges
    ====================================================== */
 .tables-grid {
   display: grid;
@@ -121,17 +202,31 @@
   gap: 16px;
 }
 
-/* Card h3 already styled in daily_dashboard.css */
+/* Color badge: top border per card */
+.tables-grid .card:nth-child(1) { border-top: 3px solid var(--accent); }       /* Customers by Bills — blue */
+.tables-grid .card:nth-child(2) { border-top: 3px solid var(--success); }      /* Customers by Revenue — green */
+.tables-grid .card:nth-child(3) { border-top: 3px solid var(--warn); }         /* Products by Qty — amber */
+.tables-grid .card:nth-child(4) { border-top: 3px solid #7048e8; }             /* Products by Revenue — indigo */
 
-/* Phone numbers — mono, muted */
+/* Matching h3 color per card */
+.tables-grid .card:nth-child(1) h3 { color: var(--accent); }
+.tables-grid .card:nth-child(2) h3 { color: var(--success); }
+.tables-grid .card:nth-child(3) h3 { color: var(--warn); }
+.tables-grid .card:nth-child(4) h3 { color: #7048e8; }
+
+/* Zebra striping */
+.tables-grid tbody tr:nth-child(odd) { background: var(--surface-2); }
+.tables-grid tbody tr:hover { background: var(--accent-light); }
+
+/* Phone — left-aligned mono muted */
 .tables-grid td:nth-child(2) {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-secondary);
-  text-align: left !important;  /* override right-align from daily css */
+  text-align: left !important;
 }
 
-/* Bill count / qty — right-aligned mono */
+/* Bills count / qty — right-aligned mono */
 .tables-grid td:nth-child(3) {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -149,24 +244,51 @@
   text-align: right;
 }
 
-/* th alignment to match */
 .tables-grid th:nth-child(2) { text-align: left !important; }
 .tables-grid th:nth-child(3) { text-align: right; }
 .tables-grid th:nth-child(4) { text-align: right; }
 
-/* 3-column product tables */
-.tables-grid table tr th:nth-child(2):last-child,
-.tables-grid table tr td:nth-child(2):last-child {
+/* ======================================================
+   HIGHEST CREDIT CARD — red treatment (same as daily)
+   ====================================================== */
+.card--credit {
+  border-left: 4px solid var(--danger);
+  background: #fffcfc;
+}
+
+.card--credit h3 { color: var(--danger); }
+
+.card--credit tbody tr:nth-child(odd) { background: #fff5f5; }
+.card--credit tbody tr:hover { background: #ffe8e8; }
+
+.card--credit td.col-outstanding {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--danger) !important;
   text-align: right;
 }
+
+/* Customer links */
+.cust-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.cust-link:hover { text-decoration: underline; }
 
 /* ======================================================
    RESPONSIVE
    ====================================================== */
-@media (max-width: 860px) {
-  .tables-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 960px) {
+  .container > .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
+  .kpi--hero { grid-column: span 2; }
+  .kpi--full { grid-column: span 4; }
+}
+
+@media (max-width: 860px) {
+  .tables-grid { grid-template-columns: 1fr; }
 
   .container > .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -174,31 +296,24 @@
 }
 
 @media (max-width: 640px) {
-  .period-nav {
-    padding: 10px 14px;
-    gap: 8px;
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    gap: 12px;
   }
 
+  .page-title { font-size: 16px; }
+
+  .period-nav { padding: 10px 14px; gap: 8px; }
   .period-title { font-size: 14px; }
-
-  .period-btn {
-    font-size: 12px;
-    padding: 6px 10px;
-  }
+  .period-btn { font-size: 12px; padding: 6px 10px; }
 
   .tab-switcher { padding: 5px; }
   .tab { font-size: 12px; padding: 7px 12px; }
 
-  .container > .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .container > .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi--hero  { grid-column: span 2; }
+  .kpi--wide  { grid-column: span 2; }
+  .kpi--full  { grid-column: span 2; }
 }
-
-/* Customer links inside period tables */
-.cust-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.cust-link:hover { text-decoration: underline; }

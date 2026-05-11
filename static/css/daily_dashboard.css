@@ -22,7 +22,11 @@
   --success-light: #e6f7f2;
 
   --danger: #e03131;
+  --danger-hover: #c92a2a;
   --danger-light: #fff0f0;
+
+  --warn: #e67700;
+  --warn-light: #fff8ee;
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
@@ -47,7 +51,9 @@ body {
   line-height: 1.5;
 }
 
-/* ---- SITE HEADER ---- */
+/* =====================================================
+   SITE HEADER
+   ===================================================== */
 .site-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -68,20 +74,12 @@ body {
   gap: 12px;
 }
 
-.header-left::before {
-  content: 'KSA';
+.logo-mark img {
   width: 36px;
   height: 36px;
-  background: var(--accent);
-  color: #fff;
   border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
+  display: block;
+  object-fit: cover;
 }
 
 .header-left h1 {
@@ -114,13 +112,16 @@ body {
   transition: background 0.15s, color 0.15s;
 }
 
-.header-nav a:hover                   { background: var(--surface-2); color: var(--text-primary); }
-.header-nav a[href="/billing"]        { background: var(--accent); color: #fff; }
-.header-nav a[href="/billing"]:hover  { background: var(--accent-hover); }
-.header-nav a[style*="dc2626"]        { color: var(--danger) !important; }
-.header-nav a[style*="dc2626"]:hover  { background: var(--danger-light); }
+.header-nav a:hover { background: var(--surface-2); color: var(--text-primary); }
+.header-nav a.active { color: var(--accent); font-weight: 600; }
+.header-nav a[href="/billing"] { background: var(--accent); color: #fff; }
+.header-nav a[href="/billing"]:hover { background: var(--accent-hover); }
+.header-nav a.nav-logout { color: var(--danger); }
+.header-nav a.nav-logout:hover { background: var(--danger-light); }
 
-/* ---- PAGE CONTAINER ---- */
+/* =====================================================
+   PAGE CONTAINER
+   ===================================================== */
 .container {
   max-width: 1080px;
   margin: 0 auto;
@@ -130,63 +131,99 @@ body {
   gap: 16px;
 }
 
-/* ---- GREETING HEADER BAND ---- */
-.header {
-  background: linear-gradient(135deg, var(--accent) 0%, #5b78f5 100%);
+/* =====================================================
+   GREETING HERO BAND
+   ===================================================== */
+.dashboard-page-header {
+  background: linear-gradient(130deg, #1a2d8f 0%, #3b5bdb 55%, #5b78f5 100%);
   color: #fff;
   border-radius: var(--radius);
-  padding: 20px 24px;
-  box-shadow: 0 4px 20px rgba(59,91,219,0.28);
+  padding: 22px 28px;
+  box-shadow: 0 6px 28px rgba(59,91,219,0.32);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-page-header::after {
+  content: '';
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+
+.page-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  opacity: 0.72;
+  margin-bottom: 4px;
 }
 
 .greeting {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   margin-bottom: 2px;
 }
 
 .subtitle {
   font-size: 12px;
-  opacity: 0.82;
+  opacity: 0.75;
   font-weight: 500;
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 
-.header a {
-  color: rgba(255,255,255,0.9);
+.date-viewing {
+  margin-top: 8px;
   font-size: 12px;
-  font-weight: 600;
-  text-decoration: underline;
+  opacity: 0.88;
 }
 
-.header a:hover { color: #fff; }
+.date-viewing a {
+  color: rgba(255,255,255,0.9);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
-/* ---- KPI GRID ---- */
+.date-viewing a:hover { color: #fff; }
+
+/* =====================================================
+   KPI GRID — base
+   ===================================================== */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
 }
 
 .kpi-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
+  border-left-width: 4px;
+  border-left-color: var(--border);
   border-radius: var(--radius-sm);
-  padding: 16px;
+  padding: 16px 16px 14px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+  gap: 5px;
+  transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+  position: relative;
+  overflow: hidden;
 }
 
 .kpi-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
 }
 
 .kpi-value {
@@ -197,50 +234,171 @@ body {
   line-height: 1.1;
 }
 
-/* Clickable KPI cards */
+/* Clickable cards */
 a.kpi-card {
   text-decoration: none;
   cursor: pointer;
 }
 
-a.kpi-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(59,91,219,0.15);
+/* =====================================================
+   KPI VARIANTS — color coded
+   ===================================================== */
+
+/* DANGER — Outstanding credit (red) */
+.kpi--danger {
+  background: var(--danger-light);
+  border-left-color: var(--danger);
+  border-color: #ffd0d0;
+  border-left-width: 4px;
+}
+.kpi--danger .kpi-label { color: var(--danger); }
+.kpi--danger .kpi-value { color: var(--danger); font-size: 28px; }
+.kpi--danger:hover {
+  border-color: var(--danger);
+  box-shadow: 0 4px 20px rgba(224,49,49,0.18);
   transform: translateY(-2px);
 }
 
-a.kpi-card:hover .kpi-label { color: var(--accent); }
-a.kpi-card:hover .kpi-value { color: var(--accent); }
-
-/* Navigation tab cards (Monthly / Quarterly / Yearly) */
-.tab-card {
-  border: 1.5px dashed var(--border);
-  background: var(--surface-2);
+/* SUCCESS — Payments, New Bill (green) */
+.kpi--success {
+  background: var(--success-light);
+  border-left-color: var(--success);
+  border-color: #c3eedf;
+  border-left-width: 4px;
+}
+.kpi--success .kpi-label { color: var(--success); }
+.kpi--success .kpi-value { color: var(--success); }
+.kpi--success:hover {
+  border-color: var(--success);
+  box-shadow: 0 4px 20px rgba(15,158,110,0.18);
+  transform: translateY(-2px);
 }
 
-.tab-card:hover {
+/* PRIMARY — Total Sales (blue hero) */
+.kpi--primary {
+  background: var(--accent-light);
+  border-left-color: var(--accent);
+  border-color: #c8d3f8;
+  border-left-width: 4px;
+}
+.kpi--primary .kpi-label { color: var(--accent); }
+.kpi--primary .kpi-value { color: var(--accent); font-size: 28px; }
+.kpi--primary:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(59,91,219,0.18);
+  transform: translateY(-2px);
+}
+
+/* WARN — Avg Bill (amber) */
+.kpi--warn {
+  background: var(--warn-light);
+  border-left-color: var(--warn);
+  border-color: #fde8c0;
+  border-left-width: 4px;
+}
+.kpi--warn .kpi-label { color: var(--warn); }
+.kpi--warn .kpi-value { color: var(--warn); }
+.kpi--warn:hover {
+  border-color: var(--warn);
+  box-shadow: 0 4px 20px rgba(230,119,0,0.14);
+  transform: translateY(-2px);
+}
+
+/* NEUTRAL — nav tabs (dashed, grey) */
+.kpi--neutral {
+  background: var(--surface-2);
+  border-style: dashed;
+  border-left-style: solid;
+  border-left-color: var(--text-muted);
+  border-left-width: 4px;
+}
+.kpi--neutral .kpi-label { color: var(--text-muted); }
+.kpi--neutral .kpi-value { font-size: 15px; color: var(--text-secondary); }
+.kpi--neutral:hover {
   background: var(--accent-light);
   border-color: var(--accent);
   border-style: solid;
+  box-shadow: 0 4px 16px rgba(59,91,219,0.12);
+  transform: translateY(-2px);
+}
+.kpi--neutral:hover .kpi-label { color: var(--accent); }
+.kpi--neutral:hover .kpi-value { color: var(--accent); }
+
+/* =====================================================
+   KPI SIZES — spanning
+   ===================================================== */
+
+/* Wide tiles — span 2 columns */
+.kpi--wide {
+  grid-column: span 2;
 }
 
-/* New Bill quick-action card */
-a.kpi-card[href="/billing"] .kpi-value {
+/* Hero tiles — span 3 columns */
+.kpi--hero {
+  grid-column: span 3;
+}
+
+/* Full row — span 6 */
+.kpi--full {
+  grid-column: span 6;
+}
+
+/* Large value for hero tiles */
+.kpi--hero .kpi-value {
+  font-size: 32px;
+}
+
+.kpi--hero .kpi-label {
+  font-size: 11px;
+}
+
+/* CTA card — New Bill */
+.kpi--cta {
+  background: linear-gradient(135deg, var(--success-light) 0%, #d1f5e8 100%);
+  border-left-color: var(--success);
+  border-color: #b2e8d4;
+  border-left-width: 4px;
+  align-items: flex-start;
+}
+.kpi--cta .kpi-value {
   font-size: 17px;
   color: var(--success);
+  font-weight: 700;
+}
+.kpi--cta:hover {
+  background: linear-gradient(135deg, #d1f5e8 0%, #b8f0da 100%);
+  border-color: var(--success);
+  box-shadow: 0 4px 20px rgba(15,158,110,0.22);
+  transform: translateY(-2px);
 }
 
-a.kpi-card[href="/billing"]:hover .kpi-value { color: var(--success-hover); }
-a.kpi-card[href="/billing"]:hover { border-color: var(--success); box-shadow: 0 4px 16px rgba(15,158,110,0.15); }
+/* =====================================================
+   SECTION DIVIDER LABEL
+   ===================================================== */
+.kpi-section-label {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 4px 2px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
 
-/* ---- TWO-COLUMN LAYOUT ---- */
+/* =====================================================
+   TWO-COLUMN LAYOUT
+   ===================================================== */
 .layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-/* ---- GENERIC CARD ---- */
+/* =====================================================
+   GENERIC CARD
+   ===================================================== */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -250,40 +408,45 @@ a.kpi-card[href="/billing"]:hover { border-color: var(--success); box-shadow: 0 
 }
 
 .card h3 {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   margin-bottom: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
 }
 
-/* ---- CHART ---- */
+/* =====================================================
+   CHART
+   ===================================================== */
 .chart-container {
   position: relative;
   height: 220px;
   width: 100%;
 }
 
-/* ---- TABLES ---- */
+/* =====================================================
+   TABLES — base
+   ===================================================== */
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-thead tr,
-tr:first-child {
+thead tr {
   background: var(--surface-2);
   border-bottom: 1.5px solid var(--border);
 }
 
 th {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
   padding: 9px 12px;
   text-align: left;
   white-space: nowrap;
@@ -303,7 +466,6 @@ tbody tr:last-child td { border-bottom: none; }
 tbody tr { transition: background 0.1s; }
 tbody tr:hover { background: var(--surface-2); }
 
-/* Qty + Amount right-aligned, mono */
 td:nth-child(2),
 td:nth-child(3) {
   text-align: right;
@@ -316,12 +478,41 @@ td:nth-child(3) {
   color: var(--success);
 }
 
-/* ---- CUSTOMERS CARD ---- */
+/* =====================================================
+   HIGHEST CREDIT TABLE — striped red tones
+   ===================================================== */
+.card--credit {
+  border-left: 4px solid var(--danger);
+  background: #fffcfc;
+}
+
+.card--credit h3 {
+  color: var(--danger);
+}
+
+.card--credit tbody tr:nth-child(odd) {
+  background: #fff5f5;
+}
+
+.card--credit tbody tr:hover {
+  background: #ffe8e8;
+}
+
+/* Outstanding amount column — always red, mono */
+.card--credit td.col-outstanding {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--danger) !important;
+  text-align: right;
+}
+
+/* =====================================================
+   CUSTOMERS TODAY CARD
+   ===================================================== */
 #new-customers {
   margin: 0 0 4px;
 }
 
-/* Phone number mono */
 #new-customers td:nth-child(2) {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -329,11 +520,64 @@ td:nth-child(3) {
   text-align: left;
 }
 
-/* ---- RESPONSIVE ---- */
-@media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
+#new-customers th:nth-child(3),
+#new-customers td:nth-child(3) { text-align: right; }
+
+#new-customers th:nth-child(4),
+#new-customers td:nth-child(4) { text-align: center; }
+
+/* =====================================================
+   LINK STYLES
+   ===================================================== */
+.cust-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.cust-link:hover { text-decoration: underline; }
+
+.ref-link {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 8px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ref-link:hover {
+  border-color: var(--accent);
+  background: #dde4fb;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media (max-width: 960px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
+  .kpi--hero { grid-column: span 2; }
+  .kpi--full { grid-column: span 4; }
+  .kpi--hero .kpi-value { font-size: 26px; }
+}
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi--wide  { grid-column: span 2; }
+  .kpi--hero  { grid-column: span 2; }
+  .kpi--full  { grid-column: span 2; }
+  .kpi--hero .kpi-value { font-size: 24px; }
+  .kpi--danger .kpi-value,
+  .kpi--primary .kpi-value { font-size: 22px; }
 }
 
 @media (max-width: 640px) {
@@ -350,71 +594,13 @@ td:nth-child(3) {
 
   .container { padding: 14px 10px 40px; gap: 12px; }
 
-  .header { padding: 16px; }
+  .dashboard-page-header { padding: 16px; }
   .greeting { font-size: 14px; }
 
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .kpi-card { padding: 12px; }
   .kpi-value { font-size: 18px; }
 
   .card { padding: 14px; }
-
   .chart-container { height: 180px; }
-
   th, td { padding: 8px 10px; }
 }
-
-/* ======================================================
-   DASHBOARD-SPECIFIC ADDITIONS
-   ====================================================== */
-
-/* Date viewing banner inside hero */
-.date-viewing {
-  margin-top: 6px;
-  font-size: 12px;
-  opacity: 0.88;
-}
-
-.date-viewing a {
-  color: rgba(255,255,255,0.9);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.date-viewing a:hover { color: #fff; }
-
-/* Customer name links inside dashboard tables */
-.cust-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.cust-link:hover { text-decoration: underline; }
-
-/* Reference pill link (reused from transactions.css) */
-.ref-link {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  color: var(--accent);
-  background: var(--accent-light);
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 2px 8px;
-  text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.ref-link:hover {
-  border-color: var(--accent);
-  background: #dde4fb;
-}
-
-/* Customers Today card — 4-column table tweaks */
-#new-customers th:nth-child(3),
-#new-customers td:nth-child(3) { text-align: right; }
-
-#new-customers th:nth-child(4),
-#new-customers td:nth-child(4) { text-align: center; }

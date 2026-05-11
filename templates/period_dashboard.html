@@ -35,14 +35,15 @@
 
 <div class="container">
 
+    <!-- HERO BAND -->
     <div class="page-header">
         <div class="page-header-content">
             <p class="page-kicker">Period Dashboard</p>
             <h2 class="page-title">{{ period_label }}</h2>
-            <p class="page-summary">Track sales, payments, customers, and top-performing products for the selected period.</p>
+            <p class="page-summary">Sales, payments, customers &amp; top products for this period.</p>
         </div>
         <div class="page-header-actions">
-            <a class="back-link" href="/">Daily View</a>
+            <a class="back-link" href="/">← Daily View</a>
         </div>
     </div>
 
@@ -61,32 +62,45 @@
         <a href="/dashboard/yearly" class="tab {% if period == 'yearly' %}active{% endif %}">Yearly</a>
     </div>
 
-    <!-- KPI GRID -->
+    <!-- KPI GRID — credit & cash flow first, then sales metrics -->
     <div class="kpi-grid">
-        <div class="kpi-card">
+
+        <!-- ── Credit & Cash Flow ── -->
+        <div class="kpi-section-label">Credit &amp; Cash Flow</div>
+
+        <div class="kpi-card kpi--danger kpi--hero">
+            <div class="kpi-label">⚠ Outstanding Credit</div>
+            <div class="kpi-value">₹ {{ total_outstanding }}</div>
+        </div>
+
+        <div class="kpi-card kpi--success kpi--hero">
+            <div class="kpi-label">↑ Payments Inflow</div>
+            <div class="kpi-value">₹ {{ total_payments }}</div>
+        </div>
+
+        <!-- ── Period Sales ── -->
+        <div class="kpi-section-label">Period Sales</div>
+
+        <div class="kpi-card kpi--primary kpi--wide">
             <div class="kpi-label">Total Sales</div>
             <div class="kpi-value">₹ {{ total_sales }}</div>
         </div>
+
+        <div class="kpi-card kpi--warn">
+            <div class="kpi-label">Avg Bill</div>
+            <div class="kpi-value">₹ {{ avg_bill }}</div>
+        </div>
+
         <div class="kpi-card">
             <div class="kpi-label">Bills</div>
             <div class="kpi-value">{{ total_bills }}</div>
         </div>
-        <div class="kpi-card">
+
+        <div class="kpi-card kpi--wide">
             <div class="kpi-label">Units Sold</div>
             <div class="kpi-value">{{ total_units }}</div>
         </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Payments Inflow</div>
-            <div class="kpi-value">₹ {{ total_payments }}</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Avg Bill</div>
-            <div class="kpi-value">₹ {{ avg_bill }}</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Outstanding</div>
-            <div class="kpi-value">₹ {{ total_outstanding }}</div>
-        </div>
+
     </div>
 
     <!-- DAY-WISE CHART -->
@@ -209,7 +223,8 @@
 
     </div><!-- /tables-grid -->
 
-    <div class="card">
+    <!-- HIGHEST CREDIT CUSTOMERS — red card treatment -->
+    <div class="card card--credit">
         <h3>Highest Credit Customers</h3>
         <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
             <table>
@@ -230,7 +245,7 @@
                             </a>
                         </td>
                         <td>{{ c.customer_phone or '—' }}</td>
-                        <td>₹ {{ '%.2f'|format(c.outstanding_amount) }}</td>
+                        <td class="col-outstanding">₹ {{ '%.2f'|format(c.outstanding_amount) }}</td>
                         <td><a href="/customers/{{ c.customer_id }}/ledger" class="ref-link">View</a></td>
                     </tr>
                     {% else %}
