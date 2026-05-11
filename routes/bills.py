@@ -87,6 +87,9 @@ def save_bill():
             db.session.add(wallet)
     elif customer_id:
         customer = db.session.get(Customer, customer_id)
+
+    if not customer_id:
+        customer = db.session.get(Customer, 12)
     
     date_str = (data.get("bill_date") or "").strip()
     if date_str:
