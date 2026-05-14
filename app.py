@@ -5,9 +5,67 @@ from extensions import db
 from flask_security import Security, SQLAlchemyUserDatastore, hash_password
 from flask_security import current_user
 from flask_security.utils import login_user, verify_and_update_password
-from sqlalchemy import inspect
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy import func
 from auth_helpers import customer_placeholder_email, is_admin
+
+
+def load_local_env():
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if not os.path.exists(env_path):
+        return
+
+    with open(env_path, "r", encoding="utf-8") as env_file:
+        for line in env_file:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+load_local_env()
+
+
+def _normalize_database_url(db_url):
+    if db_url and db_url.startswith("postgres://"):
+        return db_url.replace("postgres://", "postgresql://", 1)
+    return db_url
+
+
+def _is_postgres_url(db_url):
+    return db_url and db_url.startswith(("postgresql://", "postgresql+psycopg2://"))
+
+
+def _postgres_available(db_url):
+    engine = None
+    try:
+        engine = create_engine(
+            db_url,
+            pool_pre_ping=True,
+            connect_args={"connect_timeout": 3}
+        )
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return True
+    except Exception as exc:
+        print(f"Postgres unavailable, using local SQLite: {exc.__class__.__name__}")
+        return False
+    finally:
+        if engine:
+            engine.dispose()
+
+
+def _database_uri():
+    sqlite_url = os.environ.get("SQLITE_DB_URL", "sqlite:///db.sqlite3")
+    postgres_url = _normalize_database_url(
+        os.environ.get("SUPABASE_DB_URL") or os.environ.get("DATABASE_URL")
+    )
+
+    if _is_postgres_url(postgres_url) and _postgres_available(postgres_url):
+        return postgres_url
+
+    return sqlite_url
 
 
 def create_app():
@@ -18,21 +76,21 @@ def create_app():
     # --------------------------------
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-    db_url = os.environ.get("SUPABASE_DB_URL", "sqlite:///db.sqlite3")
-
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    db_url = _database_uri()
 
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "pool_size": 3,
-        "max_overflow": 2,
-        "isolation_level": "AUTOCOMMIT"
-    }
+    if _is_postgres_url(db_url):
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_pre_ping": True,
+            "pool_recycle": 300,
+            "pool_size": 3,
+            "max_overflow": 2,
+            "isolation_level": "AUTOCOMMIT"
+        }
+    else:
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {}
 
     # --------------------------------
     # Flask-Security Config

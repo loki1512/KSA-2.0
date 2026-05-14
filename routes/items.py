@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from auth_helpers import admin_required
 from extensions import db
-from models import Item
+from models import Item, BillItem
 from sqlalchemy import func, and_
 import pandas as pd
 
@@ -131,6 +131,7 @@ def update_item(item_id):
 
     item = Item.query.get_or_404(item_id)
     data = request.get_json()
+    old_name = item.name
 
     name          = data.get("name", "").strip()
     category      = data.get("category")
@@ -162,9 +163,20 @@ def update_item(item_id):
     item.final_price   = final_price
     item.cost_price    = cost_price
 
+    updated_bill_items = 0
+    if old_name != name:
+        updated_bill_items = (
+            BillItem.query
+            .filter(BillItem.item_name == old_name)
+            .update({BillItem.item_name: name}, synchronize_session=False)
+        )
+
     db.session.commit()
 
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "updated_bill_items": updated_bill_items
+    })
 
 
 # --------------------------------
