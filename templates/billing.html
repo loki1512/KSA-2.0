@@ -450,6 +450,18 @@
             <span>Total Amount</span>
             <span class="total-val mono">₹ <span id="finalAmount">0.00</span></span>
           </div>
+
+          <div class="amount-row discount-input-row">
+            <span>Initial Payment</span>
+            <div class="discount-row">
+              <select id="initialPaymentMethod" class="discount-type-select sm">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="cheque">Cheque</option>
+              </select>
+              <input id="initialPaymentAmount" class="sm" type="number" min="0" step="0.01" placeholder="0.00">
+            </div>
+          </div>
         </div>
 
         <div class="action-bar dual">

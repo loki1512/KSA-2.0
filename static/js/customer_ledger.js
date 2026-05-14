@@ -325,6 +325,8 @@ function new_return(){
 function openPaymentModal() {
   document.getElementById('payAmount').value = '';
   document.getElementById('payNotes').value  = '';
+  document.getElementById('payDate').value   = '';
+  document.getElementById('payTime').value   = '';
   document.getElementById('paymentModal').style.display = 'flex';
   document.getElementById('payAmount').focus();
 }
@@ -337,14 +339,18 @@ async function submitPayment() {
   const amount = parseFloat(document.getElementById('payAmount').value);
   const method = document.getElementById('payMethod').value;
   const notes  = document.getElementById('payNotes').value.trim();
+  const date   = document.getElementById('payDate').value;
+  const time   = document.getElementById('payTime').value;
 
   if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+
+  const payment_datetime = date ? `${date}T${time || '12:00'}` : null;
 
   try {
     const res = await fetch('/api/payments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: CUSTOMER_ID, amount, method, notes })
+      body: JSON.stringify({ customer_id: CUSTOMER_ID, amount, method, notes, payment_datetime })
     });
 
     if (!res.ok) throw new Error();

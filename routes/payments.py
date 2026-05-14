@@ -9,6 +9,20 @@ payments_bp = Blueprint("payments", __name__)
 APP_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
 
+def _parse_payment_timestamp(value):
+    if not value:
+        return datetime.now(APP_TIMEZONE)
+
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        raise ValueError("Invalid payment date/time")
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=APP_TIMEZONE)
+    return parsed.astimezone(APP_TIMEZONE)
+
+
 # --------------------------------
 # RECORD PAYMENT
 # --------------------------------
@@ -22,9 +36,23 @@ def record_payment():
     amount      = data.get("amount")
     method      = data.get("method", "cash")   # cash / upi / cheque
     notes       = data.get("notes")
+    timestamp_value = data.get("payment_datetime") or data.get("timestamp")
 
     if not customer_id or not amount:
         return jsonify({"message": "customer_id and amount required"}), 400
+
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return jsonify({"message": "Invalid amount"}), 400
+
+    if amount <= 0:
+        return jsonify({"message": "Amount must be greater than zero"}), 400
+
+    try:
+        payment_timestamp = _parse_payment_timestamp(timestamp_value)
+    except ValueError as exc:
+        return jsonify({"message": str(exc)}), 400
 
     customer = Customer.query.get_or_404(customer_id)
 
@@ -33,7 +61,7 @@ def record_payment():
         amount=amount,
         method=method,
         notes=notes,
-        timestamp=datetime.now(APP_TIMEZONE)
+        timestamp=payment_timestamp
     )
     db.session.add(payment)
     db.session.flush()   # get payment.id
@@ -52,7 +80,8 @@ def record_payment():
         amount=-amount,          # negative = reduces outstanding debt
         reference_type="payment",
         reference_id=payment.id,
-        notes=notes
+        notes=notes,
+        timestamp=payment_timestamp
     )
     db.session.add(txn)
 

@@ -142,7 +142,8 @@ def save_bill():
             transaction_type="SALE",
             amount=bill.final_amount,
             reference_type="bill",
-            reference_id=bill.id
+            reference_id=bill.id,
+            timestamp=bill_timestamp
         )
         db.session.add(txn)
 

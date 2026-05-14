@@ -1,6 +1,6 @@
 import os
 import uuid
-from flask import Flask, request, jsonify, redirect, render_template, flash
+from flask import Flask, request, jsonify, redirect, render_template, flash, send_from_directory
 from extensions import db
 from flask_security import Security, SQLAlchemyUserDatastore, hash_password
 from flask_security import current_user
@@ -156,6 +156,36 @@ def create_app():
     @app.route("/api/health")
     def health():
         return {"status": "ok"}
+
+    @app.route("/sw.js")
+    def service_worker():
+        return send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+
+    @app.after_request
+    def add_pwa_assets(response):
+        if not response.content_type.startswith("text/html"):
+            return response
+
+        html = response.get_data(as_text=True)
+        if "</head>" in html and 'rel="manifest"' not in html:
+            html = html.replace(
+                "</head>",
+                '  <link rel="manifest" href="/static/manifest.webmanifest">\n'
+                '  <meta name="theme-color" content="#0f9e6e">\n'
+                '  <link rel="apple-touch-icon" href="/static/images/pwa-icon-192.png">\n'
+                "</head>",
+                1
+            )
+        if "</body>" in html and "navigator.serviceWorker.register" not in html:
+            html = html.replace(
+                "</body>",
+                '  <script src="/static/js/pwa.js" defer></script>\n'
+                "</body>",
+                1
+            )
+        response.set_data(html)
+        response.headers["Content-Length"] = len(response.get_data())
+        return response
 
     # --------------------------------
     # Create tables & seed admin

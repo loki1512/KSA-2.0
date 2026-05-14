@@ -869,6 +869,8 @@ function openFinalScreen() {
   document.getElementById('finalSubtotal').textContent    = fmtNum(sub);
   document.getElementById('finalAmount').textContent      = fmtNum(sub);
   document.getElementById('billDiscountValue').value      = '';
+  document.getElementById('initialPaymentAmount').value   = '';
+  document.getElementById('initialPaymentMethod').value   = 'cash';
 
   document.getElementById('step1').style.display = 'none';
   document.getElementById('step2').style.display = 'block';
@@ -909,6 +911,17 @@ async function saveBill() {
   else if (type === '₹' && val > 0) final = sub - val;
   final = Math.max(0, final);
 
+  const initialPaymentAmount = parseFloat(document.getElementById('initialPaymentAmount').value) || 0;
+  const initialPaymentMethod = document.getElementById('initialPaymentMethod').value || 'cash';
+  if (initialPaymentAmount < 0) {
+    showToast('Initial payment cannot be negative', 'error');
+    return;
+  }
+  if (initialPaymentAmount > final) {
+    showToast('Initial payment cannot exceed total amount', 'error');
+    return;
+  }
+
   // Read optional bill date; send as ISO string or null
   const billDateInput = document.getElementById('billDate');
   const billDate = billDateInput && billDateInput.value ? billDateInput.value : null;
@@ -948,13 +961,32 @@ async function saveBill() {
     const data = await res.json();
     savedBillId = data.bill_id;
 
+    let initialPaymentFailed = false;
+    if (initialPaymentAmount > 0 && data.customer_id) {
+      const paymentRes = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: data.customer_id,
+          amount: initialPaymentAmount,
+          method: initialPaymentMethod,
+          notes: `Initial payment for bill #${savedBillId}`
+        })
+      });
+
+      initialPaymentFailed = !paymentRes.ok;
+    }
+
     document.getElementById('savedBillId').textContent = `#${savedBillId}`;
     document.getElementById('viewBillLink').href       = `/bills/${savedBillId}`;
 
     document.getElementById('step2').style.display = 'none';
     document.getElementById('step3').style.display = 'block';
     setStep(3);
-    showToast('Bill saved successfully!', 'success');
+    showToast(
+      initialPaymentFailed ? 'Bill saved, but initial payment failed' : 'Bill saved successfully!',
+      initialPaymentFailed ? 'error' : 'success'
+    );
 
   } catch (err) {
     showToast('Failed to save bill. Please try again.', 'error');
@@ -977,6 +1009,8 @@ function resetForm() {
 
   const billDateInput = document.getElementById('billDate');
   if (billDateInput) billDateInput.value = '';
+  document.getElementById('initialPaymentAmount').value = '';
+  document.getElementById('initialPaymentMethod').value = 'cash';
 
   const fields  = document.getElementById('customerFields');
   const chevron = document.getElementById('customerChevron');
