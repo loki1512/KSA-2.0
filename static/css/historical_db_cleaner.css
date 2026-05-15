@@ -47,6 +47,12 @@ body {
   box-shadow: 0 0 0 3px rgba(59, 91, 219, 0.12);
 }
 
+.search-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 220px;
+}
+
 .lookup-wrap {
   position: relative;
 }
@@ -261,6 +267,10 @@ tr:last-child td {
   }
 
   .replace-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .search-grid {
     grid-template-columns: 1fr;
   }
 

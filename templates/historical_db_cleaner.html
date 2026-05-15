@@ -44,10 +44,17 @@
     </div>
 
     <section class="cleaner-panel">
-      <div class="field-group lookup-wrap">
-        <label for="catalogueSearch">Catalogue Item</label>
-        <input id="catalogueSearch" type="text" placeholder="Search catalogue item" autocomplete="off">
-        <div id="catalogueResults" class="lookup-results" hidden></div>
+      <div class="search-grid">
+        <div class="field-group lookup-wrap">
+          <label for="catalogueSearch">Catalogue Item</label>
+          <input id="catalogueSearch" type="text" placeholder="Search catalogue item" autocomplete="off">
+          <div id="catalogueResults" class="lookup-results" hidden></div>
+        </div>
+
+        <div class="field-group">
+          <label for="minKeywordMatches">Minimum Keyword Matches</label>
+          <input id="minKeywordMatches" type="number" min="1" max="10" step="1" value="2">
+        </div>
       </div>
 
       <div id="targetCard" class="target-card" hidden></div>
@@ -70,6 +77,7 @@
               <th class="check-col"></th>
               <th>Historical Name</th>
               <th class="num">Bill Rows</th>
+              <th>Keyword Matches</th>
               <th>Status</th>
             </tr>
           </thead>

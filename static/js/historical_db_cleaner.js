@@ -10,6 +10,7 @@ const els = {};
 document.addEventListener('DOMContentLoaded', () => {
   [
     'catalogueSearch',
+    'minKeywordMatches',
     'catalogueResults',
     'targetCard',
     'message',
@@ -29,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   els.catalogueSearch.addEventListener('input', handleCatalogueInput);
+  els.minKeywordMatches.addEventListener('change', () => selectedItem && loadMatches(selectedItem));
   els.selectAllBtn.addEventListener('click', selectAllNonExact);
   els.refreshBtn.addEventListener('click', () => selectedItem && loadMatches(selectedItem));
   els.confirmText.addEventListener('input', updateReplaceState);
@@ -101,7 +103,10 @@ async function selectCatalogueItem(item) {
 
 async function loadMatches(item) {
   try {
-    const response = await fetch(`/api/admin/historical-db-cleaner/search?item_id=${encodeURIComponent(item.id)}`);
+    const minKeywordMatches = getMinKeywordMatches();
+    const response = await fetch(
+      `/api/admin/historical-db-cleaner/search?item_id=${encodeURIComponent(item.id)}&min_keyword_matches=${encodeURIComponent(minKeywordMatches)}`
+    );
     const data = await response.json();
 
     if (!response.ok) {
@@ -123,10 +128,10 @@ function renderMatches() {
   els.matchesPanel.hidden = false;
 
   const totalRows = matches.reduce((sum, item) => sum + Number(item.count || 0), 0);
-  els.matchesSummary.textContent = `${matches.length} names found, ${totalRows} bill rows matched.`;
+  els.matchesSummary.textContent = `${matches.length} names found, ${totalRows} bill rows matched. Short one or two word exact-keyword names are included automatically.`;
 
   if (!matches.length) {
-    els.matchesBody.innerHTML = '<tr><td colspan="4">No historical bill item names matched this catalogue item.</td></tr>';
+    els.matchesBody.innerHTML = '<tr><td colspan="5">No historical bill item names matched this catalogue item.</td></tr>';
     updateReplaceState();
     return;
   }
@@ -140,9 +145,10 @@ function renderMatches() {
       </td>
       <td>${esc(item.name)}</td>
       <td class="num">${Number(item.count || 0)}</td>
+      <td>${Number(item.keyword_matches || 0)}</td>
       <td>
         <span class="status-pill ${item.is_exact ? 'exact' : 'old'}">
-          ${item.is_exact ? 'Already correct' : 'Can replace'}
+          ${item.is_exact ? 'Already correct' : item.is_short_exact_keyword_match ? 'Short exact keyword' : 'Can replace'}
         </span>
       </td>`;
 
@@ -203,6 +209,7 @@ async function replaceSelectedNames() {
         item_id: selectedItem.id,
         old_names: Array.from(selectedNames),
         expected_count: expectedCount,
+        min_keyword_matches: getMinKeywordMatches(),
         confirm_text: els.confirmText.value.trim()
       })
     });
@@ -241,6 +248,12 @@ function showMessage(text, type) {
 function hideMessage() {
   els.message.hidden = true;
   els.message.textContent = '';
+}
+
+function getMinKeywordMatches() {
+  const value = Number.parseInt(els.minKeywordMatches.value, 10);
+  if (!Number.isFinite(value)) return 2;
+  return Math.min(Math.max(value, 1), 10);
 }
 
 function esc(value) {
