@@ -36,14 +36,21 @@
       <div class="page-header-content">
         <p class="page-kicker">Admin Maintenance</p>
         <h2 class="page-title">Historical Database Cleaner</h2>
-        <p class="page-summary">Replace selected old bill item names with one catalogue item name. Only bill item names are updated.</p>
+        <p class="page-summary">Find old bill item names and replace only the selected names with a catalogue item name.</p>
       </div>
       <div class="page-header-actions">
         <a class="back-link" href="/admin/profile">Back to Profile</a>
       </div>
     </div>
 
-    <section class="cleaner-panel">
+    <section class="cleaner-panel search-panel">
+      <div class="section-head">
+        <div>
+          <span class="step-badge">1</span>
+          <h3>Select Catalogue Item</h3>
+        </div>
+      </div>
+
       <div class="search-grid">
         <div class="field-group lookup-wrap">
           <label for="catalogueSearch">Catalogue Item</label>
@@ -53,7 +60,10 @@
 
         <div class="field-group">
           <label for="minKeywordMatches">Minimum Keyword Matches</label>
-          <input id="minKeywordMatches" type="number" min="1" max="10" step="1" value="2">
+          <div class="keyword-control">
+            <input id="minKeywordMatches" type="number" min="1" max="10" step="1" value="2">
+            <button class="btn btn-ghost" id="updateKeywordBtn" type="button">Update Keyword Number</button>
+          </div>
         </div>
       </div>
 
@@ -64,10 +74,17 @@
     <section class="cleaner-panel" id="matchesPanel" hidden>
       <div class="panel-top">
         <div>
+          <span class="step-badge">2</span>
           <h3>Historical Bill Items</h3>
           <p id="matchesSummary"></p>
         </div>
-        <button class="btn btn-ghost" id="selectAllBtn" type="button">Select All Non-Exact</button>
+        <div class="panel-actions">
+          <div class="metric-pill">
+            <span>Selected rows</span>
+            <strong id="selectedCountTop">0</strong>
+          </div>
+          <button class="btn btn-ghost" id="selectAllBtn" type="button">Select All Non-Exact</button>
+        </div>
       </div>
 
       <div class="table-wrap">
@@ -87,6 +104,13 @@
     </section>
 
     <section class="cleaner-panel danger-panel" id="replacePanel" hidden>
+      <div class="section-head">
+        <div>
+          <span class="step-badge danger">3</span>
+          <h3>Confirm Replacement</h3>
+        </div>
+      </div>
+
       <div class="replace-summary">
         <div>
           <span>Selected rows</span>
@@ -96,6 +120,11 @@
           <span>Replace with</span>
           <strong id="replaceName">-</strong>
         </div>
+      </div>
+
+      <div class="guardrail-box">
+        <strong>Only selected bill item names will change.</strong>
+        <span>Amounts, quantities, discounts, customers, and bill totals stay untouched.</span>
       </div>
 
       <div class="field-group">

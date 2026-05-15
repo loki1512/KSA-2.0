@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   [
     'catalogueSearch',
     'minKeywordMatches',
+    'updateKeywordBtn',
     'catalogueResults',
     'targetCard',
     'message',
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'selectAllBtn',
     'replacePanel',
     'selectedCount',
+    'selectedCountTop',
     'replaceName',
     'confirmLabel',
     'confirmText',
@@ -30,12 +32,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   els.catalogueSearch.addEventListener('input', handleCatalogueInput);
-  els.minKeywordMatches.addEventListener('change', () => selectedItem && loadMatches(selectedItem));
+  els.updateKeywordBtn.addEventListener('click', refreshKeywordMatches);
   els.selectAllBtn.addEventListener('click', selectAllNonExact);
   els.refreshBtn.addEventListener('click', () => selectedItem && loadMatches(selectedItem));
   els.confirmText.addEventListener('input', updateReplaceState);
   els.replaceBtn.addEventListener('click', replaceSelectedNames);
 });
+
+function refreshKeywordMatches() {
+  hideMessage();
+
+  if (!selectedItem) {
+    showMessage('Select a catalogue item before updating keyword matches', 'error');
+    return;
+  }
+
+  selectedNames = new Set();
+  els.confirmText.value = '';
+  loadMatches(selectedItem);
+}
 
 function handleCatalogueInput() {
   selectedItem = null;
@@ -96,7 +111,10 @@ async function selectCatalogueItem(item) {
   els.catalogueSearch.value = item.name;
   els.catalogueResults.hidden = true;
   els.targetCard.hidden = false;
-  els.targetCard.textContent = `Selected catalogue name: ${item.name}`;
+  els.targetCard.innerHTML = `
+    <span>Selected catalogue name</span>
+    <strong>${esc(item.name)}</strong>
+  `;
   hideMessage();
   await loadMatches(selectedItem);
 }
@@ -156,6 +174,7 @@ function renderMatches() {
     checkbox?.addEventListener('change', event => {
       if (event.target.checked) selectedNames.add(item.name);
       else selectedNames.delete(item.name);
+      tr.classList.toggle('is-selected', event.target.checked);
       updateReplaceState();
     });
 
@@ -169,6 +188,7 @@ function selectAllNonExact() {
   selectedNames = new Set(matches.filter(item => !item.is_exact).map(item => item.name));
   els.matchesBody.querySelectorAll('input[type="checkbox"]').forEach(input => {
     input.checked = selectedNames.has(input.dataset.name);
+    input.closest('tr')?.classList.toggle('is-selected', input.checked);
   });
   updateReplaceState();
 }
@@ -187,6 +207,7 @@ function updateReplaceState() {
 
   els.replacePanel.hidden = !selectedItem || !matches.length;
   els.selectedCount.textContent = String(selectedCount);
+  els.selectedCountTop.textContent = String(selectedCount);
   els.replaceName.textContent = selectedItem ? selectedItem.name : '-';
   els.confirmLabel.textContent = requiredText ? `Type "${requiredText}" to confirm` : 'Confirmation';
   els.replaceBtn.disabled = !canReplace;
