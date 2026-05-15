@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Historical Database Cleaner - KSA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
+  <link rel="stylesheet" href="/static/css/historical_db_cleaner.css">
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
+</head>
+<body>
+<div class="page">
+  <header class="site-header">
+    <div class="header-left">
+      <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+      <div>
+        <h1>Kumara Swami Agencies</h1>
+        <span class="header-sub">Smart billing system</span>
+      </div>
+    </div>
+    <nav class="header-nav">
+      <a href="/">Dashboard</a>
+      <a href="/billing">+ New Bill</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/bills">Bills</a>
+      <a href="/customers">Customers</a>
+      <a href="/transactions">Transactions</a>
+      <a href="/returns/new">Returns</a>
+      <a href="/admin/profile" class="active">Profile</a>
+      <a href="/logout" class="nav-logout">Logout</a>
+    </nav>
+  </header>
+
+  <main class="cleaner-shell">
+    <div class="page-header">
+      <div class="page-header-content">
+        <p class="page-kicker">Admin Maintenance</p>
+        <h2 class="page-title">Historical Database Cleaner</h2>
+        <p class="page-summary">Replace selected old bill item names with one catalogue item name. Only bill item names are updated.</p>
+      </div>
+      <div class="page-header-actions">
+        <a class="back-link" href="/admin/profile">Back to Profile</a>
+      </div>
+    </div>
+
+    <section class="cleaner-panel">
+      <div class="field-group lookup-wrap">
+        <label for="catalogueSearch">Catalogue Item</label>
+        <input id="catalogueSearch" type="text" placeholder="Search catalogue item" autocomplete="off">
+        <div id="catalogueResults" class="lookup-results" hidden></div>
+      </div>
+
+      <div id="targetCard" class="target-card" hidden></div>
+      <div id="message" class="cleaner-message" hidden></div>
+    </section>
+
+    <section class="cleaner-panel" id="matchesPanel" hidden>
+      <div class="panel-top">
+        <div>
+          <h3>Historical Bill Items</h3>
+          <p id="matchesSummary"></p>
+        </div>
+        <button class="btn btn-ghost" id="selectAllBtn" type="button">Select All Non-Exact</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="check-col"></th>
+              <th>Historical Name</th>
+              <th class="num">Bill Rows</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="matchesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="cleaner-panel danger-panel" id="replacePanel" hidden>
+      <div class="replace-summary">
+        <div>
+          <span>Selected rows</span>
+          <strong id="selectedCount">0</strong>
+        </div>
+        <div>
+          <span>Replace with</span>
+          <strong id="replaceName">-</strong>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label id="confirmLabel" for="confirmText">Confirmation</label>
+        <input id="confirmText" type="text" autocomplete="off">
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-ghost" id="refreshBtn" type="button">Refresh Preview</button>
+        <button class="btn btn-danger" id="replaceBtn" type="button" disabled>Replace Selected Names</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/static/js/historical_db_cleaner.js"></script>
+</body>
+</html>

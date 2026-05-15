@@ -12,6 +12,27 @@
   padding: 24px;
 }
 
+.tools-panel {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.tools-panel h3 {
+  color: var(--text-primary);
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.tools-panel p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -101,6 +122,11 @@
   }
 
   .profile-actions {
+    flex-direction: column;
+  }
+
+  .tools-panel {
+    align-items: stretch;
     flex-direction: column;
   }
 
