@@ -340,6 +340,7 @@ function changeUncataloguedPage(delta) {
 
 async function loadUncatalogued() {
   try {
+    renderUncataloguedLoading();
     const params = new URLSearchParams({
       q: uncataloguedState.query,
       page: uncataloguedState.page,
@@ -363,15 +364,30 @@ async function loadUncatalogued() {
   }
 }
 
+function renderUncataloguedLoading() {
+  els.uncataloguedSummary.textContent = uncataloguedState.query
+    ? `Searching high frequency non-catalogue bill items for "${uncataloguedState.query}".`
+    : 'Loading high frequency non-catalogue bill items.';
+  els.uncataloguedBody.innerHTML = '<tr><td colspan="5">Loading high frequency non-catalogue bill items...</td></tr>';
+  els.uncataloguedPrevBtn.disabled = true;
+  els.uncataloguedNextBtn.disabled = true;
+}
+
 function renderUncatalogued() {
   els.uncataloguedBody.innerHTML = '';
-  els.uncataloguedSummary.textContent = `${uncataloguedState.total} uncatalogued names found. Sorted by frequency.`;
+  const visibleStart = uncataloguedState.total
+    ? ((uncataloguedState.page - 1) * uncataloguedState.perPage) + 1
+    : 0;
+  const visibleEnd = Math.min(uncataloguedState.page * uncataloguedState.perPage, uncataloguedState.total);
+  els.uncataloguedSummary.textContent = uncataloguedState.query
+    ? `${uncataloguedState.total} matching non-catalogue names found. Showing ${visibleStart}-${visibleEnd}, sorted by frequency.`
+    : `${uncataloguedState.total} non-catalogue names found. Showing highest frequency ${visibleStart}-${visibleEnd}.`;
   els.uncataloguedPageLabel.textContent = `Page ${uncataloguedState.page} of ${uncataloguedState.totalPages}`;
   els.uncataloguedPrevBtn.disabled = uncataloguedState.page <= 1;
   els.uncataloguedNextBtn.disabled = uncataloguedState.page >= uncataloguedState.totalPages;
 
   if (!uncataloguedState.items.length) {
-    els.uncataloguedBody.innerHTML = '<tr><td colspan="5">No uncatalogued bill item names found.</td></tr>';
+    els.uncataloguedBody.innerHTML = '<tr><td colspan="5">No non-catalogue bill item names found.</td></tr>';
     return;
   }
 

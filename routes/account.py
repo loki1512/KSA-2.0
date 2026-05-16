@@ -164,6 +164,26 @@ def uncatalogued_historical_bill_items():
         for (name,) in db.session.query(Item.name).all()
     }
 
+    latest_prices = {}
+    latest_price_rows = (
+        db.session.query(
+            BillItem.item_name.label("name"),
+            BillItem.unit_price.label("unit_price"),
+            func.row_number().over(
+                partition_by=BillItem.item_name,
+                order_by=(Bill.timestamp.desc(), BillItem.id.desc())
+            ).label("row_number")
+        )
+        .join(Bill, Bill.id == BillItem.bill_id)
+        .subquery()
+    )
+    for row in (
+        db.session.query(latest_price_rows.c.name, latest_price_rows.c.unit_price)
+        .filter(latest_price_rows.c.row_number == 1)
+        .all()
+    ):
+        latest_prices[row.name] = row.unit_price
+
     rows = (
         db.session.query(
             BillItem.item_name.label("name"),
@@ -204,14 +224,7 @@ def uncatalogued_historical_bill_items():
     page_items = candidates[start:start + per_page]
 
     for item in page_items:
-        latest_row = (
-            db.session.query(BillItem.unit_price)
-            .join(Bill, Bill.id == BillItem.bill_id)
-            .filter(BillItem.item_name == item["name"])
-            .order_by(Bill.timestamp.desc(), BillItem.id.desc())
-            .first()
-        )
-        item["latest_unit_price"] = latest_row.unit_price if latest_row else None
+        item["latest_unit_price"] = latest_prices.get(item["name"])
 
     return jsonify({
         "items": page_items,
