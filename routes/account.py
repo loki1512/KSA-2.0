@@ -1,3 +1,5 @@
+from difflib import SequenceMatcher
+
 from flask import Blueprint, jsonify, render_template, request
 from email_validator import EmailNotValidError, validate_email
 from flask_security import current_user, hash_password
@@ -6,7 +8,7 @@ from sqlalchemy import func, or_
 
 from auth_helpers import admin_required
 from extensions import db
-from models import BillItem, Item, User
+from models import Bill, BillItem, Item, User
 
 
 account_bp = Blueprint("account", __name__)
@@ -84,6 +86,45 @@ def _search_tokens(value):
     ]
 
 
+def _normalize_name(value):
+    return " ".join((value or "").strip().lower().split())
+
+
+def _fuzzy_score(left, right):
+    normalized_left = _normalize_name(left)
+    normalized_right = _normalize_name(right)
+    if not normalized_left or not normalized_right:
+        return 0
+    if normalized_left == normalized_right:
+        return 1
+    return SequenceMatcher(None, normalized_left, normalized_right).ratio()
+
+
+def _contains_all_tokens(value, tokens):
+    haystack = _normalize_name(value)
+    return bool(tokens) and all(token in haystack for token in tokens)
+
+
+def _item_payload(item, score=None):
+    price = item.max_price if item.max_price else item.default_price
+    if item.max_price and price > item.max_price:
+        price = item.max_price
+
+    payload = {
+        "id": item.id,
+        "name": item.name,
+        "category": item.category,
+        "price": price,
+        "default_price": item.default_price,
+        "max_price": item.max_price,
+        "final_price": item.final_price,
+        "cost_price": float(item.cost_price) if item.cost_price else None
+    }
+    if score is not None:
+        payload["score"] = round(score, 3)
+    return payload
+
+
 def _keyword_match_count(name, target_tokens):
     name_tokens = set(_search_tokens(name))
     return sum(1 for token in set(target_tokens) if token in name_tokens)
@@ -110,16 +151,138 @@ def _min_keyword_matches(value):
         return 2
 
 
+@account_bp.route("/api/admin/historical-db-cleaner/uncatalogued")
+@admin_required
+def uncatalogued_historical_bill_items():
+    query = (request.args.get("q") or "").strip()
+    page = max(request.args.get("page", default=1, type=int) or 1, 1)
+    per_page = min(max(request.args.get("per_page", default=25, type=int) or 25, 5), 100)
+    query_tokens = _search_tokens(query)
+
+    catalogue_names = {
+        _normalize_name(name)
+        for (name,) in db.session.query(Item.name).all()
+    }
+
+    rows = (
+        db.session.query(
+            BillItem.item_name.label("name"),
+            func.count(BillItem.id).label("count"),
+            func.max(Bill.timestamp).label("latest_bill_timestamp")
+        )
+        .join(Bill, Bill.id == BillItem.bill_id)
+        .group_by(BillItem.item_name)
+        .all()
+    )
+
+    candidates = []
+    for row in rows:
+        normalized_name = _normalize_name(row.name)
+        if not normalized_name or normalized_name in catalogue_names:
+            continue
+
+        score = _fuzzy_score(query, row.name) if query else 0
+        if query and score < 0.45 and not _contains_all_tokens(row.name, query_tokens):
+            continue
+
+        candidates.append({
+            "name": row.name,
+            "count": int(row.count or 0),
+            "latest_bill_timestamp": row.latest_bill_timestamp.isoformat() if row.latest_bill_timestamp else None,
+            "score": round(score, 3)
+        })
+
+    if query:
+        candidates.sort(key=lambda item: (-item["count"], -item["score"], item["name"].lower()))
+    else:
+        candidates.sort(key=lambda item: (-item["count"], item["name"].lower()))
+
+    total = len(candidates)
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    page_items = candidates[start:start + per_page]
+
+    for item in page_items:
+        latest_row = (
+            db.session.query(BillItem.unit_price)
+            .join(Bill, Bill.id == BillItem.bill_id)
+            .filter(BillItem.item_name == item["name"])
+            .order_by(Bill.timestamp.desc(), BillItem.id.desc())
+            .first()
+        )
+        item["latest_unit_price"] = latest_row.unit_price if latest_row else None
+
+    return jsonify({
+        "items": page_items,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages
+    })
+
+
+@account_bp.route("/api/admin/historical-db-cleaner/similar-catalogue")
+@admin_required
+def similar_catalogue_items():
+    query = (request.args.get("q") or "").strip()
+    query_tokens = _search_tokens(query)
+
+    if len(query) < 2:
+        return jsonify([])
+
+    matches = []
+    for item in Item.query.all():
+        haystack = " ".join([item.name or "", item.category or ""])
+        score = _fuzzy_score(query, item.name)
+        token_match = _contains_all_tokens(haystack, query_tokens)
+
+        if _normalize_name(query) == _normalize_name(item.name):
+            score = 1
+        elif token_match:
+            score = max(score, 0.75)
+
+        if score >= 0.45 or token_match:
+            matches.append(_item_payload(item, score))
+
+    matches.sort(key=lambda item: (-item["score"], item["name"].lower()))
+    return jsonify(matches[:10])
+
+
 @account_bp.route("/api/admin/historical-db-cleaner/search")
 @admin_required
 def search_historical_bill_items():
     item_id = request.args.get("item_id", type=int)
     query = (request.args.get("q") or "").strip()
+    old_name = (request.args.get("old_name") or "").strip()
     min_keyword_matches = _min_keyword_matches(request.args.get("min_keyword_matches"))
 
     target_item = db.session.get(Item, item_id) if item_id else None
     target_name = target_item.name if target_item else query
     tokens = _search_tokens(target_name)
+
+    if old_name and target_item:
+        current_count = (
+            db.session.query(func.count(BillItem.id))
+            .filter(BillItem.item_name == old_name)
+            .scalar()
+        )
+        match_count = _keyword_match_count(old_name, tokens)
+        short_exact = _is_short_exact_keyword_match(old_name, tokens)
+        return jsonify({
+            "target_item": {
+                "id": target_item.id,
+                "name": target_name
+            },
+            "min_keyword_matches": min_keyword_matches,
+            "matches": [{
+                "name": old_name,
+                "count": current_count,
+                "is_exact": _normalize_name(old_name) == _normalize_name(target_name),
+                "keyword_matches": match_count,
+                "is_short_exact_keyword_match": short_exact
+            }]
+        })
 
     if len(target_name) < 3 or not tokens:
         return jsonify({"message": "Search for a catalogue item name first"}), 400
@@ -197,9 +360,13 @@ def replace_historical_bill_item_names():
         key = name.lower()
         if not name or key == target_key or key in seen:
             continue
-        if not _matches_historical_keyword_rule(name, target_tokens, min_keyword_matches):
+        fuzzy_match = _fuzzy_score(name, target_item.name) >= 0.45 if target_item else False
+        if (
+            not _matches_historical_keyword_rule(name, target_tokens, min_keyword_matches)
+            and not fuzzy_match
+        ):
             return jsonify({
-                "message": f'"{name}" does not satisfy the keyword match rule'
+                "message": f'"{name}" does not satisfy the keyword or fuzzy match rule'
             }), 400
         cleaned_names.append(name)
         seen.add(key)

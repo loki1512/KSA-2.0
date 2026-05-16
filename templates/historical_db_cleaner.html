@@ -71,6 +71,45 @@
       <div id="message" class="cleaner-message" hidden></div>
     </section>
 
+    <section class="cleaner-panel" id="uncataloguedPanel">
+      <div class="panel-top">
+        <div>
+          <span class="step-badge">A</span>
+          <h3>Uncatalogued Bill Items</h3>
+          <p id="uncataloguedSummary">Bill item names that do not exactly exist in the catalogue.</p>
+        </div>
+      </div>
+
+      <div class="uncatalogued-toolbar">
+        <div class="field-group">
+          <label for="uncataloguedSearch">Search Bill Items</label>
+          <input id="uncataloguedSearch" type="text" placeholder="Fuzzy search bill item names" autocomplete="off">
+        </div>
+        <button class="btn btn-ghost" id="uncataloguedRefreshBtn" type="button">Refresh</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="uncatalogued-table">
+          <thead>
+            <tr>
+              <th>Bill Item Name</th>
+              <th class="num">Frequency</th>
+              <th class="num">Latest Price</th>
+              <th class="num">Score</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="uncataloguedBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pagination-row">
+        <button class="btn btn-ghost" id="uncataloguedPrevBtn" type="button">Previous</button>
+        <span id="uncataloguedPageLabel">Page 1 of 1</span>
+        <button class="btn btn-ghost" id="uncataloguedNextBtn" type="button">Next</button>
+      </div>
+    </section>
+
     <section class="cleaner-panel" id="matchesPanel" hidden>
       <div class="panel-top">
         <div>
