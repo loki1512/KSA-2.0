@@ -294,6 +294,9 @@
           </div>
           <div id="suggestions" class="suggestions-dropdown" style="display:none;">
             <div id="suggestionList"></div>
+            <div class="suggestions-footer">
+              <button type="button" class="link-btn" onclick="openQuickProductModal()">+ Add new product to catalogue</button>
+            </div>
             <div class="suggestions-footer" id="viewMoreBtn" style="display:none;">
               <button class="link-btn" onclick="openProductModal()">View more results →</button>
             </div>
@@ -503,6 +506,55 @@
     </div>
   </div>
 
+  <div id="quickProductModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add Product to Catalogue</h3>
+        <button class="modal-close" onclick="closeQuickProductModal()">x</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-group">
+          <label>Product Name</label>
+          <input type="text" id="quickProductName" placeholder="Product name">
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Category</label>
+            <select id="quickProductCategory">
+              <option value="Electrical">Electrical</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Agriculture">Agriculture</option>
+              <option value="Water Purifiers">Water Purifiers</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>MRP / Selling Price (Rs)</label>
+            <input type="number" id="quickProductDefaultPrice" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Max Price / MRP (Rs)</label>
+            <input type="number" id="quickProductMaxPrice" min="0" step="0.01" placeholder="Optional">
+          </div>
+          <div class="field-group">
+            <label>Final Price (Rs)</label>
+            <input type="number" id="quickProductFinalPrice" min="0" step="0.01" placeholder="Optional">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Cost Price (Rs)</label>
+          <input type="number" id="quickProductCostPrice" min="0" step="0.01" placeholder="Optional">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeQuickProductModal()">Cancel</button>
+        <button class="btn btn-primary" id="quickProductSaveBtn" onclick="saveQuickProduct()">Save & Use</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===================== EDIT ITEM MODAL ===================== -->
   <div id="editModal" class="modal-overlay" style="display:none;">
     <div class="modal">
@@ -526,6 +578,23 @@
             <input type="number" id="editPrice" min="0" step="0.01">
           </div>
         </div>
+        <div class="field-group">
+          <label>Enter via</label>
+          <select id="editCalcMode">
+            <option value="mrp">MRP + Discount</option>
+            <option value="unit">Final Unit Price</option>
+            <option value="total">Line Total</option>
+          </select>
+        </div>
+        <div class="reverse-input-row" id="editReverseUnitRow">
+          <label>Final unit price (Rs)</label>
+          <input type="number" id="editReverseUnitPrice" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="reverse-input-row" id="editReverseTotalRow">
+          <label>Line total (Rs)</label>
+          <input type="number" id="editReverseLineTotal" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="reverse-preview" id="editReversePreview"></div>
         <div class="field-row">
           <div class="field-group">
             <label>Discount Type</label>
@@ -683,6 +752,6 @@
     </div>
   </div>
 
-  <script src="/static/js/billing.js"></script>
+  <script src="/static/js/billing.js?v=20260523-enter-via-dropdown"></script>
 </body>
 </html>

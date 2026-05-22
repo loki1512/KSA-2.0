@@ -26,6 +26,7 @@ let activeReferrerSuggestionIndex = -1;
 
 // Reverse-calc mode: 'mrp' (default) | 'unit' | 'total'
 let reverseMode = 'mrp';
+let editReverseMode = 'mrp';
 
 // ─── DOM REFS ─────────────────────────────────────────
 const itemNameInput       = document.getElementById('itemName');
@@ -53,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSearchListeners();
   setupDiscountLivePreview();
   setupEditModalPreview();
+  setupEditReverseMode();
   setupBillDiscountLive();
   setupClearBtn();
   setupReverseModeToggle();
@@ -280,7 +282,12 @@ async function fetchSuggestions(q, forModal) {
 function renderSuggestions(items) {
   suggestionList.innerHTML = '';
 
-  if (!items.length) { hideSuggestions(); return; }
+  if (!items.length) {
+    suggestionList.innerHTML = '<div class="suggestion-item">No products found</div>';
+    viewMoreBtn.style.display = 'block';
+    suggestionsCont.style.display = 'block';
+    return;
+  }
 
   const show = items.slice(0, 10);
   show.forEach(item => {
@@ -443,6 +450,83 @@ function renderModalResults(items, q) {
 }
 
 // ─── DISCOUNT TOGGLE ──────────────────────────────────
+function parseOptionalNumber(id) {
+  const raw = document.getElementById(id).value.trim();
+  if (!raw) return null;
+  const value = parseFloat(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function openQuickProductModal(prefillName = '') {
+  const modal = document.getElementById('quickProductModal');
+  const nameInput = document.getElementById('quickProductName');
+  nameInput.value = prefillName || itemNameInput.value.trim() || document.getElementById('modalSearch')?.value.trim() || '';
+  document.getElementById('quickProductCategory').value = 'Electrical';
+  document.getElementById('quickProductDefaultPrice').value = priceInput.value || '';
+  document.getElementById('quickProductMaxPrice').value = '';
+  document.getElementById('quickProductFinalPrice').value = '';
+  document.getElementById('quickProductCostPrice').value = '';
+  modal.style.display = 'flex';
+  setTimeout(() => (nameInput.value ? document.getElementById('quickProductDefaultPrice') : nameInput).focus(), 0);
+}
+
+function closeQuickProductModal() {
+  const modal = document.getElementById('quickProductModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveQuickProduct() {
+  const name = document.getElementById('quickProductName').value.trim();
+  const defaultPrice = parseFloat(document.getElementById('quickProductDefaultPrice').value);
+  if (!name) { showToast('Enter a product name', 'error'); return; }
+  if (!Number.isFinite(defaultPrice) || defaultPrice < 0) { showToast('Enter a valid selling price', 'error'); return; }
+
+  const payload = {
+    name,
+    category: document.getElementById('quickProductCategory').value.trim() || null,
+    default_price: defaultPrice,
+    max_price: parseOptionalNumber('quickProductMaxPrice'),
+    final_price: parseOptionalNumber('quickProductFinalPrice'),
+    cost_price: parseOptionalNumber('quickProductCostPrice')
+  };
+
+  const btn = document.getElementById('quickProductSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    const res = await fetch('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Could not add product', 'error'); return; }
+
+    selectItem({
+      id: data.id,
+      name: payload.name,
+      category: payload.category,
+      price: payload.max_price ?? payload.default_price,
+      default_price: payload.default_price,
+      max_price: payload.max_price,
+      final_price: payload.final_price
+    });
+    closeQuickProductModal();
+    closeProductModal();
+    showToast(`${name} added to catalogue`, 'success');
+  } catch (e) {
+    console.error('Quick product save failed', e);
+    showToast('Could not add product', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save & Use';
+  }
+}
+
+window.openQuickProductModal = openQuickProductModal;
+window.closeQuickProductModal = closeQuickProductModal;
+window.saveQuickProduct = saveQuickProduct;
+
 function toggleDiscount() {
   const box  = document.getElementById('discountBox');
   const btn  = document.getElementById('discountToggleBtn');
@@ -496,7 +580,7 @@ function updateDiscountPreview() {
 // The discount box (type+value) is auto-managed — user only chooses mode.
 
 function setupReverseModeToggle() {
-  document.querySelectorAll('.calc-mode-btn').forEach(btn => {
+  document.querySelectorAll('.calc-mode-btn[data-mode]').forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
       setReverseMode(mode);
@@ -508,7 +592,7 @@ function setReverseMode(mode) {
   reverseMode = mode;
 
   // Update active button styling
-  document.querySelectorAll('.calc-mode-btn').forEach(btn => {
+  document.querySelectorAll('.calc-mode-btn[data-mode]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
@@ -772,6 +856,7 @@ function openEditModal(index) {
   // Round displayed discount to 2dp so long reverse-computed values look clean
   document.getElementById('editDiscountValue').value = item.discountValue
     ? parseFloat(item.discountValue.toFixed(2)) : '';
+  setEditReverseMode('mrp');
   updateEditPreview();
   document.getElementById('editModal').style.display = 'flex';
 }
@@ -782,7 +867,7 @@ function closeEditModal() {
 }
 
 function setupEditModalPreview() {
-  ['editQty','editPrice','editDiscountType','editDiscountValue'].forEach(id => {
+  ['editQty','editPrice','editDiscountType','editDiscountValue','editReverseUnitPrice','editReverseLineTotal'].forEach(id => {
     document.getElementById(id).addEventListener('input', updateEditPreview);
   });
 
@@ -793,15 +878,57 @@ function setupEditModalPreview() {
   });
 }
 
+function setupEditReverseMode() {
+  document.getElementById('editCalcMode').addEventListener('change', (event) => {
+    setEditReverseMode(event.target.value);
+  });
+}
+
+function setEditReverseMode(mode) {
+  editReverseMode = mode;
+  document.getElementById('editCalcMode').value = mode;
+  document.getElementById('editReverseUnitRow').style.display = mode === 'unit' ? 'flex' : 'none';
+  document.getElementById('editReverseTotalRow').style.display = mode === 'total' ? 'flex' : 'none';
+  document.getElementById('editDiscountType').closest('.field-row').style.display = mode === 'mrp' ? 'flex' : 'none';
+  document.getElementById('editReverseUnitPrice').value = '';
+  document.getElementById('editReverseLineTotal').value = '';
+  document.getElementById('editReversePreview').textContent = '';
+}
+
+function resolveEditDiscountFromMode() {
+  const mrp = parseFloat(document.getElementById('editPrice').value) || 0;
+  if (editReverseMode === 'mrp' || !mrp) {
+    return {
+      discountType: document.getElementById('editDiscountType').value,
+      discountValue: parseFloat(document.getElementById('editDiscountValue').value) || 0
+    };
+  }
+  if (editReverseMode === 'unit') {
+    const unit = parseFloat(document.getElementById('editReverseUnitPrice').value);
+    if (isNaN(unit)) return { discountType: '', discountValue: 0 };
+    const roundedUnit = Math.round(Math.min(Math.max(unit, 0), mrp));
+    const pct = ((mrp - roundedUnit) / mrp) * 100;
+    return { discountType: '%', discountValue: parseFloat(pct.toFixed(4)) };
+  }
+  const qty = parseFloat(document.getElementById('editQty').value) || 1;
+  const total = parseFloat(document.getElementById('editReverseLineTotal').value);
+  if (isNaN(total)) return { discountType: '', discountValue: 0 };
+  const roundedTotal = Math.round(Math.min(Math.max(total, 0), mrp * qty));
+  const roundedUnit = Math.round(qty > 0 ? roundedTotal / qty : 0);
+  const pct = ((mrp - roundedUnit) / mrp) * 100;
+  return { discountType: '%', discountValue: parseFloat(pct.toFixed(4)) };
+}
+
 function updateEditPreview() {
   const price   = parseFloat(document.getElementById('editPrice').value) || 0;
   const qty     = parseFloat(document.getElementById('editQty').value) || 1;
-  const type    = document.getElementById('editDiscountType').value;
-  const val     = parseFloat(document.getElementById('editDiscountValue').value) || 0;
+  const { discountType: type, discountValue: val } = resolveEditDiscountFromMode();
   const preview = document.getElementById('editPreview');
+  const reversePreview = document.getElementById('editReversePreview');
 
-  if (!price) { preview.textContent = ''; return; }
+  if (!price) { preview.textContent = ''; reversePreview.textContent = ''; return; }
   const { finalUnit, lineTotal } = calcLineTotal(price, qty, type, val);
+  reversePreview.textContent = editReverseMode === 'mrp' || !type ? '' : `Discount: ${fmtNum(val)}%`;
   preview.textContent = `Line Total: ₹${fmtNum(lineTotal)} · Unit Price: ₹${fmtNum(finalUnit)}`;
 }
 
@@ -812,8 +939,13 @@ function saveEdit() {
   const name          = document.getElementById('editName').value.trim();
   const qty           = parseFloat(document.getElementById('editQty').value);
   const rate          = parseFloat(document.getElementById('editPrice').value);
-  const discountType  = document.getElementById('editDiscountType').value;
-  const discountValue = parseFloat(document.getElementById('editDiscountValue').value) || 0;
+  if (editReverseMode === 'unit' && !document.getElementById('editReverseUnitPrice').value.trim()) {
+    showToast('Enter the final unit price', 'error'); return;
+  }
+  if (editReverseMode === 'total' && !document.getElementById('editReverseLineTotal').value.trim()) {
+    showToast('Enter the line total', 'error'); return;
+  }
+  const { discountType, discountValue } = resolveEditDiscountFromMode();
 
   if (!name)            { showToast('Item name cannot be empty', 'error'); return; }
   if (!qty || qty <= 0) { showToast('Enter a valid quantity', 'error'); return; }
@@ -1069,10 +1201,11 @@ function showToast(msg, type = '') {
 }
 
 // Close modals on overlay click
-['productModal','editModal','deleteModal','customerModal','customerCreatedModal'].forEach(id => {
+['productModal','quickProductModal','editModal','deleteModal','customerModal','customerCreatedModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) {
       if (id === 'productModal') closeProductModal();
+      else if (id === 'quickProductModal') closeQuickProductModal();
       else if (id === 'editModal') closeEditModal();
       else if (id === 'deleteModal') closeDeleteModal();
       else if (id === 'customerModal') closeCustomerModal();
@@ -1085,6 +1218,7 @@ function showToast(msg, type = '') {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeProductModal();
+    closeQuickProductModal();
     closeEditModal();
     closeDeleteModal();
     closeCustomerModal();

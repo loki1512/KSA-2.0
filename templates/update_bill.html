@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Edit Bill #{{ bill.id }}</title>
   <link rel="stylesheet" href="/static/css/bill_detail.css">
-  <link rel="stylesheet" href="/static/css/update_bill.css">
+  <link rel="stylesheet" href="/static/css/update_bill.css?v=20260523-enter-via-dropdown">
   <link rel="stylesheet" href="/static/css/app_shell.css">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <style>
@@ -108,6 +108,22 @@
         <div class="field-group">
           <label>MRP (₹)</label>
           <input type="number" id="addPrice" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field-group wide-field">
+          <label>Enter via</label>
+          <select id="addCalcMode">
+            <option value="mrp">MRP + Discount</option>
+            <option value="unit">Final Unit Price</option>
+            <option value="total">Line Total</option>
+          </select>
+        </div>
+        <div class="field-group reverse-input-row" id="addReverseUnitRow" style="display:none;">
+          <label>Final Unit (Rs)</label>
+          <input type="number" id="addReverseUnitPrice" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="field-group reverse-input-row" id="addReverseTotalRow" style="display:none;">
+          <label>Line Total (Rs)</label>
+          <input type="number" id="addReverseLineTotal" min="0" step="0.01" placeholder="0.00">
         </div>
         <div class="field-group">
           <label>Discount</label>
@@ -222,6 +238,27 @@
           <input id="editRate" type="number" min="0" step="0.01">
         </div>
       </div>
+      <div class="field-group">
+        <label>Enter via</label>
+        <select id="editCalcMode">
+          <option value="mrp">MRP + Discount</option>
+          <option value="unit">Final Unit Price</option>
+          <option value="total">Line Total</option>
+        </select>
+      </div>
+      <div class="field-row reverse-input-row" id="editReverseUnitRow" style="display:none;">
+        <div class="field-group">
+          <label>Final unit price (Rs)</label>
+          <input id="editReverseUnitPrice" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <div class="field-row reverse-input-row" id="editReverseTotalRow" style="display:none;">
+        <div class="field-group">
+          <label>Line total (Rs)</label>
+          <input id="editReverseLineTotal" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+      <div class="edit-preview" id="editReversePreview"></div>
       <div class="field-row">
         <div class="field-group">
           <label>Discount Type</label>
@@ -363,6 +400,7 @@ function openEditModal(index) {
   document.getElementById('editDiscountType').value  = item.item_discount_type  || '';
   document.getElementById('editDiscountValue').value = item.item_discount_value || '';
 
+  setEditReverseMode('mrp');
   updateEditPreview();
   document.getElementById('editModal').style.display = 'flex';
   document.getElementById('editQty').focus();
@@ -371,20 +409,23 @@ function openEditModal(index) {
 function updateEditPreview() {
   const qty   = parseFloat(document.getElementById('editQty').value)           || 0;
   const rate  = parseFloat(document.getElementById('editRate').value)           || 0;
-  const type  = document.getElementById('editDiscountType').value;
-  const val   = parseFloat(document.getElementById('editDiscountValue').value)  || 0;
+  const resolved = resolveDiscountFromReverse('edit', editReverseMode);
+  const type  = resolved.type;
+  const val   = resolved.value;
   const prev  = document.getElementById('editPreview');
+  const revPrev = document.getElementById('editReversePreview');
 
   let discount = 0;
   if (type === '%') discount = rate * val / 100;
   if (type === '₹') discount = val;
   const finalRate = Math.max(0, rate - discount);
   const total     = qty * finalRate;
+  revPrev.textContent = editReverseMode === 'mrp' || !type ? '' : `Discount: ${fmt(val)}%`;
 
   prev.textContent = `Unit price: ₹${fmt(finalRate)} · Line total: ₹${fmt(total)}`;
 }
 
-['editQty','editRate','editDiscountValue'].forEach(id => {
+['editQty','editRate','editDiscountValue','editReverseUnitPrice','editReverseLineTotal'].forEach(id => {
   document.getElementById(id).addEventListener('input', updateEditPreview);
 });
 document.getElementById('editDiscountType').addEventListener('change', updateEditPreview);
@@ -393,8 +434,15 @@ function saveEdit() {
   const item  = items[currentIndex];
   item.qty                 = parseFloat(document.getElementById('editQty').value)           || item.qty;
   item.unit_price          = parseFloat(document.getElementById('editRate').value)          || item.unit_price;
-  item.item_discount_type  = document.getElementById('editDiscountType').value              || null;
-  item.item_discount_value = parseFloat(document.getElementById('editDiscountValue').value) || 0;
+  if (editReverseMode === 'unit' && !document.getElementById('editReverseUnitPrice').value.trim()) {
+    showToast('Enter the final unit price', 'error'); return;
+  }
+  if (editReverseMode === 'total' && !document.getElementById('editReverseLineTotal').value.trim()) {
+    showToast('Enter the line total', 'error'); return;
+  }
+  const resolved = resolveDiscountFromReverse('edit', editReverseMode);
+  item.item_discount_type  = resolved.type;
+  item.item_discount_value = resolved.value;
   item.final_item_amount   = calcItemTotal(item);
 
   closeModal();
@@ -433,7 +481,7 @@ function setupModalKeyboard() {
   });
 
   // Enter in edit fields saves
-  ['editQty','editRate','editDiscountValue'].forEach(id => {
+  ['editQty','editRate','editDiscountValue','editReverseUnitPrice','editReverseLineTotal'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
     });
@@ -499,10 +547,13 @@ let addSearchDebounce   = null;
 let addModalDebounce    = null;
 let addSuggestionIndex  = -1;
 let addMaxPrice         = null;
+let addReverseMode      = 'mrp';
+let editReverseMode     = 'mrp';
 
 // ─── ADD ITEM — INIT ─────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   setupAddItemListeners();
+  setupReverseModeButtons();
 });
 
 function setupAddItemListeners() {
@@ -741,11 +792,75 @@ document.getElementById('addProductModal').addEventListener('click', function(e)
 });
 
 // ─── LIVE PREVIEW ────────────────────────────────────
+function setupReverseModeButtons() {
+  document.getElementById('addCalcMode').addEventListener('change', event => {
+    setAddReverseMode(event.target.value);
+  });
+  document.getElementById('editCalcMode').addEventListener('change', event => {
+    setEditReverseMode(event.target.value);
+  });
+  ['addReverseUnitPrice','addReverseLineTotal'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateAddPreview);
+  });
+  ['editReverseUnitPrice','editReverseLineTotal'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateEditPreview);
+  });
+}
+
+function setAddReverseMode(mode) {
+  addReverseMode = mode;
+  document.getElementById('addCalcMode').value = mode;
+  document.getElementById('addReverseUnitRow').style.display = mode === 'unit' ? 'flex' : 'none';
+  document.getElementById('addReverseTotalRow').style.display = mode === 'total' ? 'flex' : 'none';
+  document.getElementById('addDiscountType').closest('.field-group').style.display = mode === 'mrp' ? 'flex' : 'none';
+  document.getElementById('addReverseUnitPrice').value = '';
+  document.getElementById('addReverseLineTotal').value = '';
+  updateAddPreview();
+}
+
+function setEditReverseMode(mode) {
+  editReverseMode = mode;
+  document.getElementById('editCalcMode').value = mode;
+  document.getElementById('editReverseUnitRow').style.display = mode === 'unit' ? 'flex' : 'none';
+  document.getElementById('editReverseTotalRow').style.display = mode === 'total' ? 'flex' : 'none';
+  document.getElementById('editDiscountType').closest('.field-row').style.display = mode === 'mrp' ? 'flex' : 'none';
+  document.getElementById('editReverseUnitPrice').value = '';
+  document.getElementById('editReverseLineTotal').value = '';
+  document.getElementById('editReversePreview').textContent = '';
+  updateEditPreview();
+}
+
+function resolveDiscountFromReverse(prefix, mode) {
+  if (mode === 'mrp') {
+    return {
+      type: document.getElementById(`${prefix}DiscountType`).value || null,
+      value: parseFloat(document.getElementById(`${prefix}DiscountValue`).value) || 0
+    };
+  }
+  const priceId = prefix === 'add' ? 'addPrice' : 'editRate';
+  const qtyId = prefix === 'add' ? 'addQty' : 'editQty';
+  const mrp = parseFloat(document.getElementById(priceId).value) || 0;
+  if (!mrp) return { type: null, value: 0 };
+  if (mode === 'unit') {
+    const unit = parseFloat(document.getElementById(`${prefix}ReverseUnitPrice`).value);
+    if (isNaN(unit)) return { type: null, value: 0 };
+    const roundedUnit = Math.round(Math.min(Math.max(unit, 0), mrp));
+    return { type: '%', value: parseFloat((((mrp - roundedUnit) / mrp) * 100).toFixed(4)) };
+  }
+  const qty = parseFloat(document.getElementById(qtyId).value) || 1;
+  const total = parseFloat(document.getElementById(`${prefix}ReverseLineTotal`).value);
+  if (isNaN(total)) return { type: null, value: 0 };
+  const roundedTotal = Math.round(Math.min(Math.max(total, 0), mrp * qty));
+  const roundedUnit = Math.round(qty > 0 ? roundedTotal / qty : 0);
+  return { type: '%', value: parseFloat((((mrp - roundedUnit) / mrp) * 100).toFixed(4)) };
+}
+
 function updateAddPreview() {
   const price   = parseFloat(document.getElementById('addPrice').value)         || 0;
   const qty     = parseFloat(document.getElementById('addQty').value)            || 1;
-  const type    = document.getElementById('addDiscountType').value;
-  const val     = parseFloat(document.getElementById('addDiscountValue').value)  || 0;
+  const resolved = resolveDiscountFromReverse('add', addReverseMode);
+  const type    = resolved.type;
+  const val     = resolved.value;
   const prev    = document.getElementById('addPreview');
 
   if (!price) { prev.textContent = ''; return; }
@@ -766,8 +881,15 @@ function addNewItem() {
   const name     = document.getElementById('addItemName').value.trim();
   const qty      = parseFloat(document.getElementById('addQty').value);
   const price    = parseFloat(document.getElementById('addPrice').value);
-  const dtype    = document.getElementById('addDiscountType').value   || null;
-  const dval     = parseFloat(document.getElementById('addDiscountValue').value) || 0;
+  if (addReverseMode === 'unit' && !document.getElementById('addReverseUnitPrice').value.trim()) {
+    showToast('Enter the final unit price', 'error'); document.getElementById('addReverseUnitPrice').focus(); return;
+  }
+  if (addReverseMode === 'total' && !document.getElementById('addReverseLineTotal').value.trim()) {
+    showToast('Enter the line total', 'error'); document.getElementById('addReverseLineTotal').focus(); return;
+  }
+  const resolved = resolveDiscountFromReverse('add', addReverseMode);
+  const dtype    = resolved.type;
+  const dval     = resolved.value;
 
   if (!name)          { showToast('Enter an item name', 'error'); document.getElementById('addItemName').focus(); return; }
   if (!qty || qty <= 0) { showToast('Enter a valid quantity', 'error'); document.getElementById('addQty').focus(); return; }
@@ -797,6 +919,8 @@ function addNewItem() {
   document.getElementById('addQty').value             = 1;
   document.getElementById('addDiscountType').value    = '';
   document.getElementById('addDiscountValue').value   = '';
+  document.getElementById('addReverseUnitPrice').value = '';
+  document.getElementById('addReverseLineTotal').value = '';
   document.getElementById('addPreview').textContent   = '';
   document.getElementById('addMaxPriceHint').style.display = 'none';
   addMaxPrice = null;

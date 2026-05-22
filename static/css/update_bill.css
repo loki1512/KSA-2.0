@@ -318,6 +318,7 @@ label {
 /* Fields row */
 .add-fields-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: flex-end;
   margin-bottom: 12px;
@@ -730,6 +731,16 @@ label {
 .field-group  { display: flex; flex-direction: column; }
 .field-row    { display: flex; gap: 12px; }
 .field-row .field-group { flex: 1; min-width: 0; }
+.wide-field {
+  flex: 1 1 100%;
+  min-width: 100%;
+}
+.reverse-input-row {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 10px;
+}
 
 /* Edit preview line */
 .edit-preview {
@@ -853,6 +864,7 @@ label {
   .totals { padding-left: 16px; padding-right: 16px; }
 
   .add-fields-row { flex-direction: column; gap: 10px; }
+  .wide-field { min-width: 0; width: 100%; }
 
   .bill-discount-row { flex-wrap: wrap; justify-content: flex-start; }
   .bill-discount-row input  { width: 100%; }
