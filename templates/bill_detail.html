@@ -15,6 +15,13 @@
       #bill-print-area { position: absolute; left: 0; top: 0; width: 100%; }
       .action-bar { display: none; }
     }
+
+    body.display-mode-final-only .mrp-col,
+    body.display-mode-final-only .discount-col,
+    body.display-mode-final-only .mrp-cell,
+    body.display-mode-final-only .discount-cell {
+      display: none;
+    }
   </style>
 </head>
 <body class="app-shell-body">
@@ -45,7 +52,7 @@
     <div class="page-header-content">
       <p class="page-kicker">Sales Document</p>
       <h2 class="page-title">Bill #{{ bill.id }}</h2>
-      <p class="page-summary">Review the invoice, print it, share it, or jump straight into edits and the customer ledger.</p>
+      <p class="page-summary">Review the estimate, print it, share it, or jump straight into edits and the customer ledger.</p>
     </div>
     <div class="page-header-actions">
       <a class="back-link" href="/bills">Bills</a>
@@ -64,7 +71,7 @@
       <p>Near SBI ATM, Ravindra Nagar<br></p>
       <p>📞 9490608943</p>
       <hr>
-      <h2>Invoice</h2>
+      <h2>Estimate</h2>
       <p>Bill #{{ bill.id }}</p>
       <p>{{ bill.timestamp.strftime('%d %b %Y %H:%M') }}</p>
     </header>
@@ -89,8 +96,8 @@
           <th>#</th>
           <th>Item</th>
           <th>Qty</th>
-          <th>MRP</th>
-          <th>Discount</th>
+          <th class="mrp-col">MRP</th>
+          <th class="discount-col">Discount</th>
           <th>Rate</th>
           <th>Amount</th>
         </tr>
@@ -105,9 +112,9 @@
           {% set dv = i.item_discount_value or 0 %}
           {% set discount = dv if i.item_discount_type == '₹' else (i.unit_price * dv / 100) %}
 
-          <td>₹{{ "%.2f"|format(i.unit_price) }}</td>
+          <td class="mrp-cell">₹{{ "%.2f"|format(i.unit_price) }}</td>
 
-          <td>
+          <td class="discount-cell">
             {% if i.item_discount_type == '₹' %}
               ₹{{ "%.2f"|format(dv) }}
             {% elif i.item_discount_type == '%' %}
@@ -143,8 +150,13 @@
 
 <!-- ── ACTION BUTTONS ────────────────────────────────── -->
 <div class="action-bar">
+  <label for="displayModeSelect" style="margin-right:8px; font-weight:600;">Display mode</label>
+  <select id="displayModeSelect" onchange="applyDisplayMode(this.value)" style="margin-right:12px; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1;">
+    <option value="mrp_discount">Show MRP + Discount</option>
+    <option value="final_only">Show final unit prices only</option>
+  </select>
   <button onclick="sendWhatsApp()">📲 WhatsApp</button>
-  <button onclick="window.print()">🖨️ Print</button>
+  <button onclick="applyDisplayMode(document.getElementById('displayModeSelect').value); window.print()">🖨️ Print Estimate</button>
   <button onclick="window.location='/bills'">🔙 Bills</button>
   <button onclick="window.location='/bills/edit/{{ bill.id }}'">✏️ Edit</button>
   {% if bill.customer %}
@@ -156,12 +168,25 @@
 </main>
 
 <script>
+  function applyDisplayMode(mode) {
+    document.body.classList.toggle('display-mode-final-only', mode === 'final_only');
+    document.body.classList.toggle('display-mode-mrp-discount', mode === 'mrp_discount');
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var select = document.getElementById('displayModeSelect');
+    var mode = select ? select.value : 'mrp_discount';
+    applyDisplayMode(mode);
+  });
+
   function sendWhatsApp() {
     const phone = "{{ bill.customer.phone if bill.customer else '' }}";
     if (!phone) { alert("No phone number on this bill."); return; }
     if (phone.length < 10) { alert("Invalid phone number."); return; }
 
-    const link    = "https://ksa-2-0.onrender.com/invoice/{{ bill.id }}";
+    var select = document.getElementById('displayModeSelect');
+    var displayMode = select ? select.value : 'mrp_discount';
+    const link    = "https://ksa-2-0.onrender.com/invoice/{{ bill.id }}?display_mode=" + displayMode;
     const ledger_link = "https://ksa-2-0.onrender.com/customers/{{ bill.customer.id }}/ledger";
     const name    = "{{ bill.customer.name if bill.customer else 'Customer' }}";
     const amount  = "₹{{ '%.2f'|format(bill.final_amount) }}";

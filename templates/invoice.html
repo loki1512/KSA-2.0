@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Invoice #{{ bill.id }} | Kumara Swami Agencies</title>
+  <title>Estimate #{{ bill.id }} | Kumara Swami Agencies</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
   <link rel="stylesheet" href="/static/css/bill_detail.css">
@@ -48,12 +48,22 @@
 
     <section class="customer">
       <strong>Customer:</strong>
-      <p>{{ bill.customer_name or 'Walk-in' }}</p>
-      {% if bill.customer_phone %}
-        <p>{{ bill.customer_phone }}</p>
-      {% endif %}
-      {% if bill.customer_address %}
-        <p>{{ bill.customer_address }}</p>
+      {% if customer %}
+        <p>{{ customer.name or 'Walk-in Customer' }}</p>
+        {% if customer.phone %}
+          <p>{{ customer.phone }}</p>
+        {% endif %}
+        {% if customer.address %}
+          <p>{{ customer.address }}{% if customer.village %}, {{ customer.village }}{% endif %}</p>
+        {% endif %}
+      {% else %}
+        <p>{{ bill.customer_name or 'Walk-in Customer' }}</p>
+        {% if bill.customer_phone %}
+          <p>{{ bill.customer_phone }}</p>
+        {% endif %}
+        {% if bill.customer_address %}
+          <p>{{ bill.customer_address }}</p>
+        {% endif %}
       {% endif %}
     </section>
 
@@ -62,8 +72,10 @@
         <tr>
           <th>Item</th>
           <th>Qty</th>
+          {% if show_mrp_discount %}
           <th>MRP</th>
           <th>Discount</th>
+          {% endif %}
           <th>Rate</th>
           <th>Amount</th>
         </tr>
@@ -79,6 +91,7 @@
             if i.item_discount_type == '₹'
             else (i.unit_price * discount_value / 100)
           %}
+          {% if show_mrp_discount %}
           <td>₹{{ "%.2f"|format(i.unit_price) }}</td>
           <td>
             {% if i.item_discount_type == '₹' %}
@@ -89,6 +102,7 @@
               -
             {% endif %}
           </td>
+          {% endif %}
           <td>₹{{ "%.2f"|format(i.unit_price - discount) }}</td>
           <td>₹{{ "%.2f"|format(i.final_item_amount) }}</td>
         </tr>
@@ -107,7 +121,7 @@
 </div>
 
 <div class="no-print">
-  <button onclick="window.print()">Print Invoice</button>
+  <button onclick="window.print()">Print Estimate</button>
 </div>
 
 </body>

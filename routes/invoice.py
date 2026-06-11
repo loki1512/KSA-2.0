@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 from flask_security import auth_required, current_user
 from auth_helpers import forbidden_response, is_admin
 from models import Bill
@@ -17,9 +17,14 @@ def public_invoice(bill_id):
     ):
         return forbidden_response()
 
+    display_mode = request.args.get("display_mode", "mrp_discount")
+    show_mrp_discount = display_mode != "final_only"
+
     return render_template(
         "invoice.html",
         bill=bill,
         items=bill.items,
-        customer=bill.customer
+        customer=bill.customer,
+        display_mode=display_mode,
+        show_mrp_discount=show_mrp_discount,
     )
