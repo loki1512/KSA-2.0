@@ -186,8 +186,8 @@
 
     var select = document.getElementById('displayModeSelect');
     var displayMode = select ? select.value : 'mrp_discount';
-    const link    = "https://ksa-2-0.onrender.com/invoice/{{ bill.id }}?display_mode=" + displayMode;
-    const ledger_link = "https://ksa-2-0.onrender.com/customers/{{ bill.customer.id }}/ledger";
+    const link    = "https://ksa-3-0.onrender.com/invoice/{{ bill.id }}?display_mode=" + displayMode;
+    const ledger_link = "https://ksa-3-0.onrender.com/customers/{{ bill.customer.id }}/ledger";
     const name    = "{{ bill.customer.name if bill.customer else 'Customer' }}";
     const amount  = "₹{{ '%.2f'|format(bill.final_amount) }}";
 
