@@ -9,6 +9,7 @@ This guide is the engineering handbook for KSA. It is written for developers who
 - [Data Model](data-model.md)
 - [Backend Guide](backend.md)
 - [API Guide](api.md)
+- [Interactive Analytics Dashboard](analytics-dashboard.md)
 - [Frontend Guide](frontend.md)
 - [Testing And Quality](testing.md)
 - [Security Guide](security.md)
@@ -49,4 +50,3 @@ Dockerfile              Container build definition
 3. [Data Model](data-model.md)
 4. [Backend Guide](backend.md)
 5. [Frontend Guide](frontend.md)
-

@@ -145,6 +145,14 @@ Guidelines:
 - Do not silently mutate historical transactions unless the route is explicitly for correction.
 - Keep settlement behavior auditable.
 
+## Analytics APIs
+
+Interactive dashboard APIs live in `routes/analytics.py` and are documented in:
+
+- [Interactive Analytics Dashboard](analytics-dashboard.md)
+
+Important rule: all margin/profit/cost-based analytics must ignore rows where cost price is blank or zero.
+
 ## Returns APIs
 
 Return APIs live in `routes/returns.py`.
@@ -164,4 +172,3 @@ Guidelines:
 - Admin offer routes require admin access.
 - Public offer pages should expose only active offers.
 - Leads should keep offer/customer references when possible.
-

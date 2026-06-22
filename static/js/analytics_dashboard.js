@@ -6,6 +6,7 @@ const state = {
   revenueDetail: null,
   activeChart: null,
   miniChart: null,
+  tabChart: null,
 };
 
 const qs = (selector) => document.querySelector(selector);
@@ -21,10 +22,20 @@ function formatNumber(value) {
   return Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 
+function formatPct(value) {
+  const number = Number(value || 0);
+  return `${number > 0 ? "+" : ""}${number.toLocaleString("en-IN", { maximumFractionDigits: 1 })}%`;
+}
+
 function escapeHtml(value) {
   const div = document.createElement("div");
   div.textContent = value == null ? "" : String(value);
   return div.innerHTML;
+}
+
+function setText(selector, value) {
+  const element = qs(selector);
+  if (element) element.textContent = value;
 }
 
 function params() {
@@ -43,11 +54,10 @@ async function fetchJson(url) {
 }
 
 function setLoading() {
-  qs("#kpiRevenue").textContent = "-";
-  qs("#kpiOutstanding").textContent = "-";
-  qs("#kpiMargin").textContent = "-";
-  qs("#kpiSlowItems").textContent = "-";
-  qs("#periodLabel").textContent = "Loading...";
+  ["#kpiRevenue", "#kpiOutstanding", "#kpiMargin", "#kpiSlowItems", "#kpiCollectionRate"].forEach((selector) => {
+    setText(selector, "-");
+  });
+  setText("#periodLabel", "Loading...");
 }
 
 async function loadDashboard() {
@@ -61,27 +71,57 @@ async function loadDashboard() {
     state.revenueDetail = revenueDetail;
     renderSummary(summary);
     renderMiniChart(revenueDetail.daily_revenue || []);
+    renderRevenueTabChart(revenueDetail.daily_revenue || []);
   } catch (error) {
     qs("#periodLabel").textContent = error.message;
   }
 }
 
 function renderSummary(data) {
-  qs("#periodLabel").textContent = `${data.period.start} to ${data.period.end}`;
-  qs("#kpiRevenue").textContent = formatMoney(data.revenue.total);
-  qs("#kpiRevenueMeta").textContent = `${data.revenue.bills} bills | ${formatNumber(data.revenue.units)} units`;
-  qs("#kpiOutstanding").textContent = formatMoney(data.cash.outstanding);
-  qs("#kpiPayments").textContent = `${formatMoney(data.cash.payments)} payments`;
-  qs("#kpiMargin").textContent = formatMoney(data.margin.gross_margin);
-  qs("#kpiMarginPct").textContent = `${data.margin.margin_pct}% on known-cost sales`;
-  qs("#kpiSlowItems").textContent = formatNumber(data.slow_items);
+  const topProduct = (data.top_products || [])[0] || {};
+  const qualityScore = Math.max(
+    0,
+    Math.min(100, Math.round((data.cash.collection_rate_pct || 0) - ((data.cash.outstanding_pct || 0) * 0.25) + ((data.customers.repeat_pct || 0) * 0.25))),
+  );
+
+  setText("#periodLabel", `${data.period.start} to ${data.period.end}`);
+  setText("#kpiRevenue", formatMoney(data.revenue.total));
+  setText("#kpiRevenueGrowth", `${formatPct(data.revenue.growth_pct)} vs previous period`);
+  setText("#kpiCollectionRate", `${data.cash.collection_rate_pct}%`);
+  setText("#kpiPayments", `${formatMoney(data.cash.payments)} collected`);
+  setText("#kpiOutstanding", formatMoney(data.cash.outstanding));
+  setText("#kpiOutstandingPct", `${data.cash.outstanding_pct}% of revenue`);
+  setText("#kpiMargin", formatMoney(data.margin.gross_margin));
+  setText("#kpiMarginPct", `${data.margin.margin_pct}% on known-cost sales`);
+  setText("#kpiRepeatCustomerPct", `${data.customers.repeat_pct}%`);
+  setText("#kpiActiveCustomers", `${data.customers.active || 0} active customers`);
+  setText("#kpiConcentration", `${data.customers.top_customer_concentration_pct}%`);
+  setText("#kpiTopProduct", topProduct.name || "-");
+  setText("#kpiTopProductMeta", topProduct.revenue == null ? "-" : `${formatMoney(topProduct.revenue)} | ${formatNumber(topProduct.units)} units`);
+  setText("#kpiSlowItems", formatNumber(data.slow_items));
 
   const newData = data.revenue.by_type.new || {};
   const repeatData = data.revenue.by_type.repeat || {};
-  qs("#newCustomerRevenue").textContent = formatMoney(newData.revenue);
-  qs("#newCustomerCount").textContent = `${newData.customers || 0} customers`;
-  qs("#repeatCustomerRevenue").textContent = formatMoney(repeatData.revenue);
-  qs("#repeatCustomerCount").textContent = `${repeatData.customers || 0} customers`;
+  setText("#newCustomerRevenue", formatMoney(newData.revenue));
+  setText("#newCustomerCount", `${newData.customers || 0} customers`);
+  setText("#repeatCustomerRevenue", formatMoney(repeatData.revenue));
+  setText("#repeatCustomerCount", `${repeatData.customers || 0} customers`);
+  setText("#snapRevenuePerCustomer", formatMoney(data.revenue.revenue_per_customer));
+  setText("#snapAvgBill", formatMoney(data.revenue.avg_bill));
+  setText("#snapUnitsPerBill", formatNumber(data.revenue.units_per_bill));
+  setText("#snapRevenueQuality", `${qualityScore}/100`);
+  setText("#revenueAvgBill", formatMoney(data.revenue.avg_bill));
+  setText("#revenuePerCustomer", formatMoney(data.revenue.revenue_per_customer));
+  setText("#revenuePerBill", formatMoney(data.revenue.avg_bill));
+  setText("#revenueUnitsPerBill", formatNumber(data.revenue.units_per_bill));
+  setText("#customerActive", formatNumber(data.customers.active));
+  setText("#customerNew", formatNumber(data.customers.new));
+  setText("#customerRepeatPct", `${data.customers.repeat_pct}%`);
+  setText("#customerConcentration", `${data.customers.top_customer_concentration_pct}%`);
+  setText("#productSlowItems", formatNumber(data.slow_items));
+  setText("#costedRevenue", formatMoney(data.margin.costed_revenue));
+  setText("#knownCost", formatMoney(data.margin.known_cost));
+  setText("#marginConfidence", `${_safeCoverage(data.margin.costed_revenue, data.revenue.total)}%`);
 
   const list = qs("#categoryList");
   list.innerHTML = (data.categories || []).map((item) => `
@@ -95,6 +135,91 @@ function renderSummary(data) {
   `).join("") || `<div class="empty-state">No category data</div>`;
 
   qsa(".category-row").forEach((row) => {
+    row.addEventListener("click", () => openCategory(row.dataset.category));
+  });
+
+  renderPriorityList(data);
+  renderAgingList(data.cash.aging_buckets || []);
+  renderDebtorList(data.cash.top_debtors || []);
+  renderProductList(data.top_products || []);
+  renderMarginCategoryList(data.margin.by_category || []);
+}
+
+function _safeCoverage(part, total) {
+  const totalValue = Number(total || 0);
+  return totalValue ? Math.round((Number(part || 0) / totalValue) * 100) : 0;
+}
+
+function renderPriorityList(data) {
+  const items = [
+    ["Revenue growth %", `${formatPct(data.revenue.growth_pct)} vs previous`],
+    ["Collection rate %", `${data.cash.collection_rate_pct}% collected`],
+    ["Aging buckets", `${(data.cash.aging_buckets || []).length} buckets`],
+    ["Top debtors", `${(data.cash.top_debtors || []).length} customers`],
+    ["Repeat customer %", `${data.customers.repeat_pct}%`],
+    ["Customer concentration", `${data.customers.top_customer_concentration_pct}% top 5`],
+    ["Top products", `${(data.top_products || []).length} ranked`],
+    ["Margin by category", `${(data.margin.by_category || []).length} categories`],
+  ];
+  qs("#priorityList").innerHTML = items.map(([label, value]) => `
+    <div class="priority-row">
+      <span class="status-dot"></span>
+      <div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>
+    </div>
+  `).join("");
+}
+
+function renderAgingList(rows) {
+  qs("#agingList").innerHTML = rows.map((bucket) => `
+    <button class="category-row" type="button" data-modal="outstanding">
+      <div>
+        <strong>${escapeHtml(bucket.bucket)}</strong>
+        <span>${formatNumber(bucket.count)} customers</span>
+      </div>
+      <span>${formatMoney(bucket.total)}</span>
+    </button>
+  `).join("") || `<div class="empty-state">No outstanding balances</div>`;
+  qsa("#agingList [data-modal]").forEach((button) => {
+    button.addEventListener("click", () => renderOutstandingModal());
+  });
+}
+
+function renderDebtorList(rows) {
+  qs("#debtorList").innerHTML = rows.map((customer) => `
+    <button class="category-row" type="button" data-customer-id="${customer.customer_id}">
+      <div>
+        <strong>${escapeHtml(customer.name)}</strong>
+        <span>${escapeHtml(customer.phone || "")}</span>
+      </div>
+      <span>${formatMoney(customer.outstanding)}</span>
+    </button>
+  `).join("") || `<div class="empty-state">No debtors</div>`;
+  bindCustomerRows();
+}
+
+function renderProductList(rows) {
+  qs("#productList").innerHTML = rows.map((item) => `
+    <div class="category-row static-row">
+      <div>
+        <strong>${escapeHtml(item.name)}</strong>
+        <span>${item.pct}% of revenue | ${formatNumber(item.units)} units</span>
+      </div>
+      <span>${formatMoney(item.revenue)}</span>
+    </div>
+  `).join("") || `<div class="empty-state">No product sales</div>`;
+}
+
+function renderMarginCategoryList(rows) {
+  qs("#marginCategoryList").innerHTML = rows.map((item) => `
+    <button class="category-row" type="button" data-category="${escapeHtml(item.category)}">
+      <div>
+        <strong>${escapeHtml(item.category)}</strong>
+        <span>${item.margin_pct}% margin on valid-cost rows</span>
+      </div>
+      <span>${formatMoney(item.margin)}</span>
+    </button>
+  `).join("") || `<div class="empty-state">No known-cost category margin</div>`;
+  qsa("#marginCategoryList [data-category]").forEach((row) => {
     row.addEventListener("click", () => openCategory(row.dataset.category));
   });
 }
@@ -129,6 +254,50 @@ function renderMiniChart(rows) {
         y: { ticks: { callback: (value) => formatMoney(value) } },
       },
     },
+  });
+}
+
+function renderRevenueTabChart(rows) {
+  const ctx = qs("#revenueTabChart");
+  if (!ctx) return;
+  if (state.tabChart) state.tabChart.destroy();
+
+  state.tabChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: rows.map((row) => row.date),
+      datasets: [{
+        label: "Revenue",
+        data: rows.map((row) => row.revenue),
+        backgroundColor: "#11845b",
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => formatMoney(item.raw) } },
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8 } },
+        y: { ticks: { callback: (value) => formatMoney(value) } },
+      },
+    },
+  });
+}
+
+function switchTab(tabKey) {
+  qsa(".analytics-tab").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tab === tabKey);
+  });
+  qsa(".tab-panel").forEach((panel) => {
+    panel.classList.toggle("active", panel.id === `tab-${tabKey}`);
+  });
+  requestAnimationFrame(() => {
+    if (state.miniChart) state.miniChart.resize();
+    if (state.tabChart) state.tabChart.resize();
   });
 }
 
@@ -491,6 +660,12 @@ function bindEvents() {
   qs("#refreshBtn").addEventListener("click", loadDashboard);
   qsa("[data-modal]").forEach((button) => {
     button.addEventListener("click", () => handleModalRequest(button.dataset.modal));
+  });
+  qsa("[data-tab-target]").forEach((button) => {
+    button.addEventListener("click", () => switchTab(button.dataset.tabTarget));
+  });
+  qsa(".analytics-tab").forEach((button) => {
+    button.addEventListener("click", () => switchTab(button.dataset.tab));
   });
   qs("#modalClose").addEventListener("click", closeModals);
   qs("#customerModalClose").addEventListener("click", () => {

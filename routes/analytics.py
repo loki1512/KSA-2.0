@@ -58,6 +58,13 @@ def _period_bounds():
     return today.replace(day=1), today, "this_month"
 
 
+def _previous_period_bounds(start_date, end_date):
+    days = (end_date - start_date).days + 1
+    previous_end = start_date - timedelta(days=1)
+    previous_start = previous_end - timedelta(days=days - 1)
+    return previous_start, previous_end
+
+
 def _money(value):
     return round(float(value or 0), 2)
 
@@ -65,6 +72,13 @@ def _money(value):
 def _safe_pct(part, total):
     total = float(total or 0)
     return round((float(part or 0) / total) * 100, 1) if total else 0
+
+
+def _pct_delta(current, previous):
+    previous = float(previous or 0)
+    if not previous:
+        return 0
+    return round(((float(current or 0) - previous) / previous) * 100, 1)
 
 
 def _customer_first_bill_subquery():
@@ -116,6 +130,45 @@ def _outstanding_rows(as_of_date=None, limit=None):
     return rows_query.all()
 
 
+def _aging_payload(end_date):
+    buckets = [
+        ("0-30 days", 0, 30),
+        ("31-60 days", 31, 60),
+        ("61-90 days", 61, 90),
+        ("90+ days", 91, None),
+    ]
+    payload = [{"bucket": label, "total": 0, "customers": []} for label, _, _ in buckets]
+
+    for row in _outstanding_rows(end_date):
+        activity_date = row.oldest_activity
+        if isinstance(activity_date, str):
+            activity_date = datetime.strptime(activity_date, "%Y-%m-%d").date()
+        days_open = (end_date - activity_date).days if activity_date else 0
+        item = {
+            "customer_id": row.customer_id,
+            "name": row.customer_name,
+            "phone": row.customer_phone,
+            "outstanding": _money(row.outstanding_amount),
+            "days_open": days_open,
+            "oldest_activity": str(row.oldest_activity) if row.oldest_activity else None,
+        }
+        for idx, (_, low, high) in enumerate(buckets):
+            if days_open >= low and (high is None or days_open <= high):
+                payload[idx]["customers"].append(item)
+                payload[idx]["total"] += item["outstanding"]
+                break
+
+    for bucket in payload:
+        bucket["total"] = _money(bucket["total"])
+        bucket["customers"] = sorted(
+            bucket["customers"],
+            key=lambda customer: customer["outstanding"],
+            reverse=True,
+        )
+
+    return payload
+
+
 def _top_category_for_customer(customer_id, start_date=None, end_date=None):
     query = (
         db.session.query(
@@ -147,11 +200,15 @@ def analytics_dashboard():
 @admin_required
 def dashboard_summary():
     start_date, end_date, period = _period_bounds()
+    previous_start, previous_end = _previous_period_bounds(start_date, end_date)
     bill_range = _range_filter(Bill.timestamp, start_date, end_date)
+    previous_bill_range = _range_filter(Bill.timestamp, previous_start, previous_end)
     payment_range = _range_filter(Payment.timestamp, start_date, end_date)
 
     total_revenue = _money(db.session.query(func.sum(Bill.final_amount)).filter(bill_range).scalar())
+    previous_revenue = _money(db.session.query(func.sum(Bill.final_amount)).filter(previous_bill_range).scalar())
     total_bills = db.session.query(func.count(Bill.id)).filter(bill_range).scalar() or 0
+    active_customers = db.session.query(func.count(distinct(Bill.customer_id))).filter(bill_range, Bill.customer_id.isnot(None)).scalar() or 0
     total_units = _money(
         db.session.query(func.sum(BillItem.qty))
         .join(Bill, Bill.id == BillItem.bill_id)
@@ -191,6 +248,21 @@ def dashboard_summary():
     costed_revenue = _money(cost_basis[1] if cost_basis else 0)
     gross_margin = _money(costed_revenue - known_cost)
 
+    margin_category_rows = (
+        db.session.query(
+            func.coalesce(Item.category, "Uncategorized").label("category"),
+            func.sum(BillItem.cost_price * BillItem.qty).label("known_cost"),
+            func.sum(BillItem.final_item_amount).label("costed_revenue"),
+        )
+        .join(Bill, Bill.id == BillItem.bill_id)
+        .outerjoin(Item, func.lower(Item.name) == func.lower(BillItem.item_name))
+        .filter(cost_filter)
+        .group_by(func.coalesce(Item.category, "Uncategorized"))
+        .order_by((func.sum(BillItem.final_item_amount) - func.sum(BillItem.cost_price * BillItem.qty)).desc())
+        .limit(8)
+        .all()
+    )
+
     category_rows = (
         db.session.query(
             func.coalesce(Item.category, "Uncategorized").label("category"),
@@ -205,7 +277,45 @@ def dashboard_summary():
         .all()
     )
 
-    total_outstanding = _money(sum(float(row.outstanding_amount or 0) for row in _outstanding_rows(end_date)))
+    outstanding_rows = _outstanding_rows(end_date)
+    total_outstanding = _money(sum(float(row.outstanding_amount or 0) for row in outstanding_rows))
+    top_debtors = [
+        {
+            "customer_id": row.customer_id,
+            "name": row.customer_name,
+            "phone": row.customer_phone,
+            "outstanding": _money(row.outstanding_amount),
+        }
+        for row in outstanding_rows[:5]
+    ]
+    aging_buckets = _aging_payload(end_date)
+
+    top_customer_revenue = (
+        db.session.query(
+            Bill.customer_id.label("customer_id"),
+            func.sum(Bill.final_amount).label("revenue"),
+        )
+        .filter(bill_range, Bill.customer_id.isnot(None))
+        .group_by(Bill.customer_id)
+        .order_by(func.sum(Bill.final_amount).desc())
+        .limit(5)
+        .all()
+    )
+    top_customer_total = sum(float(row.revenue or 0) for row in top_customer_revenue)
+
+    top_product_rows = (
+        db.session.query(
+            BillItem.item_name.label("item_name"),
+            func.sum(BillItem.final_item_amount).label("revenue"),
+            func.sum(BillItem.qty).label("units"),
+        )
+        .join(Bill, Bill.id == BillItem.bill_id)
+        .filter(bill_range)
+        .group_by(BillItem.item_name)
+        .order_by(func.sum(BillItem.final_item_amount).desc())
+        .limit(8)
+        .all()
+    )
 
     slow_cutoff = end_date - timedelta(days=30)
     last_sale = (
@@ -228,24 +338,63 @@ def dashboard_summary():
 
     return jsonify({
         "period": {"key": period, "start": start_date.isoformat(), "end": end_date.isoformat()},
+        "previous_period": {"start": previous_start.isoformat(), "end": previous_end.isoformat()},
         "revenue": {
             "total": total_revenue,
+            "previous_total": previous_revenue,
+            "growth_pct": _pct_delta(total_revenue, previous_revenue),
+            "change": _money(total_revenue - previous_revenue),
             "bills": total_bills,
             "avg_bill": _money(total_revenue / total_bills) if total_bills else 0,
             "units": total_units,
+            "units_per_bill": _money(total_units / total_bills) if total_bills else 0,
+            "revenue_per_customer": _money(total_revenue / active_customers) if active_customers else 0,
             "by_type": by_type,
         },
-        "cash": {"payments": total_payments, "outstanding": total_outstanding},
+        "customers": {
+            "active": int(active_customers),
+            "new": by_type["new"]["customers"],
+            "repeat": by_type["repeat"]["customers"],
+            "repeat_pct": _safe_pct(by_type["repeat"]["customers"], active_customers),
+            "top_customer_concentration_pct": _safe_pct(top_customer_total, total_revenue),
+        },
+        "cash": {
+            "payments": total_payments,
+            "collection_rate_pct": _safe_pct(total_payments, total_revenue),
+            "outstanding": total_outstanding,
+            "outstanding_pct": _safe_pct(total_outstanding, total_revenue),
+            "top_debtors": top_debtors,
+            "aging_buckets": [{"bucket": bucket["bucket"], "total": bucket["total"], "count": len(bucket["customers"])} for bucket in aging_buckets],
+        },
         "margin": {
             "known_cost": known_cost,
             "costed_revenue": costed_revenue,
             "gross_margin": gross_margin,
             "margin_pct": _safe_pct(gross_margin, costed_revenue),
             "note": "Cost-based metrics ignore rows with blank or zero cost price.",
+            "by_category": [
+                {
+                    "category": row.category,
+                    "known_cost": _money(row.known_cost),
+                    "costed_revenue": _money(row.costed_revenue),
+                    "margin": _money(float(row.costed_revenue or 0) - float(row.known_cost or 0)),
+                    "margin_pct": _safe_pct(float(row.costed_revenue or 0) - float(row.known_cost or 0), row.costed_revenue),
+                }
+                for row in margin_category_rows
+            ],
         },
         "categories": [
             {"category": row.category, "revenue": _money(row.revenue), "pct": _safe_pct(row.revenue, total_revenue)}
             for row in category_rows
+        ],
+        "top_products": [
+            {
+                "name": row.item_name,
+                "revenue": _money(row.revenue),
+                "units": _money(row.units),
+                "pct": _safe_pct(row.revenue, total_revenue),
+            }
+            for row in top_product_rows
         ],
         "slow_items": int(slow_items),
     })
@@ -474,36 +623,7 @@ def customer_profile(customer_id):
 @admin_required
 def outstanding_detail():
     end_date = _period_bounds()[1]
-    today = date.today()
-    buckets = [
-        ("0-30 days", 0, 30),
-        ("31-60 days", 31, 60),
-        ("61-90 days", 61, 90),
-        ("90+ days", 91, None),
-    ]
-    payload = [{"bucket": label, "total": 0, "customers": []} for label, _, _ in buckets]
-
-    for row in _outstanding_rows(end_date):
-        activity_date = row.oldest_activity
-        if isinstance(activity_date, str):
-            activity_date = datetime.strptime(activity_date, "%Y-%m-%d").date()
-        days_open = (today - activity_date).days if activity_date else 0
-        item = {
-            "customer_id": row.customer_id,
-            "name": row.customer_name,
-            "phone": row.customer_phone,
-            "outstanding": _money(row.outstanding_amount),
-            "days_open": days_open,
-            "oldest_activity": str(row.oldest_activity) if row.oldest_activity else None,
-        }
-        for idx, (_, low, high) in enumerate(buckets):
-            if days_open >= low and (high is None or days_open <= high):
-                payload[idx]["customers"].append(item)
-                payload[idx]["total"] += item["outstanding"]
-                break
-
-    for bucket in payload:
-        bucket["total"] = _money(bucket["total"])
+    payload = _aging_payload(end_date)
 
     return jsonify({
         "total_outstanding": _money(sum(bucket["total"] for bucket in payload)),

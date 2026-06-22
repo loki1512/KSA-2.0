@@ -200,11 +200,62 @@ body {
   border-left-color: var(--ad-amber);
 }
 
+.metric-customer {
+  border-left-color: var(--ad-purple);
+}
+
+.metric-concentration {
+  border-left-color: #475569;
+}
+
+.metric-products {
+  border-left-color: #0f766e;
+}
+
+.analytics-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--ad-border);
+}
+
+.analytics-tab {
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--ad-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.analytics-tab.active {
+  color: var(--ad-blue);
+  border-bottom-color: var(--ad-blue);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1.4fr 0.8fr;
   gap: 12px;
   margin-top: 12px;
+}
+
+.dashboard-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .panel {
@@ -288,6 +339,14 @@ body {
   border-color: var(--ad-blue);
 }
 
+.category-row.static-row {
+  cursor: default;
+}
+
+.category-row.static-row:hover {
+  border-color: var(--ad-border);
+}
+
 .category-row strong {
   overflow-wrap: anywhere;
   font-size: 13px;
@@ -308,6 +367,55 @@ body {
 .modal-backdrop[hidden],
 .analytics-modal[hidden] {
   display: none !important;
+}
+
+.snapshot-list,
+.priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.snapshot-list div,
+.priority-row {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfcfe;
+}
+
+.snapshot-list span,
+.priority-row span {
+  display: block;
+  color: var(--ad-muted);
+  font-size: 12px;
+}
+
+.snapshot-list strong,
+.priority-row strong {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.priority-row {
+  justify-content: flex-start;
+}
+
+.priority-row div {
+  min-width: 0;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--ad-green);
 }
 
 .analytics-modal {
@@ -525,6 +633,7 @@ body {
   }
 
   .dashboard-grid,
+  .dashboard-grid.compact,
   .modal-grid {
     grid-template-columns: 1fr;
   }

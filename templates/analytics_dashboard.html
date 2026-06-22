@@ -57,17 +57,37 @@
     <button class="metric-card metric-revenue" type="button" data-modal="revenue">
       <span class="metric-label">Revenue</span>
       <strong id="kpiRevenue">-</strong>
-      <span id="kpiRevenueMeta">-</span>
+      <span id="kpiRevenueGrowth">-</span>
+    </button>
+    <button class="metric-card metric-cash" type="button" data-modal="outstanding">
+      <span class="metric-label">Collection Rate</span>
+      <strong id="kpiCollectionRate">-</strong>
+      <span id="kpiPayments">-</span>
+    </button>
+    <button class="metric-card metric-margin" type="button" data-modal="margin">
+      <span class="metric-label">Gross Margin</span>
+      <strong id="kpiMargin">-</strong>
+      <span id="kpiMarginPct">-</span>
     </button>
     <button class="metric-card metric-cash" type="button" data-modal="outstanding">
       <span class="metric-label">Outstanding</span>
       <strong id="kpiOutstanding">-</strong>
-      <span id="kpiPayments">-</span>
+      <span id="kpiOutstandingPct">-</span>
     </button>
-    <button class="metric-card metric-margin" type="button" data-modal="margin">
-      <span class="metric-label">Known Margin</span>
-      <strong id="kpiMargin">-</strong>
-      <span id="kpiMarginPct">-</span>
+    <button class="metric-card metric-customer" type="button" data-tab-target="customers">
+      <span class="metric-label">Repeat Customers</span>
+      <strong id="kpiRepeatCustomerPct">-</strong>
+      <span id="kpiActiveCustomers">-</span>
+    </button>
+    <button class="metric-card metric-concentration" type="button" data-tab-target="customers">
+      <span class="metric-label">Top Customer Concentration</span>
+      <strong id="kpiConcentration">-</strong>
+      <span>Top 5 customers</span>
+    </button>
+    <button class="metric-card metric-products" type="button" data-tab-target="products">
+      <span class="metric-label">Top Product</span>
+      <strong id="kpiTopProduct">-</strong>
+      <span id="kpiTopProductMeta">-</span>
     </button>
     <button class="metric-card metric-slow" type="button" data-modal="slow-items">
       <span class="metric-label">Slow Items</span>
@@ -76,16 +96,81 @@
     </button>
   </section>
 
-  <section class="dashboard-grid">
-    <div class="panel panel-wide">
+  <section class="analytics-tabs" aria-label="Analytics sections">
+    <button class="analytics-tab active" type="button" data-tab="executive">Executive</button>
+    <button class="analytics-tab" type="button" data-tab="revenue">Revenue</button>
+    <button class="analytics-tab" type="button" data-tab="customers">Customers</button>
+    <button class="analytics-tab" type="button" data-tab="credit">Credit</button>
+    <button class="analytics-tab" type="button" data-tab="products">Products</button>
+    <button class="analytics-tab" type="button" data-tab="profitability">Profitability</button>
+  </section>
+
+  <section id="tab-executive" class="tab-panel active">
+    <div class="dashboard-grid">
+      <div class="panel panel-wide">
+        <div class="panel-head">
+          <h3>Revenue Trend</h3>
+          <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
+        </div>
+        <div class="chart-box"><canvas id="revenueMiniChart"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Decision Snapshot</h3>
+        </div>
+        <div class="snapshot-list">
+          <div><span>Revenue per customer</span><strong id="snapRevenuePerCustomer">-</strong></div>
+          <div><span>Average bill</span><strong id="snapAvgBill">-</strong></div>
+          <div><span>Units per bill</span><strong id="snapUnitsPerBill">-</strong></div>
+          <div><span>Revenue quality</span><strong id="snapRevenueQuality">-</strong></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>P0 Checklist</h3>
+        </div>
+        <div id="priorityList" class="priority-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-revenue" class="tab-panel">
+    <div class="dashboard-grid">
+      <div class="panel panel-wide">
       <div class="panel-head">
         <h3>Revenue Trend</h3>
         <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
       </div>
-      <div class="chart-box"><canvas id="revenueMiniChart"></canvas></div>
-    </div>
+        <div class="chart-box"><canvas id="revenueTabChart"></canvas></div>
+      </div>
 
-    <div class="panel">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Sales Productivity</h3>
+        </div>
+        <div class="snapshot-list">
+          <div><span>Average bill value</span><strong id="revenueAvgBill">-</strong></div>
+          <div><span>Revenue per customer</span><strong id="revenuePerCustomer">-</strong></div>
+          <div><span>Revenue per bill</span><strong id="revenuePerBill">-</strong></div>
+          <div><span>Units per bill</span><strong id="revenueUnitsPerBill">-</strong></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Categories</h3>
+          <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
+        </div>
+        <div id="categoryList" class="category-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-customers" class="tab-panel">
+    <div class="dashboard-grid compact">
+      <div class="panel">
       <div class="panel-head">
         <h3>New vs Repeat</h3>
         <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
@@ -104,12 +189,82 @@
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-head">
-        <h3>Categories</h3>
-        <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Customer Value</h3>
+        </div>
+        <div class="snapshot-list">
+          <div><span>Active customers</span><strong id="customerActive">-</strong></div>
+          <div><span>New customers</span><strong id="customerNew">-</strong></div>
+          <div><span>Repeat customer %</span><strong id="customerRepeatPct">-</strong></div>
+          <div><span>Top 5 concentration</span><strong id="customerConcentration">-</strong></div>
+        </div>
       </div>
-      <div id="categoryList" class="category-list"></div>
+    </div>
+  </section>
+
+  <section id="tab-credit" class="tab-panel">
+    <div class="dashboard-grid compact">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Aging Buckets</h3>
+          <button type="button" class="btn-ghost" data-modal="outstanding">Open</button>
+        </div>
+        <div id="agingList" class="category-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Top Debtors</h3>
+          <button type="button" class="btn-ghost" data-modal="outstanding">Open</button>
+        </div>
+        <div id="debtorList" class="category-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-products" class="tab-panel">
+    <div class="dashboard-grid compact">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Top Products</h3>
+        </div>
+        <div id="productList" class="category-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Product Health</h3>
+          <button type="button" class="btn-ghost" data-modal="slow-items">Open</button>
+        </div>
+        <div class="snapshot-list">
+          <div><span>Slow-moving products</span><strong id="productSlowItems">-</strong></div>
+          <div><span>Dead / never-sold products</span><strong>Future</strong></div>
+          <div><span>Rising products</span><strong>Future</strong></div>
+          <div><span>Cross-sell</span><strong>Future</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-profitability" class="tab-panel">
+    <div class="dashboard-grid compact">
+      <div class="panel">
+      <div class="panel-head">
+          <h3>Margin by Category</h3>
+          <button type="button" class="btn-ghost" data-modal="margin">Open</button>
+      </div>
+        <div id="marginCategoryList" class="category-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Cost Data Quality</h3>
+        </div>
+        <div class="snapshot-list">
+          <div><span>Revenue with valid cost</span><strong id="costedRevenue">-</strong></div>
+          <div><span>Known cost</span><strong id="knownCost">-</strong></div>
+          <div><span>Margin confidence</span><strong id="marginConfidence">-</strong></div>
+          <div><span>Rule</span><strong>Cost &gt; 0</strong></div>
+        </div>
+      </div>
     </div>
   </section>
 </main>
