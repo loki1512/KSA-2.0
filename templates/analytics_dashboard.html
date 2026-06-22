@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Analytics - KSA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="icon" type="image/png" href="/static/images/head-logo.png">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
+  <link rel="stylesheet" href="/static/css/analytics_dashboard.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-left">
+    <div class="logo-mark"><img src="/static/images/head-logo.png" alt="KSA logo"></div>
+    <div>
+      <h1>Kumara Swami Agencies</h1>
+      <span class="header-sub">Smart billing system</span>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <a href="/">Dashboard</a>
+    <a href="/analytics" class="active">Analytics</a>
+    <a href="/billing">+ New Bill</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/bills">Bills</a>
+    <a href="/customers">Customers</a>
+    <a href="/transactions">Transactions</a>
+    <a href="/returns/new">Returns</a>
+    <a href="/admin/profile">Profile</a>
+    <a href="/logout" class="nav-logout">Logout</a>
+  </nav>
+</header>
+
+<main class="analytics-page">
+  <section class="analytics-toolbar">
+    <div>
+      <p class="page-kicker">Analytics</p>
+      <h2>Interactive Drill-Down Dashboard</h2>
+      <p id="periodLabel" class="period-label">Loading...</p>
+    </div>
+    <div class="toolbar-actions">
+      <select id="periodSelect" aria-label="Dashboard period">
+        <option value="today">Today</option>
+        <option value="this_month" selected>This Month</option>
+        <option value="last_30">Last 30 Days</option>
+        <option value="last_month">Last Month</option>
+        <option value="custom">Custom</option>
+      </select>
+      <input id="startDate" type="date" hidden>
+      <input id="endDate" type="date" hidden>
+      <button id="refreshBtn" type="button" class="btn-primary">Refresh</button>
+    </div>
+  </section>
+
+  <section class="kpi-grid" aria-label="Analytics KPIs">
+    <button class="metric-card metric-revenue" type="button" data-modal="revenue">
+      <span class="metric-label">Revenue</span>
+      <strong id="kpiRevenue">-</strong>
+      <span id="kpiRevenueMeta">-</span>
+    </button>
+    <button class="metric-card metric-cash" type="button" data-modal="outstanding">
+      <span class="metric-label">Outstanding</span>
+      <strong id="kpiOutstanding">-</strong>
+      <span id="kpiPayments">-</span>
+    </button>
+    <button class="metric-card metric-margin" type="button" data-modal="margin">
+      <span class="metric-label">Known Margin</span>
+      <strong id="kpiMargin">-</strong>
+      <span id="kpiMarginPct">-</span>
+    </button>
+    <button class="metric-card metric-slow" type="button" data-modal="slow-items">
+      <span class="metric-label">Slow Items</span>
+      <strong id="kpiSlowItems">-</strong>
+      <span>Not sold in 30+ days</span>
+    </button>
+  </section>
+
+  <section class="dashboard-grid">
+    <div class="panel panel-wide">
+      <div class="panel-head">
+        <h3>Revenue Trend</h3>
+        <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
+      </div>
+      <div class="chart-box"><canvas id="revenueMiniChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3>New vs Repeat</h3>
+        <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
+      </div>
+      <div class="split-metrics">
+        <div>
+          <span>New</span>
+          <strong id="newCustomerRevenue">-</strong>
+          <small id="newCustomerCount">-</small>
+        </div>
+        <div>
+          <span>Repeat</span>
+          <strong id="repeatCustomerRevenue">-</strong>
+          <small id="repeatCustomerCount">-</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Categories</h3>
+        <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
+      </div>
+      <div id="categoryList" class="category-list"></div>
+    </div>
+  </section>
+</main>
+
+<div id="modalBackdrop" class="modal-backdrop" hidden></div>
+
+<section id="analyticsModal" class="analytics-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+  <header class="modal-header">
+    <div>
+      <p id="modalKicker" class="page-kicker">Detail</p>
+      <h2 id="modalTitle">Analytics Detail</h2>
+    </div>
+    <button id="modalClose" class="icon-button" type="button" aria-label="Close">x</button>
+  </header>
+  <div id="modalTabs" class="modal-tabs"></div>
+  <div id="modalBody" class="modal-body"></div>
+</section>
+
+<section id="customerModal" class="analytics-modal customer-modal" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle" hidden>
+  <header class="modal-header">
+    <div>
+      <p class="page-kicker">Customer</p>
+      <h2 id="customerModalTitle">Customer Profile</h2>
+    </div>
+    <button id="customerModalClose" class="icon-button" type="button" aria-label="Close">x</button>
+  </header>
+  <div id="customerModalBody" class="modal-body"></div>
+</section>
+
+<script src="/static/js/analytics_dashboard.js"></script>
+</body>
+</html>

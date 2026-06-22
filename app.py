@@ -194,6 +194,7 @@ def create_app():
     from routes.transactions import transactions_bp
     from routes.account import account_bp
     from routes.offers import offers_bp
+    from routes.analytics import analytics_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(pages_bp)
@@ -207,6 +208,7 @@ def create_app():
     app.register_blueprint(transactions_bp)
     app.register_blueprint(account_bp)
     app.register_blueprint(offers_bp)
+    app.register_blueprint(analytics_bp)
 
     # --------------------------------
     # Health Endpoint (for Render)
