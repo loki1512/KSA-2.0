@@ -6,6 +6,11 @@ let allItems = [];
 let filteredItems = [];
 let searchDebounce = null;
 let activeViewId = null;
+let batchCostMode = false;
+let missingCostOnly = false;
+let costCategoryFilter = '';
+let pendingCostUpdates = new Map();
+let savingCostUpdates = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadItems();
@@ -13,6 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('catalogSearch').addEventListener('input', () => {
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(applyCatalogSearch, 150);
+  });
+
+  document.getElementById('missingCostOnly')?.addEventListener('change', event => {
+    missingCostOnly = event.target.checked;
+    applyCatalogSearch();
+  });
+
+  document.getElementById('costCategoryFilter')?.addEventListener('change', event => {
+    costCategoryFilter = event.target.value;
+    applyCatalogSearch();
   });
 
   ['catItemName', 'catItemCategory', 'catItemDefaultPrice', 'catItemMaxPrice', 'catItemFinalPrice', 'catItemCostPrice']
@@ -34,6 +49,7 @@ async function loadItems() {
     const response = await fetch('/api/items');
     allItems = await response.json();
     allItems.sort((left, right) => compareText(left.name, right.name));
+    renderCostCategoryFilter();
     applyCatalogSearch();
   } catch (error) {
     console.error('Failed to load items', error);
@@ -54,11 +70,21 @@ function applyCatalogSearch() {
 }
 
 function getFilteredItems(query) {
-  if (!query) return [...allItems];
+  let sourceItems = allItems;
+
+  if (batchCostMode && costCategoryFilter) {
+    sourceItems = sourceItems.filter(item => (item.category || '') === costCategoryFilter);
+  }
+
+  if (batchCostMode && missingCostOnly) {
+    sourceItems = sourceItems.filter(item => item.cost_price == null);
+  }
+
+  if (!query) return [...sourceItems];
 
   const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
 
-  return allItems.filter(item => {
+  return sourceItems.filter(item => {
     const haystack = [
       (item.name || ''),
       (item.category || '')
@@ -73,15 +99,18 @@ function renderItems(items) {
   tbody.innerHTML = '';
 
   if (!items.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No items found</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No items found</td></tr>';
     return;
   }
 
   items.forEach(item => {
     const isActive = activeViewId === item.id;
+    const pendingCost = pendingCostUpdates.get(item.id);
+    const rowChanged = pendingCost !== undefined;
     const tr = document.createElement('tr');
     tr.dataset.itemId = String(item.id);
     if (isActive) tr.classList.add('is-active');
+    if (rowChanged) tr.classList.add('is-cost-dirty');
 
     tr.innerHTML = `
       <td class="td-name">${esc(item.name)}</td>
@@ -89,16 +118,40 @@ function renderItems(items) {
       <td class="num">${formatMoney(item.default_price)}</td>
       <td class="num">${item.max_price != null ? formatMoney(item.max_price) : '-'}</td>
       <td class="num">${item.final_price != null ? formatMoney(item.final_price) : '-'}</td>
-      <td class="num">${item.cost_price != null ? formatMoney(item.cost_price) : '-'}</td>
+      <td class="num">${batchCostMode ? buildCostInput(item, pendingCost) : (item.cost_price != null ? formatMoney(item.cost_price) : '-')}</td>
       <td class="num table-updated">${fmtDate(item.updated_at)}</td>
-      <td class="actions-col">
+      <td class="actions-col ${batchCostMode ? 'batch-actions-cell' : ''}">
+        ${batchCostMode ? buildCostStatus(item, rowChanged) : `
         <button class="btn-view" onclick="viewItem(${item.id})">View</button>
         <button class="btn-edit" onclick="startEdit(${item.id})">Edit</button>
         <button class="btn-delete" onclick="deleteItem(${item.id}, '${esc(item.name)}')">Delete</button>
+        `}
       </td>`;
 
     tbody.appendChild(tr);
   });
+}
+
+function buildCostInput(item, pendingCost) {
+  const value = pendingCost !== undefined ? pendingCost : (item.cost_price ?? '');
+  return `
+    <input
+      class="cost-edit-input"
+      type="number"
+      min="0"
+      step="0.01"
+      value="${esc(value)}"
+      data-cost-item-id="${item.id}"
+      aria-label="Cost price for ${esc(item.name)}"
+      oninput="handleCostInput(${item.id}, this.value)"
+      onkeydown="handleCostKeydown(event, ${item.id})"
+    >`;
+}
+
+function buildCostStatus(item, rowChanged) {
+  if (rowChanged) return '<span class="cost-status cost-status-dirty">Unsaved</span>';
+  if (item.cost_price == null) return '<span class="cost-status">Missing</span>';
+  return '<span class="cost-status cost-status-saved">Saved</span>';
 }
 
 function renderSmartState(query, items) {
@@ -107,6 +160,24 @@ function renderSmartState(query, items) {
   const similarItems = items
     .filter(item => !exactItem || item.id !== exactItem.id)
     .slice(0, 4);
+
+  if (batchCostMode) {
+    if (!query) {
+      container.innerHTML = `
+        <div class="smart-card smart-card-empty">
+          <div class="smart-title">Cost update mode is on</div>
+          <p>Search by item name or category. The table below stays editable for the matching items.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="smart-card smart-card-empty">
+        <div class="smart-title">${items.length} matching items</div>
+        <p>Update costs directly in the table below. Use Missing cost only to narrow the list further.</p>
+      </div>`;
+    return;
+  }
 
   if (!query) {
     container.innerHTML = `
@@ -193,6 +264,168 @@ function updateItemCount(items) {
   const visible = items.length;
   const label = visible === total ? `${total} items` : `${visible} of ${total} items`;
   document.getElementById('catItemCount').textContent = label;
+}
+
+function renderCostCategoryFilter() {
+  const select = document.getElementById('costCategoryFilter');
+  if (!select) return;
+
+  const categories = Array.from(new Set(
+    allItems
+      .map(item => item.category || '')
+      .filter(Boolean)
+  )).sort(compareText);
+
+  const currentValue = categories.includes(costCategoryFilter) ? costCategoryFilter : '';
+  select.innerHTML = `
+    <option value="">All</option>
+    ${categories.map(category => `<option value="${esc(category)}">${esc(category)}</option>`).join('')}
+  `;
+  select.value = currentValue;
+  costCategoryFilter = currentValue;
+}
+
+function toggleCostMode() {
+  if (batchCostMode && pendingCostUpdates.size && !confirm('Exit cost update mode and discard unsaved changes?')) {
+    return;
+  }
+
+  batchCostMode = !batchCostMode;
+  pendingCostUpdates.clear();
+  savingCostUpdates = false;
+
+  if (!batchCostMode) {
+    missingCostOnly = false;
+    costCategoryFilter = '';
+    const missingCostOnlyInput = document.getElementById('missingCostOnly');
+    if (missingCostOnlyInput) missingCostOnlyInput.checked = false;
+    const costCategorySelect = document.getElementById('costCategoryFilter');
+    if (costCategorySelect) costCategorySelect.value = '';
+  }
+
+  updateBatchCostUi();
+  applyCatalogSearch();
+}
+
+function updateBatchCostUi(message) {
+  document.body.classList.toggle('batch-cost-mode', batchCostMode);
+  const costModeButton = document.getElementById('costModeBtn');
+  costModeButton.textContent = batchCostMode ? 'Update Costs: On' : 'Update Costs: Off';
+  costModeButton.setAttribute('aria-pressed', String(batchCostMode));
+  document.getElementById('catalogTableTitle').textContent = batchCostMode ? 'Update Cost Prices' : 'Catalogue Items';
+  document.getElementById('batchCostSubtitle').hidden = !batchCostMode;
+  document.getElementById('batchCostBar').hidden = !batchCostMode;
+  document.getElementById('missingCostToggleWrap').hidden = !batchCostMode;
+  document.getElementById('costCategoryFilterWrap').hidden = !batchCostMode;
+
+  const changedCount = pendingCostUpdates.size;
+  document.getElementById('batchChangedCount').textContent = `${changedCount} changed`;
+  document.getElementById('batchSaveStatus').textContent = message || (
+    changedCount ? 'Unsaved cost changes are ready to save.' : 'No unsaved cost changes.'
+  );
+  document.getElementById('saveCostUpdatesBtn').disabled = !changedCount || savingCostUpdates;
+}
+
+function handleCostInput(id, rawValue) {
+  const item = allItems.find(entry => entry.id === id);
+  if (!item) return;
+
+  const input = document.querySelector(`[data-cost-item-id="${id}"]`);
+  const parsedNew = parseCostInput(rawValue);
+  const normalizedOriginal = normalizeCostValue(item.cost_price ?? '');
+
+  input?.classList.toggle('is-invalid', !parsedNew.valid);
+
+  if (parsedNew.valid && parsedNew.value === normalizedOriginal) {
+    pendingCostUpdates.delete(id);
+  } else {
+    pendingCostUpdates.set(id, rawValue.trim());
+  }
+
+  updateBatchCostUi();
+  renderCostRowStatus(id);
+}
+
+function handleCostKeydown(event, id) {
+  if (event.key !== 'Enter') return;
+
+  event.preventDefault();
+  const inputs = Array.from(document.querySelectorAll('.cost-edit-input'));
+  const index = inputs.findIndex(input => Number(input.dataset.costItemId) === id);
+  const nextInput = inputs[index + 1];
+
+  if (nextInput) {
+    nextInput.focus();
+    nextInput.select();
+  } else {
+    document.getElementById('saveCostUpdatesBtn').focus();
+  }
+}
+
+function renderCostRowStatus(id) {
+  const row = document.querySelector(`[data-item-id="${id}"]`);
+  const item = allItems.find(entry => entry.id === id);
+  if (!row || !item) return;
+
+  const isChanged = pendingCostUpdates.has(id);
+  row.classList.toggle('is-cost-dirty', isChanged);
+  const statusCell = row.querySelector('.batch-actions-cell');
+  if (statusCell) statusCell.innerHTML = buildCostStatus(item, isChanged);
+}
+
+function discardCostChanges() {
+  if (!pendingCostUpdates.size) return;
+  if (!confirm('Discard unsaved cost changes?')) return;
+
+  pendingCostUpdates.clear();
+  updateBatchCostUi('Cost changes discarded.');
+  renderItems(filteredItems);
+}
+
+async function saveCostUpdates() {
+  if (!pendingCostUpdates.size || savingCostUpdates) return;
+
+  const updates = [];
+  for (const [id, rawValue] of pendingCostUpdates.entries()) {
+    const parsed = parseCostInput(rawValue);
+    const input = document.querySelector(`[data-cost-item-id="${id}"]`);
+
+    if (!parsed.valid) {
+      input?.classList.add('is-invalid');
+      input?.focus();
+      updateBatchCostUi('Fix invalid cost values before saving.');
+      return;
+    }
+
+    updates.push({ id, cost_price: parsed.value });
+  }
+
+  savingCostUpdates = true;
+  updateBatchCostUi('Saving cost changes...');
+  let finalMessage = '';
+
+  try {
+    const response = await fetch('/api/items/costs', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: updates })
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      finalMessage = data.error || 'Cost update failed.';
+      return;
+    }
+
+    pendingCostUpdates.clear();
+    await loadItems();
+    finalMessage = `${data.updated || 0} cost prices saved.`;
+  } catch (error) {
+    finalMessage = 'Cost update request failed.';
+  } finally {
+    savingCostUpdates = false;
+    updateBatchCostUi(finalMessage);
+  }
 }
 
 async function saveCatalogItem() {
@@ -305,6 +538,7 @@ function resetEditor() {
   document.getElementById('catItemDefaultPrice').value = '';
   document.getElementById('catItemMaxPrice').value = '';
   document.getElementById('catItemFinalPrice').value = '';
+  document.getElementById('catItemCostPrice').value = '';
 
   document.getElementById('formTitle').textContent = 'Add Item';
   document.getElementById('cancelEditBtn').style.display = 'none';
@@ -437,6 +671,20 @@ function parseNumberOrNull(value) {
   return Number.isNaN(numeric) ? null : numeric;
 }
 
+function normalizeCostValue(value) {
+  if (value === '' || value == null) return null;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return Number(numeric.toFixed(2));
+}
+
+function parseCostInput(value) {
+  if (value === '' || value == null) return { valid: true, value: null };
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return { valid: false, value: null };
+  return { valid: true, value: Number(numeric.toFixed(2)) };
+}
+
 function numberOrBlank(value) {
   if (value === null || value === undefined || value === '') return '';
   const numeric = Number(value);
@@ -456,6 +704,7 @@ function esc(value) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
 
@@ -480,3 +729,8 @@ window.importCatalog = importCatalog;
 window.downloadCatalogExcel = downloadCatalogExcel;
 window.viewItem = viewItem;
 window.prepareNewItemFromSearch = prepareNewItemFromSearch;
+window.toggleCostMode = toggleCostMode;
+window.handleCostInput = handleCostInput;
+window.handleCostKeydown = handleCostKeydown;
+window.discardCostChanges = discardCostChanges;
+window.saveCostUpdates = saveCostUpdates;

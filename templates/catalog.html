@@ -4,7 +4,7 @@
   <title>Catalogue Management</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/static/images/head-logo.png">
-  <link rel="stylesheet" href="/static/css/catalog.css">
+  <link rel="stylesheet" href="/static/css/catalog.css?v=20260622-cost-toggle-filter">
   <link rel="stylesheet" href="/static/css/app_shell.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -39,6 +39,7 @@
       <p class="page-summary">Search items, update pricing, and import product data from a single workspace.</p>
     </div>
     <div class="page-header-actions">
+      <button class="btn btn-cost-mode" id="costModeBtn" type="button" aria-pressed="false" onclick="toggleCostMode()">Update Costs: Off</button>
       <button class="btn btn-export" type="button" onclick="downloadCatalogExcel()">Download Excel</button>
       <a class="back-link" href="/">Dashboard</a>
     </div>
@@ -120,8 +121,33 @@
 
   <div class="card">
     <div class="card-header">
-      <h2>Catalogue Items</h2>
-      <span class="item-count" id="catItemCount">-</span>
+      <div>
+        <h2 id="catalogTableTitle">Catalogue Items</h2>
+        <p class="section-subtitle" id="batchCostSubtitle" hidden>Update cost prices row by row, then save all changed items together.</p>
+      </div>
+      <div class="catalog-table-actions">
+        <label class="category-filter" id="costCategoryFilterWrap" hidden>
+          <span>Category</span>
+          <select id="costCategoryFilter">
+            <option value="">All</option>
+          </select>
+        </label>
+        <label class="missing-cost-toggle" id="missingCostToggleWrap" hidden>
+          <input type="checkbox" id="missingCostOnly">
+          <span>Missing cost only</span>
+        </label>
+        <span class="item-count" id="catItemCount">-</span>
+      </div>
+    </div>
+    <div class="batch-cost-bar" id="batchCostBar" hidden>
+      <div>
+        <strong id="batchChangedCount">0 changed</strong>
+        <span id="batchSaveStatus">No unsaved cost changes.</span>
+      </div>
+      <div class="batch-cost-actions">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="discardCostChanges()">Discard</button>
+        <button class="btn btn-primary-action btn-sm" id="saveCostUpdatesBtn" type="button" onclick="saveCostUpdates()" disabled>Save All</button>
+      </div>
     </div>
     <div class="table-wrapper">
       <table id="catalogTable">
@@ -169,6 +195,6 @@
 
 </div>
 
-<script src="/static/js/catalog.js"></script>
+<script src="/static/js/catalog.js?v=20260622-cost-toggle-filter"></script>
 </body>
 </html>

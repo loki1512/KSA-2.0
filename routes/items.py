@@ -70,7 +70,8 @@ def get_items():
             "default_price": i.default_price,
             "max_price": i.max_price,
             "final_price": i.final_price,
-            "cost_price": float(i.cost_price) if i.cost_price else None
+            "cost_price": float(i.cost_price) if i.cost_price is not None else None,
+            "updated_at": i.updated_at.isoformat() if i.updated_at else None
         }
         for i in items
     ])
@@ -211,6 +212,58 @@ def patch_item_price(item_id):
         "default_price": item.default_price,
         "max_price": item.max_price,
         "final_price": item.final_price
+    })
+
+
+# --------------------------------
+# PATCH ITEM COSTS (catalog batch-edit)
+# --------------------------------
+@items_bp.route("/api/items/costs", methods=["PATCH"])
+@admin_required
+def patch_item_costs():
+
+    data = request.get_json(force=True)
+    updates = data.get("items") if isinstance(data, dict) else None
+
+    if not isinstance(updates, list) or not updates:
+        return jsonify({"error": "items are required"}), 400
+
+    item_ids = []
+    normalized_updates = []
+
+    for entry in updates:
+        if not isinstance(entry, dict):
+            return jsonify({"error": "Each item update must be an object"}), 400
+
+        item_id = entry.get("id")
+        cost_price = entry.get("cost_price")
+
+        if not isinstance(item_id, int):
+            return jsonify({"error": "Each update requires a valid item id"}), 400
+
+        if cost_price is not None:
+            if not isinstance(cost_price, (int, float)) or cost_price < 0:
+                return jsonify({"error": "Cost price must be a non-negative number or blank"}), 400
+            cost_price = round(float(cost_price), 2)
+
+        item_ids.append(item_id)
+        normalized_updates.append((item_id, cost_price))
+
+    items = Item.query.filter(Item.id.in_(item_ids)).all()
+    items_by_id = {item.id: item for item in items}
+    missing_ids = [item_id for item_id in item_ids if item_id not in items_by_id]
+
+    if missing_ids:
+        return jsonify({"error": f"Unknown item id: {missing_ids[0]}"}), 404
+
+    for item_id, cost_price in normalized_updates:
+        items_by_id[item_id].cost_price = cost_price
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "updated": len(normalized_updates)
     })
 
 
