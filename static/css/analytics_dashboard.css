@@ -1024,3 +1024,94 @@ body {
   color: var(--ad-muted);
   font-size: 13px;
 }
+
+/* ─────────────────────────────────────────────────────────
+   SLOW ITEMS HEATMAP — amber/red heat palette
+   ───────────────────────────────────────────────────────── */
+
+/* Amber-to-red heat (distinct from payment green) */
+.heat-s1 {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.heat-s2 {
+  background: #fcd34d;
+  color: #78350f;
+}
+
+.heat-s3 {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.heat-s4 {
+  background: #dc2626;
+  color: #fff;
+}
+
+.heatmap-cell.heat-s1:hover { filter: brightness(0.95); }
+.heatmap-cell.heat-s2:hover { filter: brightness(0.95); }
+.heatmap-cell.heat-s3:hover { filter: brightness(1.06); }
+.heatmap-cell.heat-s4:hover { filter: brightness(1.06); }
+
+/* Amber badge (price band in expanded detail) */
+.hm-detail-badge.slow {
+  background: #d97706;
+}
+
+/* ── Filter toolbar ─────────────────────────────────────── */
+.slow-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+}
+
+.slow-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 160px;
+}
+
+.slow-filter-group label {
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.slow-filter-group select {
+  height: 36px;
+  border: 1px solid var(--ad-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ad-text);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.slow-filter-group select:focus {
+  outline: 2px solid var(--ad-blue);
+  outline-offset: 1px;
+}
+
+@media (max-width: 640px) {
+  .slow-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .slow-filter-group {
+    min-width: 0;
+  }
+}

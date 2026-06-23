@@ -9,6 +9,28 @@ const state = {
   tabChart: null,
 };
 
+// ─────────────────────────────────────────────────────────
+// SLOW ITEMS HEATMAP – constants & cache
+// ─────────────────────────────────────────────────────────
+const SLOW_PRICE_BANDS = [
+  { key: "10k_plus",  label: "Rs 10k+",     min: 10000, max: Infinity },
+  { key: "2k_10k",   label: "Rs 2k–10k",   min: 2000,  max: 10000 },
+  { key: "500_2k",   label: "Rs 500–2k",   min: 500,   max: 2000 },
+  { key: "100_500",  label: "Rs 100–500",  min: 100,   max: 500 },
+  { key: "under_100",label: "Under Rs 100", min: 0,    max: 100 },
+];
+
+const SLOW_STALE_BANDS = [
+  { key: "never",  label: "Never Sold",   test: (d) => d === null },
+  { key: "y_plus", label: "365+ days",    test: (d) => d !== null && d >= 365 },
+  { key: "h_y",    label: "181–365 days", test: (d) => d !== null && d >= 181 && d < 365 },
+  { key: "q_h",    label: "91–180 days",  test: (d) => d !== null && d >= 91  && d < 181 },
+  { key: "m_q",    label: "31–90 days",   test: (d) => d !== null && d >= 31  && d < 91 },
+  { key: "short",  label: "≤30 days",     test: (d) => d !== null && d < 31 },
+];
+
+let _slowItemsData = null;
+
 const qs = (selector) => document.querySelector(selector);
 const qsa = (selector) => Array.from(document.querySelectorAll(selector));
 
@@ -514,32 +536,197 @@ function _outstandingLoaded(data, activeTab) {
   }
 }
 
-async function renderSlowItemsModal() {
-  openModal("Slow Items", "Inventory");
+async function renderSlowItemsModal(cutoffDays = 30, minPrice = 0, catFilter = "all") {
+  openModal("Slow & Costly Items", "Inventory");
   qs("#modalTabs").innerHTML = "";
   qs("#modalBody").innerHTML = `<div class="empty-state">Loading...</div>`;
-  const data = await fetchJson(`/analytics/api/items/slow-moving?${params()}&days=30`);
+  _slowItemsData = await fetchJson(`/analytics/api/items/slow-moving?${params()}&days=${cutoffDays}`);
+  renderSlowItemsBody(_slowItemsData, cutoffDays, minPrice, catFilter);
+}
+
+function renderSlowItemsBody(data, cutoffDays, minPrice, catFilter) {
+  // Build sorted unique category list from the full (unfiltered) data
+  const allCategories = ["all", ...[...new Set(data.items.map((i) => i.category || "Uncategorised"))].sort()];
+
+  // Client-side filters
+  let items = [...data.items];
+  if (minPrice > 0)        items = items.filter((i) => (i.default_price || 0) >= minPrice);
+  if (catFilter !== "all") items = items.filter((i) => (i.category || "Uncategorised") === catFilter);
+
+  // Build 2-D cell map: pBand.key → sBand.key → [items]
+  const cellMap = {};
+  for (const pb of SLOW_PRICE_BANDS) {
+    cellMap[pb.key] = {};
+    for (const sb of SLOW_STALE_BANDS) cellMap[pb.key][sb.key] = [];
+  }
+  for (const item of items) {
+    const price = item.default_price || 0;
+    const days  = item.days_since_sale;           // null = never sold
+    const pb = SLOW_PRICE_BANDS.find((b) => price >= b.min && price < b.max);
+    const sb = SLOW_STALE_BANDS.find((b) => b.test(days));
+    if (pb && sb) cellMap[pb.key][sb.key].push(item);
+  }
+
+  // Normalise for heat intensity
+  let maxCount = 1;
+  for (const pk of Object.keys(cellMap))
+    for (const sk of Object.keys(cellMap[pk]))
+      if (cellMap[pk][sk].length > maxCount) maxCount = cellMap[pk][sk].length;
+
+  function heatClass(count) {
+    if (!count) return "heat-0";
+    const r = count / maxCount;
+    if (r < 0.2)  return "heat-s1";
+    if (r < 0.45) return "heat-s2";
+    if (r < 0.7)  return "heat-s3";
+    return "heat-s4";
+  }
+
+  const totalListValue = items.reduce((s, i) => s + (i.default_price || 0), 0);
+
+  const headerCells = SLOW_STALE_BANDS
+    .map((b) => `<th class="hm-col-head">${escapeHtml(b.label)}</th>`).join("");
+
+  const bodyRows = SLOW_PRICE_BANDS.map((pb) => {
+    const dataCells = SLOW_STALE_BANDS.map((sb) => {
+      const cellItems  = cellMap[pb.key][sb.key];
+      const count      = cellItems.length;
+      const listVal    = cellItems.reduce((s, i) => s + (i.default_price || 0), 0);
+      return `
+        <td class="heatmap-cell ${heatClass(count)}"
+            data-pband="${escapeHtml(pb.key)}"
+            data-sband="${escapeHtml(sb.key)}"
+            title="${count} item${count !== 1 ? 's' : ''} · ${formatMoney(listVal)} list value">
+          <strong>${count}</strong>
+          <span>${count ? formatMoney(listVal) : "—"}</span>
+        </td>`;
+    }).join("");
+    return `<tr><td class="hm-band-label">${escapeHtml(pb.label)}</td>${dataCells}</tr>`;
+  }).join("");
+
   qs("#modalBody").innerHTML = `
-    <div class="mini-kpis">
-      <div><span>Total Slow Items</span><strong>${formatNumber(data.total_slow_items)}</strong></div>
-      <div><span>Cutoff</span><strong>${data.cutoff_days}+ days</strong></div>
+    <div class="slow-filters">
+      <div class="slow-filter-group">
+        <label for="slowCutoff">Cutoff (days not sold)</label>
+        <select id="slowCutoff">
+          ${[15, 30, 45, 60, 90, 120, 180].map((d) =>
+            `<option value="${d}" ${d === cutoffDays ? "selected" : ""}>${d} days</option>`
+          ).join("")}
+        </select>
+      </div>
+      <div class="slow-filter-group">
+        <label for="slowMinPrice">Min list price</label>
+        <select id="slowMinPrice">
+          <option value="0"    ${minPrice === 0    ? "selected" : ""}>Any price</option>
+          <option value="100"  ${minPrice === 100  ? "selected" : ""}>Rs 100+</option>
+          <option value="500"  ${minPrice === 500  ? "selected" : ""}>Rs 500+</option>
+          <option value="1000" ${minPrice === 1000 ? "selected" : ""}>Rs 1,000+</option>
+          <option value="2000" ${minPrice === 2000 ? "selected" : ""}>Rs 2,000+</option>
+          <option value="5000" ${minPrice === 5000 ? "selected" : ""}>Rs 5,000+</option>
+        </select>
+      </div>
+      <div class="slow-filter-group">
+        <label for="slowCategory">Category</label>
+        <select id="slowCategory">
+          ${allCategories.map((c) =>
+            `<option value="${escapeHtml(c)}" ${c === catFilter ? "selected" : ""}>${escapeHtml(c === "all" ? "All categories" : c)}</option>`
+          ).join("")}
+        </select>
+      </div>
     </div>
-    ${table([
-      { key: "name", label: "Item" },
-      { key: "category", label: "Category" },
-      { key: "price", label: "Default Price", num: true },
-      { key: "cost", label: "Known Cost", num: true },
-      { key: "last", label: "Last Sale" },
-      { key: "days", label: "Days", num: true },
-    ], data.items.map((item) => ({
-      name: escapeHtml(item.name),
-      category: escapeHtml(item.category),
-      price: formatMoney(item.default_price),
-      cost: item.cost_price == null ? `<span class="muted">Ignored</span>` : formatMoney(item.cost_price),
-      last: escapeHtml(item.last_sale_date || "Never"),
-      days: item.days_since_sale == null ? "-" : formatNumber(item.days_since_sale),
-    })))}
+    <div class="mini-kpis hm-summary">
+      <div><span>Matching Items</span><strong>${formatNumber(items.length)}</strong></div>
+      <div><span>Cutoff Applied</span><strong>${cutoffDays}+ days</strong></div>
+      <div><span>Total List Value</span><strong>${formatMoney(totalListValue)}</strong></div>
+    </div>
+    <p class="hm-hint">Price ↓ vs staleness →. Click any cell to see items sorted by highest price first.</p>
+    <div class="heatmap-wrap">
+      <table class="heatmap-table">
+        <thead>
+          <tr>
+            <th class="hm-corner">Price&nbsp;↓&nbsp;/&nbsp;Stale&nbsp;→</th>
+            ${headerCells}
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+    <div id="slowItemDetail" class="heatmap-detail" hidden></div>
   `;
+
+  // Cutoff change → re-fetch + re-render
+  qs("#slowCutoff").addEventListener("change", (e) => {
+    const newCutoff   = Number(e.target.value);
+    const newMinPrice = Number(qs("#slowMinPrice").value);
+    const newCat      = qs("#slowCategory").value;
+    qs("#modalBody").innerHTML = `<div class="empty-state">Loading...</div>`;
+    fetchJson(`/analytics/api/items/slow-moving?${params()}&days=${newCutoff}`)
+      .then((fresh) => { _slowItemsData = fresh; renderSlowItemsBody(fresh, newCutoff, newMinPrice, newCat); });
+  });
+
+  // Price/category changes → client-side re-filter only
+  qs("#slowMinPrice").addEventListener("change", (e) => {
+    renderSlowItemsBody(_slowItemsData, cutoffDays, Number(e.target.value), qs("#slowCategory").value);
+  });
+  qs("#slowCategory").addEventListener("change", (e) => {
+    renderSlowItemsBody(_slowItemsData, cutoffDays, Number(qs("#slowMinPrice").value), e.target.value);
+  });
+
+  // Cell click → expand detail sorted by price DESC
+  qsa(".heatmap-cell").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      const pb         = cell.dataset.pband;
+      const sb         = cell.dataset.sband;
+      const cellItems  = cellMap[pb]?.[sb] || [];
+      const pLabel     = SLOW_PRICE_BANDS.find((b) => b.key === pb)?.label || pb;
+      const sLabel     = SLOW_STALE_BANDS.find((b) => b.key === sb)?.label || sb;
+      const detail     = qs("#slowItemDetail");
+
+      const wasSelected = cell.classList.contains("selected");
+      qsa(".heatmap-cell").forEach((c) => c.classList.remove("selected"));
+      if (wasSelected) { detail.hidden = true; return; }
+
+      cell.classList.add("selected");
+
+      if (!cellItems.length) {
+        detail.innerHTML = `<div class="empty-state">No items in this segment.</div>`;
+      } else {
+        const sorted   = [...cellItems].sort((a, b) => (b.default_price || 0) - (a.default_price || 0));
+        const listVal  = sorted.reduce((s, i) => s + (i.default_price || 0), 0);
+        detail.innerHTML = `
+          <div class="hm-detail-header">
+            <span class="hm-detail-badge slow">${escapeHtml(pLabel)}</span>
+            <span class="hm-detail-badge secondary">${escapeHtml(sLabel)}</span>
+            <span class="hm-detail-meta">${sorted.length} item${sorted.length !== 1 ? 's' : ''} &middot; ${formatMoney(listVal)} list value &middot; sorted by price</span>
+          </div>
+          ${table(
+            [
+              { key: "name",     label: "Item" },
+              { key: "category", label: "Category" },
+              { key: "price",    label: "List Price",  num: true },
+              { key: "cost",     label: "Known Cost",  num: true },
+              { key: "last",     label: "Last Sale" },
+              { key: "days",     label: "Days Stale",  num: true },
+            ],
+            sorted.map((item) => ({
+              name:     escapeHtml(item.name),
+              category: escapeHtml(item.category || "-"),
+              price:    formatMoney(item.default_price),
+              cost:     item.cost_price == null
+                          ? `<span class="muted">—</span>`
+                          : formatMoney(item.cost_price),
+              last:     escapeHtml(item.last_sale_date || "Never"),
+              days:     item.days_since_sale == null
+                          ? `<span class="muted">Never sold</span>`
+                          : formatNumber(item.days_since_sale),
+            }))
+          )}`;
+      }
+
+      detail.hidden = false;
+      detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  });
 }
 
 function renderMarginModal() {
