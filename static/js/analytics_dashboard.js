@@ -498,31 +498,7 @@ async function renderOutstandingModal() {
   qs("#modalTabs").innerHTML = "";
   qs("#modalBody").innerHTML = `<div class="empty-state">Loading...</div>`;
   const data = await fetchJson(`/analytics/api/outstanding/detail?${params()}`);
-  qs("#modalBody").innerHTML = `
-    <div class="mini-kpis">
-      <div><span>Total Outstanding</span><strong>${formatMoney(data.total_outstanding)}</strong></div>
-      <div><span>Aging Basis</span><strong>Ledger</strong></div>
-    </div>
-    ${data.aging_buckets.map((bucket) => `
-      <div class="detail-card full">
-        <h3>${escapeHtml(bucket.bucket)} - ${formatMoney(bucket.total)}</h3>
-        ${table([
-          { key: "name", label: "Customer" },
-          { key: "outstanding", label: "Outstanding", num: true },
-          { key: "days", label: "Days Open", num: true },
-          { key: "oldest", label: "Oldest Activity" },
-        ], bucket.customers.map((customer) => ({
-          dataset: `data-customer-id="${customer.customer_id}"`,
-          name: `<strong>${escapeHtml(customer.name)}</strong><br><span class="muted">${escapeHtml(customer.phone || "")}</span>`,
-          outstanding: formatMoney(customer.outstanding),
-          days: formatNumber(customer.days_open),
-          oldest: escapeHtml(customer.oldest_activity || "-"),
-        })), { clickable: true })}
-      </div>
-    `).join("")}
-    <p class="muted">${escapeHtml(data.note)}</p>
-  `;
-  bindCustomerRows();
+  renderOutstandingBody(data);
 }
 
 async function renderSlowItemsModal() {
@@ -574,6 +550,71 @@ function bindCustomerRows() {
   });
 }
 
+function agingBucketRank(bucketName) {
+  if (bucketName.startsWith("90+")) return 91;
+  const match = bucketName.match(/^(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function sortAgingBuckets(buckets, sortKey) {
+  const rows = [...buckets];
+  if (sortKey === "age_newest") {
+    return rows.sort((a, b) => agingBucketRank(a.bucket) - agingBucketRank(b.bucket));
+  }
+  if (sortKey === "amount_high") {
+    return rows.sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+  }
+  if (sortKey === "amount_low") {
+    return rows.sort((a, b) => Number(a.total || 0) - Number(b.total || 0));
+  }
+  if (sortKey === "customers_high") {
+    return rows.sort((a, b) => (b.customers || []).length - (a.customers || []).length);
+  }
+  return rows.sort((a, b) => agingBucketRank(b.bucket) - agingBucketRank(a.bucket));
+}
+
+function renderOutstandingBody(data, sortKey = "age_oldest") {
+  const sortedBuckets = sortAgingBuckets(data.aging_buckets || [], sortKey);
+  qs("#modalBody").innerHTML = `
+    <div class="mini-kpis">
+      <div><span>Total Outstanding</span><strong>${formatMoney(data.total_outstanding)}</strong></div>
+      <div><span>Aging Basis</span><strong>Ledger</strong></div>
+    </div>
+    <div class="modal-tools">
+      <label for="agingSort">Sort credit age tiles</label>
+      <select id="agingSort">
+        <option value="age_oldest" ${sortKey === "age_oldest" ? "selected" : ""}>Oldest age first</option>
+        <option value="age_newest" ${sortKey === "age_newest" ? "selected" : ""}>Newest age first</option>
+        <option value="amount_high" ${sortKey === "amount_high" ? "selected" : ""}>Highest outstanding first</option>
+        <option value="amount_low" ${sortKey === "amount_low" ? "selected" : ""}>Lowest outstanding first</option>
+        <option value="customers_high" ${sortKey === "customers_high" ? "selected" : ""}>Most customers first</option>
+      </select>
+    </div>
+    ${sortedBuckets.map((bucket) => `
+      <div class="detail-card full">
+        <h3>${escapeHtml(bucket.bucket)} - ${formatMoney(bucket.total)}</h3>
+        ${table([
+          { key: "name", label: "Customer" },
+          { key: "outstanding", label: "Outstanding", num: true },
+          { key: "days", label: "Days Open", num: true },
+          { key: "oldest", label: "Oldest Activity" },
+        ], bucket.customers.map((customer) => ({
+          dataset: `data-customer-id="${customer.customer_id}"`,
+          name: `<strong>${escapeHtml(customer.name)}</strong><br><span class="muted">${escapeHtml(customer.phone || "")}</span>`,
+          outstanding: formatMoney(customer.outstanding),
+          days: formatNumber(customer.days_open),
+          oldest: escapeHtml(customer.oldest_activity || "-"),
+        })), { clickable: true })}
+      </div>
+    `).join("")}
+    <p class="muted">${escapeHtml(data.note)}</p>
+  `;
+  qs("#agingSort").addEventListener("change", (event) => {
+    renderOutstandingBody(data, event.target.value);
+  });
+  bindCustomerRows();
+}
+
 async function openCustomer(customerId) {
   qs("#analyticsModal").hidden = true;
   qs("#modalTabs").innerHTML = "";
@@ -596,6 +637,9 @@ async function openCustomer(customerId) {
       <div><span>Outstanding</span><strong>${formatMoney(summary.outstanding)}</strong></div>
       <div><span>Bills</span><strong>${formatNumber(summary.bills_count)}</strong></div>
       <div><span>Repeat</span><strong>${summary.is_repeat ? "Yes" : "No"}</strong></div>
+    </div>
+    <div class="modal-actions">
+      <a class="btn-ghost" href="/customers/${customer.id}/ledger">Open Ledger</a>
     </div>
     <div class="modal-grid">
       <div class="detail-card">

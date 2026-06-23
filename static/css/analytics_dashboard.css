@@ -697,6 +697,44 @@ body {
   font-size: 18px;
 }
 
+.modal-actions,
+.modal-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.modal-actions .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.modal-tools {
+  justify-content: flex-end;
+}
+
+.modal-tools label {
+  color: var(--ad-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.modal-tools select {
+  height: 34px;
+  min-width: 210px;
+  border: 1px solid var(--ad-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ad-text);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
 .modal-chart {
   position: relative;
   height: 260px;
