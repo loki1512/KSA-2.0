@@ -176,12 +176,93 @@ body {
   font-size: 12px;
 }
 
+.metric-label-row,
+.panel-title,
+.metric-info-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .metric-label {
   color: var(--ad-muted);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.info-dot {
+  position: relative;
+  z-index: 2;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #b8c0cc;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: none;
+  cursor: help;
+}
+
+.info-dot::after {
+  content: attr(data-info);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  width: min(280px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.info-dot::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 3px);
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #111827;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.info-dot:hover,
+.info-dot:focus-visible {
+  border-color: var(--ad-blue);
+  color: var(--ad-blue);
+}
+
+.info-dot:hover::after,
+.info-dot:hover::before,
+.info-dot:focus-visible::after,
+.info-dot:focus-visible::before {
+  opacity: 1;
+  visibility: visible;
 }
 
 .metric-revenue {
@@ -394,6 +475,17 @@ body {
   display: block;
   color: var(--ad-muted);
   font-size: 12px;
+}
+
+.snapshot-list .metric-info-label {
+  display: inline-flex;
+}
+
+.snapshot-list .info-dot,
+.priority-row .info-dot {
+  display: inline-flex;
+  color: var(--ad-muted);
+  font-size: 11px;
 }
 
 .snapshot-list strong,

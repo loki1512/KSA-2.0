@@ -649,6 +649,10 @@ function handleModalRequest(type) {
 }
 
 function bindEvents() {
+  qsa(".info-dot").forEach((dot) => {
+    dot.addEventListener("click", (event) => event.stopPropagation());
+    dot.addEventListener("pointerdown", (event) => event.stopPropagation());
+  });
   qs("#periodSelect").addEventListener("change", (event) => {
     state.period = event.target.value;
     const custom = state.period === "custom";

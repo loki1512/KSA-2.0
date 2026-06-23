@@ -8,6 +8,21 @@ GET /analytics
 
 It is separate from the existing daily, monthly, quarterly, and yearly dashboards. The page is designed for drill-down analytics: KPI cards open detail views, category rows open category detail, and customer rows open customer profiles.
 
+## Analytics Dashboard 2.0 Changes
+
+The 2.0 update turns the analytics page into a focused drill-down workspace instead of a static summary page.
+
+Main changes:
+
+- Adds an admin-only analytics blueprint registered from `app.py`.
+- Adds a dedicated `/analytics` page with period controls, KPI cards, section tabs, Chart.js visualizations, and drill-down modals.
+- Adds JSON endpoints for summary metrics, revenue detail, category detail, customer profiles, outstanding debt, and slow-moving items.
+- Adds cross-page navigation links from the daily and period dashboards.
+- Adds page-scoped JavaScript and CSS for dashboard state, charts, modal lifecycle, responsive layouts, and table rendering.
+- Adds local SQLite indexes to improve dashboard query performance during development.
+
+The dashboard is intentionally read-only. It does not create bills, payments, transactions, items, customers, or returns.
+
 ## Files Changed
 
 - `routes/analytics.py`
@@ -55,6 +70,32 @@ The summary API powers the default executive view and returns the current P0 met
 - top products
 - margin by category using valid cost rows only
 
+### API Data Contracts
+
+`GET /analytics/api/summary` returns the dashboard landing payload:
+
+- `period` and `previous_period`
+- `revenue`: total, previous total, growth, change, bills, average bill, units, units per bill, revenue per customer, and new/repeat split
+- `customers`: active, new, repeat, repeat percentage, and top-five customer concentration percentage
+- `cash`: payments, collection rate, outstanding, outstanding percentage, top debtors, and aging bucket summaries
+- `margin`: known cost, costed revenue, gross margin, margin percentage, cost rule note, and category margin rows
+- `categories`, `top_products`, and `slow_items`
+
+`GET /analytics/api/revenue/detail` returns:
+
+- daily revenue rows for charts and the trend table
+- new and repeat customer revenue groups
+- category revenue with units, bill count, and revenue share
+- top customers for the selected period
+
+`GET /analytics/api/category/<category>/detail` returns category totals, item rows, and a daily category revenue trend. The frontend currently renders the totals and item table.
+
+`GET /analytics/api/customer/<customer_id>/profile` returns profile details, lifetime summary, recent purchases, and recent payments for the customer modal.
+
+`GET /analytics/api/outstanding/detail` returns aging buckets with customer rows. Outstanding is calculated from positive ledger transaction balances as of the selected period end date.
+
+`GET /analytics/api/items/slow-moving` returns catalog items with no sale, or no sale within the requested cutoff window. The frontend currently calls it with `days=30`.
+
 ## Dashboard Layout
 
 The analytics page is organized to keep the first screen focused:
@@ -73,6 +114,30 @@ Common query parameters:
 - `period=last_30`
 - `period=last_month`
 - `period=custom&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`
+
+For custom periods, if `end_date` is earlier than `start_date`, the backend swaps the dates and returns a valid range.
+
+## Frontend Behavior
+
+`static/js/analytics_dashboard.js` keeps dashboard state in a single `state` object:
+
+- selected period and custom date inputs
+- summary API payload
+- revenue detail API payload
+- active modal chart
+- executive and revenue-tab chart instances
+
+Initial load fetches summary and revenue detail in parallel. The summary payload renders KPI cards, tab panels, lists, and snapshot values. The revenue detail payload renders the mini line chart and the revenue tab bar chart.
+
+Interactive entry points:
+
+- KPI cards with `data-modal` open revenue, outstanding, margin, or slow-items modals.
+- KPI cards with `data-tab-target` switch to the related dashboard tab.
+- Category rows call the category detail API and open a category modal.
+- Customer rows call the customer profile API and open the customer modal.
+- `Escape`, the backdrop, and close buttons close modals and destroy active modal charts.
+
+When changing dashboard CSS or JavaScript behavior, remember the service worker cache note from [Frontend Guide](frontend.md): update static asset query strings if the template starts versioning these files.
 
 ## Cost Price Rule
 
@@ -120,6 +185,15 @@ The CSS explicitly preserves `hidden` behavior for flex-based modals:
 ```
 
 This prevents stacked or overlapping modal windows.
+
+## Query Notes
+
+- Date filtering uses an inclusive date range by converting the selected end date to the next midnight and filtering with `< end`.
+- PostgreSQL uses `CAST(timestamp AS DATE)` while SQLite uses `date(timestamp)` through `_date_col`.
+- Category joins are case-insensitive and name-based with `lower(Item.name) == lower(BillItem.item_name)`.
+- New vs repeat customers are derived from each customer's first bill date.
+- Top customer concentration is calculated from the top five customers' revenue share for the selected period.
+- Revenue quality is currently a frontend score derived from collection rate, outstanding percentage, and repeat customer percentage.
 
 ## Local Indexes Created
 

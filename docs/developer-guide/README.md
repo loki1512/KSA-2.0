@@ -10,6 +10,7 @@ This guide is the engineering handbook for KSA. It is written for developers who
 - [Backend Guide](backend.md)
 - [API Guide](api.md)
 - [Interactive Analytics Dashboard](analytics-dashboard.md)
+- [Unique Features And Business Decisions](unique-features-and-business-decisions.md)
 - [Frontend Guide](frontend.md)
 - [Testing And Quality](testing.md)
 - [Security Guide](security.md)

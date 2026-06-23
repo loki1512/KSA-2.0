@@ -55,42 +55,66 @@
 
   <section class="kpi-grid" aria-label="Analytics KPIs">
     <button class="metric-card metric-revenue" type="button" data-modal="revenue">
-      <span class="metric-label">Revenue</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Revenue</span>
+        <span class="info-dot" data-info="Total final bill amount for the selected period. The small line compares it with the previous equal-length period." title="Total final bill amount for the selected period. The small line compares it with the previous equal-length period.">i</span>
+      </span>
       <strong id="kpiRevenue">-</strong>
       <span id="kpiRevenueGrowth">-</span>
     </button>
     <button class="metric-card metric-cash" type="button" data-modal="outstanding">
-      <span class="metric-label">Collection Rate</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Collection Rate</span>
+        <span class="info-dot" data-info="Payments received during the selected period divided by revenue for the same period." title="Payments received during the selected period divided by revenue for the same period.">i</span>
+      </span>
       <strong id="kpiCollectionRate">-</strong>
       <span id="kpiPayments">-</span>
     </button>
     <button class="metric-card metric-margin" type="button" data-modal="margin">
-      <span class="metric-label">Gross Margin</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Gross Margin</span>
+        <span class="info-dot" data-info="Revenue minus known cost, using only sold rows where cost price is filled and greater than zero." title="Revenue minus known cost, using only sold rows where cost price is filled and greater than zero.">i</span>
+      </span>
       <strong id="kpiMargin">-</strong>
       <span id="kpiMarginPct">-</span>
     </button>
     <button class="metric-card metric-cash" type="button" data-modal="outstanding">
-      <span class="metric-label">Outstanding</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Outstanding</span>
+        <span class="info-dot" data-info="Total positive customer ledger balance as of the selected period end date." title="Total positive customer ledger balance as of the selected period end date.">i</span>
+      </span>
       <strong id="kpiOutstanding">-</strong>
       <span id="kpiOutstandingPct">-</span>
     </button>
     <button class="metric-card metric-customer" type="button" data-tab-target="customers">
-      <span class="metric-label">Repeat Customers</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Repeat Customers</span>
+        <span class="info-dot" data-info="Share of active customers in this period whose first bill was before the selected period." title="Share of active customers in this period whose first bill was before the selected period.">i</span>
+      </span>
       <strong id="kpiRepeatCustomerPct">-</strong>
       <span id="kpiActiveCustomers">-</span>
     </button>
     <button class="metric-card metric-concentration" type="button" data-tab-target="customers">
-      <span class="metric-label">Top Customer Concentration</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Top Customer Concentration</span>
+        <span class="info-dot" data-info="How much selected-period revenue came from the top five customers." title="How much selected-period revenue came from the top five customers.">i</span>
+      </span>
       <strong id="kpiConcentration">-</strong>
       <span>Top 5 customers</span>
     </button>
     <button class="metric-card metric-products" type="button" data-tab-target="products">
-      <span class="metric-label">Top Product</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Top Product</span>
+        <span class="info-dot" data-info="The product with the highest revenue in the selected period, with its revenue and quantity sold." title="The product with the highest revenue in the selected period, with its revenue and quantity sold.">i</span>
+      </span>
       <strong id="kpiTopProduct">-</strong>
       <span id="kpiTopProductMeta">-</span>
     </button>
     <button class="metric-card metric-slow" type="button" data-modal="slow-items">
-      <span class="metric-label">Slow Items</span>
+      <span class="metric-label-row">
+        <span class="metric-label">Slow Items</span>
+        <span class="info-dot" data-info="Catalog items that were never sold or have not sold in the last 30 days as of the period end date." title="Catalog items that were never sold or have not sold in the last 30 days as of the period end date.">i</span>
+      </span>
       <strong id="kpiSlowItems">-</strong>
       <span>Not sold in 30+ days</span>
     </button>
@@ -109,7 +133,10 @@
     <div class="dashboard-grid">
       <div class="panel panel-wide">
         <div class="panel-head">
-          <h3>Revenue Trend</h3>
+          <div class="panel-title">
+            <h3>Revenue Trend</h3>
+            <span class="info-dot" data-info="Daily sales movement for the selected period. Open it to see daily rows, customer splits, categories, and top customers." title="Daily sales movement for the selected period. Open it to see daily rows, customer splits, categories, and top customers.">i</span>
+          </div>
           <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
         </div>
         <div class="chart-box"><canvas id="revenueMiniChart"></canvas></div>
@@ -117,19 +144,25 @@
 
       <div class="panel">
         <div class="panel-head">
-          <h3>Decision Snapshot</h3>
+          <div class="panel-title">
+            <h3>Decision Snapshot</h3>
+            <span class="info-dot" data-info="Quick operating ratios that help judge whether sales are broad, healthy, and efficient." title="Quick operating ratios that help judge whether sales are broad, healthy, and efficient.">i</span>
+          </div>
         </div>
         <div class="snapshot-list">
-          <div><span>Revenue per customer</span><strong id="snapRevenuePerCustomer">-</strong></div>
-          <div><span>Average bill</span><strong id="snapAvgBill">-</strong></div>
-          <div><span>Units per bill</span><strong id="snapUnitsPerBill">-</strong></div>
-          <div><span>Revenue quality</span><strong id="snapRevenueQuality">-</strong></div>
+          <div><span class="metric-info-label"><span>Revenue per customer</span><span class="info-dot" data-info="Total revenue divided by active customers in the selected period." title="Total revenue divided by active customers in the selected period.">i</span></span><strong id="snapRevenuePerCustomer">-</strong></div>
+          <div><span class="metric-info-label"><span>Average bill</span><span class="info-dot" data-info="Total revenue divided by number of bills in the selected period." title="Total revenue divided by number of bills in the selected period.">i</span></span><strong id="snapAvgBill">-</strong></div>
+          <div><span class="metric-info-label"><span>Units per bill</span><span class="info-dot" data-info="Total quantity sold divided by number of bills in the selected period." title="Total quantity sold divided by number of bills in the selected period.">i</span></span><strong id="snapUnitsPerBill">-</strong></div>
+          <div><span class="metric-info-label"><span>Revenue quality</span><span class="info-dot" data-info="Frontend score from collection rate, outstanding percentage, and repeat customer percentage. Higher means cleaner revenue." title="Frontend score from collection rate, outstanding percentage, and repeat customer percentage. Higher means cleaner revenue.">i</span></span><strong id="snapRevenueQuality">-</strong></div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <h3>P0 Checklist</h3>
+          <div class="panel-title">
+            <h3>P0 Checklist</h3>
+            <span class="info-dot" data-info="Priority metrics to review first: revenue, collections, debt, repeat buying, concentration, products, and margin." title="Priority metrics to review first: revenue, collections, debt, repeat buying, concentration, products, and margin.">i</span>
+          </div>
         </div>
         <div id="priorityList" class="priority-list"></div>
       </div>
@@ -140,7 +173,10 @@
     <div class="dashboard-grid">
       <div class="panel panel-wide">
       <div class="panel-head">
-        <h3>Revenue Trend</h3>
+        <div class="panel-title">
+          <h3>Revenue Trend</h3>
+          <span class="info-dot" data-info="Bar chart of revenue by day for the selected period." title="Bar chart of revenue by day for the selected period.">i</span>
+        </div>
         <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
       </div>
         <div class="chart-box"><canvas id="revenueTabChart"></canvas></div>
@@ -148,19 +184,25 @@
 
       <div class="panel">
         <div class="panel-head">
-          <h3>Sales Productivity</h3>
+          <div class="panel-title">
+            <h3>Sales Productivity</h3>
+            <span class="info-dot" data-info="Shows how much value each bill and customer is producing in the selected period." title="Shows how much value each bill and customer is producing in the selected period.">i</span>
+          </div>
         </div>
         <div class="snapshot-list">
-          <div><span>Average bill value</span><strong id="revenueAvgBill">-</strong></div>
-          <div><span>Revenue per customer</span><strong id="revenuePerCustomer">-</strong></div>
-          <div><span>Revenue per bill</span><strong id="revenuePerBill">-</strong></div>
-          <div><span>Units per bill</span><strong id="revenueUnitsPerBill">-</strong></div>
+          <div><span class="metric-info-label"><span>Average bill value</span><span class="info-dot" data-info="Same as average bill: total revenue divided by bill count." title="Same as average bill: total revenue divided by bill count.">i</span></span><strong id="revenueAvgBill">-</strong></div>
+          <div><span class="metric-info-label"><span>Revenue per customer</span><span class="info-dot" data-info="Total revenue divided by distinct billed customers." title="Total revenue divided by distinct billed customers.">i</span></span><strong id="revenuePerCustomer">-</strong></div>
+          <div><span class="metric-info-label"><span>Revenue per bill</span><span class="info-dot" data-info="Total revenue divided by bills in the selected period." title="Total revenue divided by bills in the selected period.">i</span></span><strong id="revenuePerBill">-</strong></div>
+          <div><span class="metric-info-label"><span>Units per bill</span><span class="info-dot" data-info="Average number of item units sold per bill." title="Average number of item units sold per bill.">i</span></span><strong id="revenueUnitsPerBill">-</strong></div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <h3>Categories</h3>
+          <div class="panel-title">
+            <h3>Categories</h3>
+            <span class="info-dot" data-info="Top categories by revenue for the selected period. Click a category to inspect item-level sales and known margin." title="Top categories by revenue for the selected period. Click a category to inspect item-level sales and known margin.">i</span>
+          </div>
           <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
         </div>
         <div id="categoryList" class="category-list"></div>
@@ -172,7 +214,10 @@
     <div class="dashboard-grid compact">
       <div class="panel">
       <div class="panel-head">
-        <h3>New vs Repeat</h3>
+        <div class="panel-title">
+          <h3>New vs Repeat</h3>
+          <span class="info-dot" data-info="Revenue split by customers whose first bill is inside this period versus before this period." title="Revenue split by customers whose first bill is inside this period versus before this period.">i</span>
+        </div>
         <button type="button" class="btn-ghost" data-modal="revenue">Open</button>
       </div>
       <div class="split-metrics">
@@ -191,13 +236,16 @@
 
       <div class="panel">
         <div class="panel-head">
-          <h3>Customer Value</h3>
+          <div class="panel-title">
+            <h3>Customer Value</h3>
+            <span class="info-dot" data-info="Counts active and new customers, repeat percentage, and dependency on the top five customers." title="Counts active and new customers, repeat percentage, and dependency on the top five customers.">i</span>
+          </div>
         </div>
         <div class="snapshot-list">
-          <div><span>Active customers</span><strong id="customerActive">-</strong></div>
-          <div><span>New customers</span><strong id="customerNew">-</strong></div>
-          <div><span>Repeat customer %</span><strong id="customerRepeatPct">-</strong></div>
-          <div><span>Top 5 concentration</span><strong id="customerConcentration">-</strong></div>
+          <div><span class="metric-info-label"><span>Active customers</span><span class="info-dot" data-info="Distinct customers with at least one bill in the selected period." title="Distinct customers with at least one bill in the selected period.">i</span></span><strong id="customerActive">-</strong></div>
+          <div><span class="metric-info-label"><span>New customers</span><span class="info-dot" data-info="Customers whose first recorded bill falls inside the selected period." title="Customers whose first recorded bill falls inside the selected period.">i</span></span><strong id="customerNew">-</strong></div>
+          <div><span class="metric-info-label"><span>Repeat customer %</span><span class="info-dot" data-info="Repeat customers divided by active customers." title="Repeat customers divided by active customers.">i</span></span><strong id="customerRepeatPct">-</strong></div>
+          <div><span class="metric-info-label"><span>Top 5 concentration</span><span class="info-dot" data-info="Revenue share contributed by the five highest-spending customers." title="Revenue share contributed by the five highest-spending customers.">i</span></span><strong id="customerConcentration">-</strong></div>
         </div>
       </div>
     </div>
@@ -207,14 +255,20 @@
     <div class="dashboard-grid compact">
       <div class="panel">
         <div class="panel-head">
-          <h3>Aging Buckets</h3>
+          <div class="panel-title">
+            <h3>Aging Buckets</h3>
+            <span class="info-dot" data-info="Outstanding customer ledger balances grouped by how long the oldest open activity has been pending." title="Outstanding customer ledger balances grouped by how long the oldest open activity has been pending.">i</span>
+          </div>
           <button type="button" class="btn-ghost" data-modal="outstanding">Open</button>
         </div>
         <div id="agingList" class="category-list"></div>
       </div>
       <div class="panel">
         <div class="panel-head">
-          <h3>Top Debtors</h3>
+          <div class="panel-title">
+            <h3>Top Debtors</h3>
+            <span class="info-dot" data-info="Customers with the highest positive outstanding ledger balances as of the period end date." title="Customers with the highest positive outstanding ledger balances as of the period end date.">i</span>
+          </div>
           <button type="button" class="btn-ghost" data-modal="outstanding">Open</button>
         </div>
         <div id="debtorList" class="category-list"></div>
@@ -226,20 +280,26 @@
     <div class="dashboard-grid compact">
       <div class="panel">
         <div class="panel-head">
-          <h3>Top Products</h3>
+          <div class="panel-title">
+            <h3>Top Products</h3>
+            <span class="info-dot" data-info="Highest revenue products in the selected period, including revenue share and units sold." title="Highest revenue products in the selected period, including revenue share and units sold.">i</span>
+          </div>
         </div>
         <div id="productList" class="category-list"></div>
       </div>
       <div class="panel">
         <div class="panel-head">
-          <h3>Product Health</h3>
+          <div class="panel-title">
+            <h3>Product Health</h3>
+            <span class="info-dot" data-info="Signals product movement. Slow-moving products are live; future rows are placeholders for planned analytics." title="Signals product movement. Slow-moving products are live; future rows are placeholders for planned analytics.">i</span>
+          </div>
           <button type="button" class="btn-ghost" data-modal="slow-items">Open</button>
         </div>
         <div class="snapshot-list">
-          <div><span>Slow-moving products</span><strong id="productSlowItems">-</strong></div>
-          <div><span>Dead / never-sold products</span><strong>Future</strong></div>
-          <div><span>Rising products</span><strong>Future</strong></div>
-          <div><span>Cross-sell</span><strong>Future</strong></div>
+          <div><span class="metric-info-label"><span>Slow-moving products</span><span class="info-dot" data-info="Catalog items with no sale in the last 30 days, including never-sold items." title="Catalog items with no sale in the last 30 days, including never-sold items.">i</span></span><strong id="productSlowItems">-</strong></div>
+          <div><span class="metric-info-label"><span>Dead / never-sold products</span><span class="info-dot" data-info="Planned metric for products that never sell or have very old sales history." title="Planned metric for products that never sell or have very old sales history.">i</span></span><strong>Future</strong></div>
+          <div><span class="metric-info-label"><span>Rising products</span><span class="info-dot" data-info="Planned metric for products whose sales trend is improving." title="Planned metric for products whose sales trend is improving.">i</span></span><strong>Future</strong></div>
+          <div><span class="metric-info-label"><span>Cross-sell</span><span class="info-dot" data-info="Planned metric for products commonly bought together." title="Planned metric for products commonly bought together.">i</span></span><strong>Future</strong></div>
         </div>
       </div>
     </div>
@@ -249,20 +309,26 @@
     <div class="dashboard-grid compact">
       <div class="panel">
       <div class="panel-head">
-          <h3>Margin by Category</h3>
+          <div class="panel-title">
+            <h3>Margin by Category</h3>
+            <span class="info-dot" data-info="Category gross margin calculated only from rows with valid cost price." title="Category gross margin calculated only from rows with valid cost price.">i</span>
+          </div>
           <button type="button" class="btn-ghost" data-modal="margin">Open</button>
       </div>
         <div id="marginCategoryList" class="category-list"></div>
       </div>
       <div class="panel">
         <div class="panel-head">
-          <h3>Cost Data Quality</h3>
+          <div class="panel-title">
+            <h3>Cost Data Quality</h3>
+            <span class="info-dot" data-info="Shows how much revenue can be trusted for margin analysis based on filled cost prices." title="Shows how much revenue can be trusted for margin analysis based on filled cost prices.">i</span>
+          </div>
         </div>
         <div class="snapshot-list">
-          <div><span>Revenue with valid cost</span><strong id="costedRevenue">-</strong></div>
-          <div><span>Known cost</span><strong id="knownCost">-</strong></div>
-          <div><span>Margin confidence</span><strong id="marginConfidence">-</strong></div>
-          <div><span>Rule</span><strong>Cost &gt; 0</strong></div>
+          <div><span class="metric-info-label"><span>Revenue with valid cost</span><span class="info-dot" data-info="Sales revenue from bill item rows where cost price is known and greater than zero." title="Sales revenue from bill item rows where cost price is known and greater than zero.">i</span></span><strong id="costedRevenue">-</strong></div>
+          <div><span class="metric-info-label"><span>Known cost</span><span class="info-dot" data-info="Cost price multiplied by sold quantity for rows with valid cost." title="Cost price multiplied by sold quantity for rows with valid cost.">i</span></span><strong id="knownCost">-</strong></div>
+          <div><span class="metric-info-label"><span>Margin confidence</span><span class="info-dot" data-info="Revenue with valid cost divided by total revenue. Higher means margin numbers cover more sales." title="Revenue with valid cost divided by total revenue. Higher means margin numbers cover more sales.">i</span></span><strong id="marginConfidence">-</strong></div>
+          <div><span class="metric-info-label"><span>Rule</span><span class="info-dot" data-info="Cost analytics ignore blank cost and zero cost to avoid false profit." title="Cost analytics ignore blank cost and zero cost to avoid false profit.">i</span></span><strong>Cost &gt; 0</strong></div>
         </div>
       </div>
     </div>
