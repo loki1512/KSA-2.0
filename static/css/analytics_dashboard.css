@@ -541,17 +541,23 @@ body {
 
 .modal-tabs {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   overflow-x: auto;
-  padding: 10px 20px 0;
-  border-bottom: 1px solid var(--ad-border);
+  overflow-y: visible;
+  flex-shrink: 0;
+  padding: 0 20px 0;
+  background: #f8fafc;
+  border-bottom: 2px solid var(--ad-border);
+  /* Ensure the 3px active tab bottom-border is never clipped */
+  clip-path: inset(0 0 -4px 0);
 }
 
 .modal-tab {
-  height: 36px;
-  padding: 0 12px;
+  height: 40px;
+  padding: 0 14px;
   border: 0;
   border-bottom: 3px solid transparent;
+  margin-bottom: -2px;   /* sit the 3px indicator flush on the container border */
   background: transparent;
   color: var(--ad-muted);
   font: inherit;
@@ -559,12 +565,19 @@ body {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.modal-tab:hover {
+  color: var(--ad-text);
 }
 
 .modal-tab.active {
   color: var(--ad-blue);
   border-bottom-color: var(--ad-blue);
+  background: transparent;
 }
+
 
 .modal-body {
   overflow: auto;
@@ -822,4 +835,192 @@ body {
   .modal-body {
     padding: 14px;
   }
+}
+
+/* ─────────────────────────────────────────────────────────
+   PAYMENT HEATMAP
+   ───────────────────────────────────────────────────────── */
+.hm-summary.mini-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hm-hint {
+  margin: 0 0 12px;
+  color: var(--ad-muted);
+  font-size: 12px;
+}
+
+.heatmap-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+}
+
+.heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* Corner label */
+.hm-corner {
+  min-width: 140px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  border-bottom: 1px solid var(--ad-border);
+  border-right: 1px solid var(--ad-border);
+  white-space: nowrap;
+}
+
+/* Column headers (Today / 1-7 Days / 8-30 Days) */
+.hm-col-head {
+  padding: 12px 14px;
+  background: #f8fafc;
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  border-bottom: 1px solid var(--ad-border);
+  border-right: 1px solid var(--ad-border);
+}
+
+.hm-col-head:last-child {
+  border-right: 0;
+}
+
+/* Band label column (Rs 50k+, etc.) */
+.hm-band-label {
+  padding: 0 14px;
+  min-width: 140px;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ad-text);
+  border-bottom: 1px solid var(--ad-border);
+  border-right: 1px solid var(--ad-border);
+  white-space: nowrap;
+}
+
+.heatmap-table tbody tr:last-child .hm-band-label,
+.heatmap-table tbody tr:last-child .heatmap-cell {
+  border-bottom: 0;
+}
+
+/* Data cells */
+.heatmap-cell {
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  border-bottom: 1px solid var(--ad-border);
+  border-right: 1px solid var(--ad-border);
+  transition: filter 0.15s, outline 0.1s;
+  vertical-align: middle;
+}
+
+.heatmap-cell:last-child {
+  border-right: 0;
+}
+
+.heatmap-cell strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.heatmap-cell span {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Heat intensity: count = 0 → cool grey; high → vibrant green */
+.heat-0 {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.heat-1 {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.heat-2 {
+  background: #6ee7b7;
+  color: #064e3b;
+}
+
+.heat-3 {
+  background: #10b981;
+  color: #fff;
+}
+
+.heat-4 {
+  background: #059669;
+  color: #fff;
+}
+
+/* Hover: brighten */
+.heatmap-cell:not(.heat-0):hover {
+  filter: brightness(1.08);
+}
+
+.heat-0:hover {
+  background: #f1f5f9;
+}
+
+/* Selected cell: ring + deepen */
+.heatmap-cell.selected {
+  outline: 3px solid var(--ad-blue);
+  outline-offset: -3px;
+  z-index: 1;
+  position: relative;
+}
+
+/* Expanded detail panel below the grid */
+.heatmap-detail {
+  margin-top: 16px;
+}
+
+.heatmap-detail[hidden] {
+  display: none;
+}
+
+.hm-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.hm-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #059669;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.hm-detail-badge.secondary {
+  background: var(--ad-blue);
+}
+
+.hm-detail-meta {
+  color: var(--ad-muted);
+  font-size: 13px;
 }

@@ -494,11 +494,24 @@ async function openCategory(category) {
 }
 
 async function renderOutstandingModal() {
-  openModal("Outstanding Debt", "Ledger");
+  openModal("Outstanding & Collections", "Ledger");
   qs("#modalTabs").innerHTML = "";
   qs("#modalBody").innerHTML = `<div class="empty-state">Loading...</div>`;
   const data = await fetchJson(`/analytics/api/outstanding/detail?${params()}`);
-  renderOutstandingBody(data);
+  _outstandingLoaded(data, "aging");
+}
+
+function _outstandingLoaded(data, activeTab) {
+  setTabs([
+    { key: "aging",   label: "Aging" },
+    { key: "heatmap", label: "Recent Payments" },
+  ], activeTab, (tab) => _outstandingLoaded(data, tab));
+
+  if (activeTab === "aging") {
+    renderOutstandingBody(data, "age_oldest");
+  } else {
+    renderPaymentHeatmap(data.recent_payments);
+  }
 }
 
 async function renderSlowItemsModal() {
@@ -613,6 +626,135 @@ function renderOutstandingBody(data, sortKey = "age_oldest") {
     renderOutstandingBody(data, event.target.value);
   });
   bindCustomerRows();
+}
+
+// ─────────────────────────────────────────────────────────
+// PAYMENT HEATMAP  (Recent Payments tab)
+// ─────────────────────────────────────────────────────────
+function renderPaymentHeatmap(heatmap) {
+  if (!heatmap) {
+    qs("#modalBody").innerHTML = `<div class="empty-state">No payment data available for this period.</div>`;
+    return;
+  }
+
+  const { basis, bands, recency, cells } = heatmap;
+
+  // Normalise counts so we can assign heat-intensity CSS classes
+  let maxCount = 1;
+  for (const band of bands) {
+    for (const bucket of recency) {
+      const count = cells[band.key]?.[bucket.key]?.count || 0;
+      if (count > maxCount) maxCount = count;
+    }
+  }
+
+  function heatClass(count) {
+    if (!count) return "heat-0";
+    const r = count / maxCount;
+    if (r < 0.2)  return "heat-1";
+    if (r < 0.45) return "heat-2";
+    if (r < 0.7)  return "heat-3";
+    return "heat-4";
+  }
+
+  const headerCells = recency
+    .map((r) => `<th class="hm-col-head">${escapeHtml(r.label)}</th>`)
+    .join("");
+
+  const bodyRows = bands
+    .map((band) => {
+      const dataCells = recency
+        .map((bucket) => {
+          const cell = cells[band.key]?.[bucket.key] || { count: 0, total: 0, payments: [] };
+          return `
+            <td class="heatmap-cell ${heatClass(cell.count)}"
+                data-band="${escapeHtml(band.key)}"
+                data-recency="${escapeHtml(bucket.key)}"
+                title="${cell.count} payment${cell.count !== 1 ? "s" : ""} · ${formatMoney(cell.total)}">
+              <strong>${cell.count}</strong>
+              <span>${cell.count ? formatMoney(cell.total) : "—"}</span>
+            </td>`;
+        })
+        .join("");
+      return `<tr><td class="hm-band-label">${escapeHtml(band.label)}</td>${dataCells}</tr>`;
+    })
+    .join("");
+
+  qs("#modalBody").innerHTML = `
+    <div class="mini-kpis hm-summary">
+      <div><span>Heatmap Basis</span><strong>${escapeHtml(basis)}</strong></div>
+      <div><span>Window</span><strong>Last 30 days</strong></div>
+    </div>
+    <p class="hm-hint">Click any cell to expand individual payments below the grid.</p>
+    <div class="heatmap-wrap">
+      <table class="heatmap-table">
+        <thead>
+          <tr>
+            <th class="hm-corner">Amount&nbsp;↓&nbsp;/&nbsp;When&nbsp;→</th>
+            ${headerCells}
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+    <div id="heatmapDetail" class="heatmap-detail" hidden></div>
+  `;
+
+  // Wire cell click → expand detail panel
+  qsa(".heatmap-cell").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      const bandKey     = cell.dataset.band;
+      const recencyKey  = cell.dataset.recency;
+      const cellData    = cells[bandKey]?.[recencyKey] || { count: 0, total: 0, payments: [] };
+      const bandLabel   = bands.find((b) => b.key === bandKey)?.label   || bandKey;
+      const recLabel    = recency.find((r) => r.key === recencyKey)?.label || recencyKey;
+      const detail      = qs("#heatmapDetail");
+
+      // Toggle off if the same cell is clicked again
+      const wasSelected = cell.classList.contains("selected");
+      qsa(".heatmap-cell").forEach((c) => c.classList.remove("selected"));
+
+      if (wasSelected) {
+        detail.hidden = true;
+        return;
+      }
+
+      cell.classList.add("selected");
+
+      if (!cellData.payments.length) {
+        detail.innerHTML = `<div class="empty-state">No payments in this band.</div>`;
+      } else {
+        detail.innerHTML = `
+          <div class="hm-detail-header">
+            <span class="hm-detail-badge">${escapeHtml(bandLabel)}</span>
+            <span class="hm-detail-badge secondary">${escapeHtml(recLabel)}</span>
+            <span class="hm-detail-meta">${cellData.count} payment${cellData.count !== 1 ? "s" : ""} &middot; ${formatMoney(cellData.total)} total</span>
+          </div>
+          ${table(
+            [
+              { key: "customer", label: "Customer" },
+              { key: "amount",   label: "Amount",  num: true },
+              { key: "method",   label: "Method" },
+              { key: "date",     label: "Date" },
+              { key: "notes",    label: "Notes" },
+            ],
+            cellData.payments.map((p) => ({
+              dataset:  p.customer_id ? `data-customer-id="${p.customer_id}"` : "",
+              customer: `<strong>${escapeHtml(p.customer_name || "Walk-in")}</strong><br><span class="muted">${escapeHtml(p.phone || "")}</span>`,
+              amount:   formatMoney(p.amount),
+              method:   escapeHtml(p.method || "-"),
+              date:     escapeHtml(p.date   || "-"),
+              notes:    escapeHtml(p.notes  || ""),
+            })),
+            { clickable: true }
+          )}`;
+        bindCustomerRows();
+      }
+
+      detail.hidden = false;
+      detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  });
 }
 
 async function openCustomer(customerId) {

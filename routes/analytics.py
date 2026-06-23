@@ -169,6 +169,90 @@ def _aging_payload(end_date):
     return payload
 
 
+def _payment_amount_band(amount):
+    value = float(amount or 0)
+    if value >= 50000:
+        return "50k_plus"
+    if value >= 10000:
+        return "10k_50k"
+    if value >= 1000:
+        return "1k_10k"
+    return "under_1k"
+
+
+def _payment_recency_bucket(payment_date, end_date):
+    if isinstance(payment_date, datetime):
+        payment_date = payment_date.date()
+    if isinstance(payment_date, str):
+        payment_date = datetime.strptime(payment_date[:10], "%Y-%m-%d").date()
+
+    days = (end_date - payment_date).days if payment_date else 0
+    if days <= 0:
+        return "today"
+    if days <= 7:
+        return "1_7"
+    return "8_30"
+
+
+def _recent_payments_heatmap(end_date):
+    start_date = end_date - timedelta(days=30)
+    bands = [
+        {"key": "50k_plus", "label": "Rs 50k+"},
+        {"key": "10k_50k", "label": "Rs 10k-50k"},
+        {"key": "1k_10k", "label": "Rs 1k-10k"},
+        {"key": "under_1k", "label": "Under Rs 1k"},
+    ]
+    recency = [
+        {"key": "today", "label": "Today"},
+        {"key": "1_7", "label": "1-7 Days"},
+        {"key": "8_30", "label": "8-30 Days"},
+    ]
+    cells = {
+        band["key"]: {
+            bucket["key"]: {"count": 0, "total": 0, "payments": []}
+            for bucket in recency
+        }
+        for band in bands
+    }
+
+    rows = (
+        db.session.query(Payment, Customer)
+        .outerjoin(Customer, Customer.id == Payment.customer_id)
+        .filter(_range_filter(Payment.timestamp, start_date, end_date))
+        .order_by(Payment.timestamp.desc())
+        .all()
+    )
+
+    for payment, customer in rows:
+        band_key = _payment_amount_band(payment.amount)
+        bucket_key = _payment_recency_bucket(payment.timestamp, end_date)
+        cell = cells[band_key][bucket_key]
+        cell["count"] += 1
+        cell["total"] += float(payment.amount or 0)
+        cell["payments"].append({
+            "payment_id": payment.id,
+            "customer_id": payment.customer_id,
+            "customer_name": customer.name if customer else "Walk-in",
+            "phone": customer.phone if customer else None,
+            "amount": _money(payment.amount),
+            "method": payment.method,
+            "date": payment.timestamp.date().isoformat() if payment.timestamp else None,
+            "notes": payment.notes,
+        })
+
+    for band in bands:
+        for bucket in recency:
+            cell = cells[band["key"]][bucket["key"]]
+            cell["total"] = _money(cell["total"])
+
+    return {
+        "basis": f"{start_date.isoformat()} to {end_date.isoformat()}",
+        "bands": bands,
+        "recency": recency,
+        "cells": cells,
+    }
+
+
 def _top_category_for_customer(customer_id, start_date=None, end_date=None):
     query = (
         db.session.query(
@@ -628,6 +712,7 @@ def outstanding_detail():
     return jsonify({
         "total_outstanding": _money(sum(bucket["total"] for bucket in payload)),
         "aging_buckets": payload,
+        "recent_payments": _recent_payments_heatmap(end_date),
         "note": "Aging is based on oldest open ledger activity because bill-level due dates are not in the schema.",
     })
 
