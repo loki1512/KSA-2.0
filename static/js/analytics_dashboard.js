@@ -113,7 +113,7 @@ function renderSummary(data) {
   setText("#kpiCollectionRate", `${data.cash.collection_rate_pct}%`);
   setText("#kpiPayments", `${formatMoney(data.cash.payments)} collected`);
   // Store both outstanding values on the tile so the toggle can switch without a re-fetch
-  const _outstandingTile = qs("[data-modal='outstanding']");
+  const _outstandingTile = qs("#outstandingTile");
   if (_outstandingTile) {
     _outstandingTile.dataset.totalOutstanding    = data.cash.outstanding;
     _outstandingTile.dataset.periodOutstanding   = data.cash.period_outstanding ?? 0;
@@ -176,7 +176,7 @@ function renderSummary(data) {
 }
 
 function _renderOutstandingTile() {
-  const tileEl = qs("[data-modal='outstanding']:has(#kpiOutstanding)");
+  const tileEl = qs("#outstandingTile");
   if (!tileEl || tileEl.dataset.totalOutstanding == null) return;
 
   const isTotal = _outstandingMode === "total";
