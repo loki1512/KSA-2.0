@@ -446,6 +446,7 @@ def dashboard_summary():
             "payments": total_payments,
             "collection_rate_pct": _safe_pct(total_payments, total_revenue),
             "outstanding": total_outstanding,
+            "period_outstanding": _money(total_revenue - total_payments),
             "outstanding_pct": _safe_pct(total_outstanding, total_revenue),
             "top_debtors": top_debtors,
             "aging_buckets": [{"bucket": bucket["bucket"], "total": bucket["total"], "count": len(bucket["customers"])} for bucket in aging_buckets],

@@ -30,6 +30,7 @@ const SLOW_STALE_BANDS = [
 ];
 
 let _slowItemsData = null;
+let _outstandingMode = "total"; // "total" = all-time ledger | "period" = revenue − payments
 
 const qs = (selector) => document.querySelector(selector);
 const qsa = (selector) => Array.from(document.querySelectorAll(selector));
@@ -111,8 +112,15 @@ function renderSummary(data) {
   setText("#kpiRevenueGrowth", `${formatPct(data.revenue.growth_pct)} vs previous period`);
   setText("#kpiCollectionRate", `${data.cash.collection_rate_pct}%`);
   setText("#kpiPayments", `${formatMoney(data.cash.payments)} collected`);
-  setText("#kpiOutstanding", formatMoney(data.cash.outstanding));
-  setText("#kpiOutstandingPct", `${data.cash.outstanding_pct}% of revenue`);
+  // Store both outstanding values on the tile so the toggle can switch without a re-fetch
+  const _outstandingTile = qs("[data-modal='outstanding']");
+  if (_outstandingTile) {
+    _outstandingTile.dataset.totalOutstanding    = data.cash.outstanding;
+    _outstandingTile.dataset.periodOutstanding   = data.cash.period_outstanding ?? 0;
+    _outstandingTile.dataset.totalOutstandingPct = data.cash.outstanding_pct;
+    _outstandingTile.dataset.periodOutstandingPct = _safeCoverage(data.cash.period_outstanding ?? 0, data.revenue.total);
+  }
+  _renderOutstandingTile();
   setText("#kpiMargin", formatMoney(data.margin.gross_margin));
   setText("#kpiMarginPct", `${data.margin.margin_pct}% on known-cost sales`);
   setText("#kpiRepeatCustomerPct", `${data.customers.repeat_pct}%`);
@@ -165,6 +173,27 @@ function renderSummary(data) {
   renderDebtorList(data.cash.top_debtors || []);
   renderProductList(data.top_products || []);
   renderMarginCategoryList(data.margin.by_category || []);
+}
+
+function _renderOutstandingTile() {
+  const tileEl = qs("[data-modal='outstanding']");
+  if (!tileEl || tileEl.dataset.totalOutstanding == null) return;
+
+  const isTotal = _outstandingMode === "total";
+  const val     = isTotal ? tileEl.dataset.totalOutstanding : tileEl.dataset.periodOutstanding;
+  const pct     = isTotal
+    ? `${tileEl.dataset.totalOutstandingPct}% of revenue`
+    : `${tileEl.dataset.periodOutstandingPct}% of period revenue`;
+  const label   = isTotal ? "Outstanding" : "Period Outstanding";
+
+  setText("#kpiOutstanding",     formatMoney(Number(val || 0)));
+  setText("#kpiOutstandingPct",  pct);
+  setText("#kpiOutstandingLabel", label);
+
+  // Sync the pill active state
+  qsa("#outstandingTileToggle .tile-toggle-opt").forEach((opt) => {
+    opt.classList.toggle("active", opt.dataset.mode === _outstandingMode);
+  });
 }
 
 function _safeCoverage(part, total) {
@@ -530,7 +559,7 @@ function _outstandingLoaded(data, activeTab) {
   ], activeTab, (tab) => _outstandingLoaded(data, tab));
 
   if (activeTab === "aging") {
-    renderOutstandingBody(data, "age_oldest", "total");
+    renderOutstandingBody(data, "age_oldest", _outstandingMode);
   } else {
     renderPaymentHeatmap(data.recent_payments);
   }
@@ -841,8 +870,9 @@ function renderOutstandingBody(data, sortKey = "age_oldest", outstandingMode = "
   `;
 
   qs("#outstandingModeBtn").addEventListener("click", () => {
-    const nextMode = outstandingMode === "total" ? "period" : "total";
-    renderOutstandingBody(data, sortKey, nextMode);
+    _outstandingMode = _outstandingMode === "total" ? "period" : "total";
+    _renderOutstandingTile();                          // keep tile in sync
+    renderOutstandingBody(data, sortKey, _outstandingMode);
   });
   qs("#agingSort").addEventListener("change", (event) => {
     renderOutstandingBody(data, event.target.value, outstandingMode);
@@ -1057,6 +1087,15 @@ function handleModalRequest(type) {
 }
 
 function bindEvents() {
+  const tileToggle = qs("#outstandingTileToggle");
+  if (tileToggle) {
+    tileToggle.addEventListener("click", (e) => {
+      e.stopPropagation();   // don't bubble up to the card → modal handler
+      _outstandingMode = _outstandingMode === "total" ? "period" : "total";
+      _renderOutstandingTile();
+    });
+  }
+
   qsa(".info-dot").forEach((dot) => {
     dot.addEventListener("click", (event) => event.stopPropagation());
     dot.addEventListener("pointerdown", (event) => event.stopPropagation());

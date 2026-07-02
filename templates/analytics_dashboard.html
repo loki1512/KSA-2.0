@@ -80,8 +80,14 @@
     </button>
     <button class="metric-card metric-cash" type="button" data-modal="outstanding">
       <span class="metric-label-row">
-        <span class="metric-label">Outstanding</span>
+        <span class="metric-label" id="kpiOutstandingLabel">Outstanding</span>
         <span class="info-dot" data-info="Total positive customer ledger balance as of the selected period end date." title="Total positive customer ledger balance as of the selected period end date.">i</span>
+      </span>
+      <span class="tile-mode-toggle" id="outstandingTileToggle"
+            role="switch" aria-label="Toggle outstanding view"
+            title="Switch between all-time ledger and period outstanding">
+        <span class="tile-toggle-opt active" data-mode="total">All-time</span>
+        <span class="tile-toggle-opt" data-mode="period">Period</span>
       </span>
       <strong id="kpiOutstanding">-</strong>
       <span id="kpiOutstandingPct">-</span>

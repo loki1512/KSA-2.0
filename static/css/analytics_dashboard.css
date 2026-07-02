@@ -1115,6 +1115,50 @@ body {
     min-width: 0;
   }
 }
+/* ─────────────────────────────────────────────────────────
+   OUTSTANDING TILE MODE TOGGLE  (All-time / Period pill)
+   ───────────────────────────────────────────────────────── */
+
+/* Pill sits between the label row and the large value */
+.tile-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.10);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.tile-mode-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.tile-toggle-opt {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: rgba(17, 24, 39, 0.50);
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+  pointer-events: none;  /* let clicks pass through to the parent span */
+}
+
+.tile-toggle-opt.active {
+  background: var(--ad-red);
+  color: #fff;
+}
+
+/* When the tile is dark/hover, inactive options get slightly lighter text */
+.metric-card:hover .tile-toggle-opt:not(.active) {
+  color: rgba(17, 24, 39, 0.65);
+}
 
 /* ─────────────────────────────────────────────────────────
    OUTSTANDING MODE TOGGLE
