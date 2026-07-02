@@ -7,6 +7,9 @@ const state = {
   activeChart: null,
   miniChart: null,
   tabChart: null,
+  refTrendChart: null,
+  refVillageChart: null,
+  refPieChart: null,
 };
 
 // ─────────────────────────────────────────────────────────
@@ -86,15 +89,21 @@ function setLoading() {
 async function loadDashboard() {
   setLoading();
   try {
-    const [summary, revenueDetail] = await Promise.all([
+    const [summary, revenueDetail, refSummary, refLeaderboard] = await Promise.all([
       fetchJson(`/analytics/api/summary?${params()}`),
       fetchJson(`/analytics/api/revenue/detail?${params()}`),
+      fetchJson(`/analytics/api/referral/summary?${params()}`),
+      fetchJson(`/analytics/api/referral/leaderboard?${params()}`),
     ]);
     state.summary = summary;
     state.revenueDetail = revenueDetail;
+    
     renderSummary(summary);
     renderMiniChart(revenueDetail.daily_revenue || []);
     renderRevenueTabChart(revenueDetail.daily_revenue || []);
+    
+    renderReferralSummary(refSummary);
+    renderReferralLeaderboard(refLeaderboard);
   } catch (error) {
     qs("#periodLabel").textContent = error.message;
   }
@@ -192,6 +201,15 @@ function _renderOutstandingTile() {
   setText("#kpiOutstanding",     formatMoney(Number(val || 0)));
   setText("#kpiOutstandingPct",  pct);
   setText("#kpiOutstandingLabel", label);
+
+  const infoDot = qs("#outstandingInfoDot");
+  if (infoDot) {
+    const infoText = isTotal
+      ? "Total positive customer ledger balance as of the selected period end date."
+      : "Period Outstanding Formula: (Total Sales in the period) - (Total Payments received in the period). Negative means more payments were received than sales made.";
+    infoDot.dataset.info = infoText;
+    infoDot.title = infoText;
+  }
 
   // Color-code the tile based on period outstanding as % of period revenue
   tileEl.classList.remove("outstanding-green", "outstanding-yellow", "outstanding-red");
@@ -1092,6 +1110,223 @@ async function openCustomer(customerId) {
       </div>
     </div>
   `;
+// ─────────────────────────────────────────────────────────
+// REFERRAL ANALYTICS
+// ─────────────────────────────────────────────────────────
+
+function renderReferralSummary(data) {
+  if (!data) return;
+  const kpis = data.kpis || {};
+  setText("#refKpiReferrers", formatNumber(kpis.total_referrers));
+  setText("#refKpiCustomers", formatNumber(kpis.referred_customers));
+  setText("#refKpiRevenue", kpis.referral_revenue);
+  setText("#refKpiShare", `${kpis.referral_share_pct}%`);
+  setText("#refKpiAvgRev", kpis.avg_revenue_per_referral);
+  setText("#refKpiTop", kpis.top_referrer ? `${escapeHtml(kpis.top_referrer.name)} (${kpis.top_referrer.revenue})` : "-");
+
+  const funnel = data.funnel || {};
+  setText("#refFunnelReferred", formatNumber(funnel.referred));
+  setText("#refFunnelPurchase", formatNumber(funnel.made_purchase));
+  setText("#refFunnelPurchasePct", `${funnel.conversion_to_purchase_pct}%`);
+  setText("#refFunnelRepeat", formatNumber(funnel.repeat));
+  setText("#refFunnelRepeatPct", `${funnel.conversion_to_repeat_pct}%`);
+
+  const qual = data.quality_comparison || {};
+  setText("#refQualAvgBill", `${qual.referred?.avg_bill || 0} vs ${qual.non_referred?.avg_bill || 0}`);
+  setText("#refQualRepeat", `${qual.referred?.repeat_rate || 0}% vs ${qual.non_referred?.repeat_rate || 0}%`);
+  setText("#refQualFreq", `${qual.referred?.avg_purchase_freq || 0} vs ${qual.non_referred?.avg_purchase_freq || 0}`);
+
+  const health = data.health || {};
+  setText("#refHealthInactive", formatNumber(health.inactive));
+  setText("#refHealthDormant", formatNumber(health.dormant));
+  setText("#refHealthHighValue", formatNumber(health.high_value));
+
+  renderReferralTrendChart(data.trend || []);
+  renderReferralVillageChart(data.village_stats || []);
+  renderReferralPieChart(data.funnel || {});
+}
+
+function renderReferralPieChart(funnel) {
+  const ctx = qs("#referralPieChart");
+  if (!ctx || !window.Chart) return;
+  
+  if (state.refPieChart) state.refPieChart.destroy();
+  
+  const repeat = funnel.repeat || 0;
+  const oneTime = (funnel.made_purchase || 0) - repeat;
+  
+  state.refPieChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Repeat (2+ purchases)", "One-time"],
+      datasets: [{
+        data: [repeat, oneTime],
+        backgroundColor: ["#10b981", "#fbbf24"],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "60%",
+      plugins: {
+        legend: { position: "right" }
+      }
+    }
+  });
+}
+
+function renderReferralTrendChart(trendData) {
+  const ctx = qs("#referralTrendChart");
+  if (!ctx || !window.Chart) return;
+  
+  if (state.refTrendChart) state.refTrendChart.destroy();
+  
+  state.refTrendChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: trendData.map(d => d.month),
+      datasets: [
+        {
+          label: "New Referred Customers",
+          data: trendData.map(d => d.new_customers),
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          yAxisID: "y"
+        },
+        {
+          label: "Referral Revenue",
+          data: trendData.map(d => Number(String(d.revenue).replace(/[^0-9.-]+/g,""))),
+          borderColor: "#10b981",
+          backgroundColor: "rgba(16, 185, 129, 0.1)",
+          yAxisID: "y1"
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { type: "linear", position: "left", title: { display: true, text: "Customers" } },
+        y1: { type: "linear", position: "right", title: { display: true, text: "Revenue" }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+}
+
+function renderReferralVillageChart(villageData) {
+  const ctx = qs("#referralVillageChart");
+  if (!ctx || !window.Chart) return;
+  
+  if (state.refVillageChart) state.refVillageChart.destroy();
+  
+  state.refVillageChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: villageData.map(d => escapeHtml(d.village)),
+      datasets: [{
+        label: "Revenue",
+        data: villageData.map(d => Number(String(d.revenue).replace(/[^0-9.-]+/g,""))),
+        backgroundColor: "#6366f1"
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+    }
+  });
+}
+
+function renderReferralLeaderboard(data) {
+  const tbody = qs("#referralLeaderboardBody");
+  if (!tbody || !data || !data.leaderboard) return;
+  
+  if (data.leaderboard.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No referrers found.</td></tr>`;
+    return;
+  }
+  
+  tbody.innerHTML = data.leaderboard.map(row => `
+    <tr class="clickable-row" data-id="${row.referrer_id}">
+      <td><strong>${escapeHtml(row.referrer_name)}</strong></td>
+      <td>${escapeHtml(row.village)}</td>
+      <td class="right-align">${formatNumber(row.referral_count)}</td>
+      <td class="right-align">${escapeHtml(row.referral_revenue)}</td>
+      <td class="right-align">${formatNumber(row.bill_count)}</td>
+      <td class="right-align">${escapeHtml(row.avg_bill)}</td>
+      <td class="right-align">${escapeHtml(row.outstanding)}</td>
+    </tr>
+  `).join("");
+  
+  qsa("#referralLeaderboardBody .clickable-row").forEach(row => {
+    row.addEventListener("click", () => openReferralModal(row.dataset.id));
+  });
+}
+
+async function openReferralModal(referrerId) {
+  const modal = qs("#referralModal");
+  const backdrop = qs("#modalBackdrop");
+  const body = qs("#referralModalBody");
+  const title = qs("#referralModalTitle");
+  
+  if (!modal || !body) return;
+  
+  title.textContent = "Loading...";
+  body.innerHTML = `<div class="loading-cell" style="padding:2rem;">Fetching details...</div>`;
+  
+  modal.hidden = false;
+  backdrop.hidden = false;
+  
+  try {
+    const data = await fetchJson(`/analytics/api/referral/detail/${referrerId}?${params()}`);
+    title.textContent = data.header.name || "Referrer";
+    
+    body.innerHTML = `
+      <div class="mini-kpis">
+        <div><span>Village</span><strong>${escapeHtml(data.header.village)}</strong></div>
+        <div><span>Code</span><strong>${escapeHtml(data.header.referral_code)}</strong></div>
+        <div><span>Referrals</span><strong>${formatNumber(data.header.total_referrals)}</strong></div>
+        <div><span>Repeat</span><strong>${formatNumber(data.header.repeat_customers)}</strong></div>
+        <div><span>Revenue</span><strong>${escapeHtml(data.header.revenue)}</strong></div>
+        <div><span>Avg Bill</span><strong>${escapeHtml(data.header.avg_bill)}</strong></div>
+        <div><span>Outstanding</span><strong>${escapeHtml(data.header.outstanding)}</strong></div>
+      </div>
+      
+      <h3 style="margin: 1.5rem 0 0.5rem; font-size: 13px;">Referred Customers</h3>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Village</th>
+              <th>Type</th>
+              <th class="right-align">Bills</th>
+              <th class="right-align">Revenue</th>
+              <th class="right-align">Outstanding</th>
+              <th class="right-align">Last Purchase</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.customers.length === 0 ? `<tr><td colspan="7">No customers referred.</td></tr>` : 
+              data.customers.map(c => `
+                <tr>
+                  <td><strong>${escapeHtml(c.name)}</strong></td>
+                  <td>${escapeHtml(c.village)}</td>
+                  <td>${escapeHtml(c.customer_type)}</td>
+                  <td class="right-align">${formatNumber(c.bills)}</td>
+                  <td class="right-align">${escapeHtml(c.revenue)}</td>
+                  <td class="right-align">${escapeHtml(c.outstanding)}</td>
+                  <td class="right-align">${escapeHtml(c.last_purchase)}</td>
+                </tr>
+              `).join("")
+            }
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    body.innerHTML = `<div class="empty-state">Error loading details: ${escapeHtml(err.message)}</div>`;
+  }
 }
 
 function handleModalRequest(type) {
@@ -1148,6 +1383,13 @@ function bindEvents() {
     qs("#customerModal").hidden = true;
     qs("#modalBackdrop").hidden = true;
   });
+  const referralModalClose = qs("#referralModalClose");
+  if (referralModalClose) {
+    referralModalClose.addEventListener("click", () => {
+      qs("#referralModal").hidden = true;
+      qs("#modalBackdrop").hidden = true;
+    });
+  }
   qs("#modalBackdrop").addEventListener("click", closeModals);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeModals();

@@ -84,7 +84,7 @@
     <button class="metric-card metric-cash" id="outstandingTile" type="button" data-modal="outstanding">
       <span class="metric-label-row">
         <span class="metric-label" id="kpiOutstandingLabel">Outstanding</span>
-        <span class="info-dot" data-info="Total positive customer ledger balance as of the selected period end date." title="Total positive customer ledger balance as of the selected period end date.">i</span>
+        <span class="info-dot" id="outstandingInfoDot" data-info="Total positive customer ledger balance as of the selected period end date." title="Total positive customer ledger balance as of the selected period end date.">i</span>
       </span>
       <span class="tile-mode-toggle" id="outstandingTileToggle"
             role="switch" aria-label="Toggle outstanding view"
@@ -136,6 +136,7 @@
     <button class="analytics-tab" type="button" data-tab="credit">Credit</button>
     <button class="analytics-tab" type="button" data-tab="products">Products</button>
     <button class="analytics-tab" type="button" data-tab="profitability">Profitability</button>
+    <button class="analytics-tab" type="button" data-tab="referral">Referral</button>
   </section>
 
   <section id="tab-executive" class="tab-panel active">
@@ -342,6 +343,132 @@
       </div>
     </div>
   </section>
+
+  <section id="tab-referral" class="tab-panel">
+    <div class="dashboard-grid compact">
+      
+      <!-- KPI Cards & Funnel -->
+      <div class="panel panel-wide">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>Referral Performance</h3>
+            <span class="info-dot" data-info="Overview of referral program metrics." title="Overview of referral program metrics.">i</span>
+          </div>
+        </div>
+        <div class="snapshot-list">
+          <div><span class="metric-info-label"><span>Total Referrers</span></span><strong id="refKpiReferrers">-</strong></div>
+          <div><span class="metric-info-label"><span>Referred Customers</span></span><strong id="refKpiCustomers">-</strong></div>
+          <div><span class="metric-info-label"><span>Referral Revenue</span></span><strong id="refKpiRevenue">-</strong></div>
+          <div><span class="metric-info-label"><span>Referral Share</span></span><strong id="refKpiShare">-</strong></div>
+          <div><span class="metric-info-label"><span>Avg Revenue/Referral</span></span><strong id="refKpiAvgRev">-</strong></div>
+          <div><span class="metric-info-label"><span>Top Referrer</span></span><strong id="refKpiTop">-</strong></div>
+        </div>
+        
+        <div class="split-metrics" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--ad-border);">
+          <div>
+            <span>Referred</span>
+            <strong id="refFunnelReferred">-</strong>
+          </div>
+          <div>
+            <span>Made Purchase</span>
+            <strong id="refFunnelPurchase">-</strong>
+            <small id="refFunnelPurchasePct">-</small>
+          </div>
+          <div>
+            <span>Repeat Customers</span>
+            <strong id="refFunnelRepeat">-</strong>
+            <small id="refFunnelRepeatPct">-</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="panel panel-wide">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>Monthly Referral Trend</h3>
+          </div>
+        </div>
+        <div class="chart-box" style="height: 250px;"><canvas id="referralTrendChart"></canvas></div>
+      </div>
+      
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>Revenue by Village</h3>
+          </div>
+        </div>
+        <div class="chart-box" style="height: 200px;"><canvas id="referralVillageChart"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>New vs Repeat</h3>
+            <span class="info-dot" data-info="Split of referred customers who made only 1 purchase vs multiple purchases." title="Split of referred customers who made only 1 purchase vs multiple purchases.">i</span>
+          </div>
+        </div>
+        <div class="chart-box" style="height: 200px;"><canvas id="referralPieChart"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>Customer Quality Comparison</h3>
+            <span class="info-dot" data-info="Referred vs Non-Referred customers." title="Referred vs Non-Referred customers.">i</span>
+          </div>
+        </div>
+        <div class="snapshot-list">
+          <div><span class="metric-info-label"><span>Avg Bill (Ref vs Non)</span></span><strong id="refQualAvgBill">-</strong></div>
+          <div><span class="metric-info-label"><span>Repeat Rate (Ref vs Non)</span></span><strong id="refQualRepeat">-</strong></div>
+          <div><span class="metric-info-label"><span>Purchase Freq (Ref vs Non)</span></span><strong id="refQualFreq">-</strong></div>
+        </div>
+      </div>
+
+      <!-- Health -->
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>Referral Health</h3>
+          </div>
+        </div>
+        <div class="snapshot-list">
+          <div><span class="metric-info-label"><span>Inactive (90 days)</span></span><strong id="refHealthInactive">-</strong></div>
+          <div><span class="metric-info-label"><span>Dormant (180 days)</span></span><strong id="refHealthDormant">-</strong></div>
+          <div><span class="metric-info-label"><span>High Value (>50k)</span></span><strong id="refHealthHighValue">-</strong></div>
+        </div>
+      </div>
+      
+      <!-- Leaderboard -->
+      <div class="panel panel-wide">
+        <div class="panel-head">
+          <div class="panel-title">
+            <h3>Referral Leaderboard</h3>
+            <span class="info-dot" data-info="Click a referrer to see detailed breakdown of their referrals." title="Click a referrer to see detailed breakdown of their referrals.">i</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table interactive-table" id="referralLeaderboardTable">
+            <thead>
+              <tr>
+                <th>Referrer</th>
+                <th>Village</th>
+                <th class="right-align">Referral Count</th>
+                <th class="right-align">Revenue</th>
+                <th class="right-align">Bills</th>
+                <th class="right-align">Avg Bill</th>
+                <th class="right-align">Outstanding</th>
+              </tr>
+            </thead>
+            <tbody id="referralLeaderboardBody">
+              <tr><td colspan="7" class="loading-cell">Loading leaderboard...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
 </main>
 
 <div id="modalBackdrop" class="modal-backdrop" hidden></div>
@@ -367,6 +494,17 @@
     <button id="customerModalClose" class="icon-button" type="button" aria-label="Close">x</button>
   </header>
   <div id="customerModalBody" class="modal-body"></div>
+</section>
+
+<section id="referralModal" class="analytics-modal" role="dialog" aria-modal="true" aria-labelledby="referralModalTitle" hidden>
+  <header class="modal-header">
+    <div>
+      <p class="page-kicker">Referrer Detail</p>
+      <h2 id="referralModalTitle">Referrer Name</h2>
+    </div>
+    <button id="referralModalClose" class="icon-button" type="button" aria-label="Close">x</button>
+  </header>
+  <div id="referralModalBody" class="modal-body"></div>
 </section>
 
 <script src="/static/js/analytics_dashboard.js?v=20260623-credit-sort"></script>

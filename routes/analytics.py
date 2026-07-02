@@ -706,6 +706,379 @@ def customer_profile(customer_id):
     })
 
 
+# -----------------------------
+# REFERRAL ANALYTICS
+# -----------------------------
+
+@analytics_bp.route("/api/referral/summary")
+@admin_required
+def referral_summary():
+    start_date, end_date, period = _period_bounds()
+    
+    # Base queries for the period
+    bill_range = _range_filter(Bill.timestamp, start_date, end_date)
+
+    # 1. Referred Customers & Total Customers
+    total_customers = db.session.query(func.count(Customer.id)).scalar() or 0
+    referred_customers = db.session.query(func.count(Customer.id)).filter(Customer.referred_by_id.isnot(None)).scalar() or 0
+    referral_share_pct = round((referred_customers / total_customers * 100), 1) if total_customers else 0
+
+    # 2. Total Referrers
+    total_referrers = db.session.query(func.count(distinct(Customer.referred_by_id))).filter(Customer.referred_by_id.isnot(None)).scalar() or 0
+
+    # 3. Referral Revenue (in period)
+    referred_customer_ids_sq = db.session.query(Customer.id).filter(Customer.referred_by_id.isnot(None)).subquery()
+    referral_revenue = db.session.query(func.sum(Bill.final_amount)).filter(
+        bill_range,
+        Bill.customer_id.in_(db.session.query(referred_customer_ids_sq))
+    ).scalar() or 0
+    
+    avg_rev_per_referral = round(referral_revenue / referred_customers, 2) if referred_customers else 0
+
+    # 4. Top Referrer (by revenue in period)
+    top_referrer_query = (
+        db.session.query(
+            Customer.referred_by_id.label("referrer_id"),
+            func.sum(Bill.final_amount).label("revenue"),
+            func.count(distinct(Customer.id)).label("referrals")
+        )
+        .select_from(Bill)
+        .join(Customer, Bill.customer_id == Customer.id)
+        .filter(bill_range, Customer.referred_by_id.isnot(None))
+        .group_by(Customer.referred_by_id)
+        .order_by(func.sum(Bill.final_amount).desc())
+        .limit(1)
+        .first()
+    )
+
+    top_referrer_data = None
+    if top_referrer_query and top_referrer_query.referrer_id:
+        referrer = db.session.query(Customer).get(top_referrer_query.referrer_id)
+        if referrer:
+            top_referrer_data = {
+                "name": referrer.name,
+                "revenue": _money(top_referrer_query.revenue),
+                "referrals": top_referrer_query.referrals
+            }
+
+    # 5. Referral Funnel
+    made_purchase = db.session.query(func.count(distinct(Bill.customer_id))).filter(
+        Bill.customer_id.in_(db.session.query(referred_customer_ids_sq))
+    ).scalar() or 0
+    
+    repeat_customers_sq = db.session.query(Bill.customer_id).group_by(Bill.customer_id).having(func.count(Bill.id) > 1).subquery()
+    repeat_customers = db.session.query(func.count(Customer.id)).filter(
+        Customer.referred_by_id.isnot(None),
+        Customer.id.in_(db.session.query(repeat_customers_sq))
+    ).scalar() or 0
+
+    funnel = {
+        "referred": referred_customers,
+        "made_purchase": made_purchase,
+        "repeat": repeat_customers,
+        "conversion_to_purchase_pct": round((made_purchase / referred_customers * 100), 1) if referred_customers else 0,
+        "conversion_to_repeat_pct": round((repeat_customers / made_purchase * 100), 1) if made_purchase else 0,
+    }
+
+    # 6. Referral Revenue by Village
+    village_stats = (
+        db.session.query(
+            Customer.village,
+            func.sum(Bill.final_amount).label("revenue")
+        )
+        .select_from(Bill)
+        .join(Customer, Bill.customer_id == Customer.id)
+        .filter(bill_range, Customer.referred_by_id.isnot(None))
+        .group_by(Customer.village)
+        .order_by(func.sum(Bill.final_amount).desc())
+        .limit(10)
+        .all()
+    )
+    village_data = [{"village": v.village or "Unknown", "revenue": _money(v.revenue)} for v in village_stats]
+
+    # 7. Monthly Trend (Last 12 months)
+    twelve_months_ago = end_date - timedelta(days=365)
+    trend_range = _range_filter(Bill.timestamp, twelve_months_ago, end_date)
+    
+    month_col = func.date_trunc('month', Bill.timestamp) if _is_postgres() else func.strftime('%Y-%m', Bill.timestamp)
+    
+    trend_stats = (
+        db.session.query(
+            month_col.label('month'),
+            func.count(distinct(Bill.customer_id)).label('new_customers'),
+            func.sum(Bill.final_amount).label('revenue')
+        )
+        .join(Customer, Bill.customer_id == Customer.id)
+        .filter(trend_range, Customer.referred_by_id.isnot(None))
+        .group_by('month')
+        .order_by('month')
+        .all()
+    )
+    
+    # 8. Customer Quality Comparison (Referred vs Non-Referred)
+    def _get_quality_stats(is_referred):
+        cond = Customer.referred_by_id.isnot(None) if is_referred else Customer.referred_by_id.is_(None)
+        
+        stats = db.session.query(
+            func.count(distinct(Customer.id)).label('customers'),
+            func.count(Bill.id).label('bills'),
+            func.sum(Bill.final_amount).label('revenue')
+        ).join(Customer, Bill.customer_id == Customer.id).filter(cond, bill_range).first()
+        
+        customers = stats.customers or 0
+        bills = stats.bills or 0
+        revenue = stats.revenue or 0
+        
+        rep_cust = db.session.query(func.count(Customer.id)).filter(
+            cond,
+            Customer.id.in_(db.session.query(repeat_customers_sq))
+        ).scalar() or 0
+        
+        return {
+            "customers": customers,
+            "revenue": _money(revenue),
+            "bills": bills,
+            "avg_bill": _money(revenue / bills) if bills else 0,
+            "repeat_rate": round((rep_cust / customers * 100), 1) if customers else 0,
+            "avg_purchase_freq": round(bills / customers, 1) if customers else 0
+        }
+        
+    quality_comparison = {
+        "referred": _get_quality_stats(True),
+        "non_referred": _get_quality_stats(False)
+    }
+
+    # 9. Referral Health
+    ninety_days_ago = end_date - timedelta(days=90)
+    one_eighty_days_ago = end_date - timedelta(days=180)
+    
+    last_purchase_sq = db.session.query(
+        Bill.customer_id, 
+        func.max(_date_col(Bill.timestamp)).label('last_purchase')
+    ).group_by(Bill.customer_id).subquery()
+    
+    inactive_count = db.session.query(func.count(Customer.id)).join(
+        last_purchase_sq, Customer.id == last_purchase_sq.c.customer_id
+    ).filter(Customer.referred_by_id.isnot(None), last_purchase_sq.c.last_purchase < ninety_days_ago).scalar() or 0
+    
+    dormant_count = db.session.query(func.count(Customer.id)).join(
+        last_purchase_sq, Customer.id == last_purchase_sq.c.customer_id
+    ).filter(Customer.referred_by_id.isnot(None), last_purchase_sq.c.last_purchase < one_eighty_days_ago).scalar() or 0
+    
+    # High Value (> 50,000 revenue)
+    cust_revenue_sq = db.session.query(
+        Bill.customer_id,
+        func.sum(Bill.final_amount).label('total_revenue')
+    ).group_by(Bill.customer_id).subquery()
+    
+    high_value_count = db.session.query(func.count(Customer.id)).join(
+        cust_revenue_sq, Customer.id == cust_revenue_sq.c.customer_id
+    ).filter(Customer.referred_by_id.isnot(None), cust_revenue_sq.c.total_revenue > 50000).scalar() or 0
+
+    return jsonify({
+        "period": {"key": period, "start": start_date.isoformat(), "end": end_date.isoformat()},
+        "kpis": {
+            "total_referrers": total_referrers,
+            "referred_customers": referred_customers,
+            "referral_revenue": _money(referral_revenue),
+            "referral_share_pct": referral_share_pct,
+            "avg_revenue_per_referral": _money(avg_rev_per_referral),
+            "top_referrer": top_referrer_data
+        },
+        "funnel": funnel,
+        "village_stats": village_data,
+        "trend": [{"month": str(t.month), "new_customers": t.new_customers, "revenue": _money(t.revenue)} for t in trend_stats],
+        "quality_comparison": quality_comparison,
+        "health": {
+            "inactive": inactive_count,
+            "dormant": dormant_count,
+            "high_value": high_value_count,
+            "outstanding": 0 # Would need transaction aggregation
+        }
+    })
+
+
+@analytics_bp.route("/api/referral/leaderboard")
+@admin_required
+def referral_leaderboard():
+    start_date, end_date, period = _period_bounds()
+    bill_range = _range_filter(Bill.timestamp, start_date, end_date)
+    
+    # We want a list of referrers (customers who have referred others).
+    # We'll aggregate over the referred customers.
+    referred_alias = aliased(Customer)
+    
+    leaderboard_sq = (
+        db.session.query(
+            Customer.id.label("referrer_id"),
+            Customer.name.label("referrer_name"),
+            Customer.village.label("village"),
+            func.count(distinct(referred_alias.id)).label("referral_count"),
+            func.max(referred_alias.id).label("last_referral_id") # We don't have a joined date, so using ID as proxy for now or we could use the first bill date of the referred customer.
+        )
+        .join(referred_alias, referred_alias.referred_by_id == Customer.id)
+        .group_by(Customer.id, Customer.name, Customer.village)
+        .subquery()
+    )
+
+    revenue_sq = (
+        db.session.query(
+            Customer.referred_by_id.label("referrer_id"),
+            func.sum(Bill.final_amount).label("referral_revenue"),
+            func.count(Bill.id).label("bill_count")
+        )
+        .select_from(Bill)
+        .join(Customer, Bill.customer_id == Customer.id)
+        .filter(bill_range, Customer.referred_by_id.isnot(None))
+        .group_by(Customer.referred_by_id)
+        .subquery()
+    )
+    
+    # Outstanding requires Transaction table aggregation per referred customer, then summing up by referrer.
+    # To keep it performant, we'll join Transactions for referred customers.
+    outstanding_sq = (
+        db.session.query(
+            Customer.referred_by_id.label("referrer_id"),
+            func.sum(Transaction.amount).label("outstanding")
+        )
+        .select_from(Transaction)
+        .join(Customer, Transaction.customer_id == Customer.id)
+        .filter(Customer.referred_by_id.isnot(None))
+        .group_by(Customer.referred_by_id)
+        .subquery()
+    )
+
+    rows = (
+        db.session.query(
+            leaderboard_sq.c.referrer_id,
+            leaderboard_sq.c.referrer_name,
+            leaderboard_sq.c.village,
+            leaderboard_sq.c.referral_count,
+            revenue_sq.c.referral_revenue,
+            revenue_sq.c.bill_count,
+            outstanding_sq.c.outstanding
+        )
+        .outerjoin(revenue_sq, leaderboard_sq.c.referrer_id == revenue_sq.c.referrer_id)
+        .outerjoin(outstanding_sq, leaderboard_sq.c.referrer_id == outstanding_sq.c.referrer_id)
+        .order_by(revenue_sq.c.referral_revenue.desc().nullsfirst())
+        .limit(100)
+        .all()
+    )
+    
+    data = []
+    for r in rows:
+        rev = r.referral_revenue or 0
+        bills = r.bill_count or 0
+        outst = r.outstanding or 0
+        data.append({
+            "referrer_id": r.referrer_id,
+            "referrer_name": r.referrer_name,
+            "village": r.village or "Unknown",
+            "referral_count": r.referral_count,
+            "referral_revenue": _money(rev),
+            "bill_count": bills,
+            "avg_bill": _money(rev / bills) if bills else 0,
+            "outstanding": _money(outst),
+            # "last_referral_date": "N/A" # No clear joined_date column in Customer
+        })
+
+    return jsonify({
+        "period": {"key": period, "start": start_date.isoformat(), "end": end_date.isoformat()},
+        "leaderboard": data
+    })
+
+
+@analytics_bp.route("/api/referral/detail/<int:referrer_id>")
+@admin_required
+def referral_detail(referrer_id):
+    start_date, end_date, period = _period_bounds()
+    bill_range = _range_filter(Bill.timestamp, start_date, end_date)
+    
+    referrer = db.session.query(Customer).get_or_404(referrer_id)
+    
+    # Header Stats
+    referred_custs = db.session.query(Customer).filter(Customer.referred_by_id == referrer_id).all()
+    referred_ids = [c.id for c in referred_custs]
+    
+    revenue = db.session.query(func.sum(Bill.final_amount)).filter(
+        bill_range, Bill.customer_id.in_(referred_ids)
+    ).scalar() or 0
+    
+    outstanding = db.session.query(func.sum(Transaction.amount)).filter(
+        Transaction.customer_id.in_(referred_ids)
+    ).scalar() or 0
+    
+    bills = db.session.query(func.count(Bill.id)).filter(
+        bill_range, Bill.customer_id.in_(referred_ids)
+    ).scalar() or 0
+    
+    repeat_custs = db.session.query(Bill.customer_id).filter(
+        bill_range, Bill.customer_id.in_(referred_ids)
+    ).group_by(Bill.customer_id).having(func.count(Bill.id) > 1).count()
+    
+    header = {
+        "name": referrer.name,
+        "village": referrer.village or "Unknown",
+        "referral_code": referrer.referral_code,
+        "total_referrals": len(referred_ids),
+        "revenue": _money(revenue),
+        "outstanding": _money(outstanding),
+        "avg_bill": _money(revenue / bills) if bills else 0,
+        "repeat_customers": repeat_custs
+    }
+    
+    # Customer List
+    customers_data = []
+    
+    # Optimization: fetch all aggregated data for these customers at once
+    cust_revenue_sq = db.session.query(
+        Bill.customer_id,
+        func.sum(Bill.final_amount).label("revenue"),
+        func.count(Bill.id).label("bills"),
+        func.max(_date_col(Bill.timestamp)).label("last_purchase")
+    ).filter(bill_range, Bill.customer_id.in_(referred_ids)).group_by(Bill.customer_id).subquery()
+    
+    cust_outst_sq = db.session.query(
+        Transaction.customer_id,
+        func.sum(Transaction.amount).label("outstanding")
+    ).filter(Transaction.customer_id.in_(referred_ids)).group_by(Transaction.customer_id).subquery()
+    
+    cust_stats = (
+        db.session.query(
+            Customer,
+            cust_revenue_sq.c.revenue,
+            cust_revenue_sq.c.bills,
+            cust_revenue_sq.c.last_purchase,
+            cust_outst_sq.c.outstanding
+        )
+        .outerjoin(cust_revenue_sq, Customer.id == cust_revenue_sq.c.customer_id)
+        .outerjoin(cust_outst_sq, Customer.id == cust_outst_sq.c.customer_id)
+        .filter(Customer.referred_by_id == referrer_id)
+        .all()
+    )
+    
+    for c, rev, blls, last_p, outst in cust_stats:
+        customers_data.append({
+            "id": c.id,
+            "name": c.name,
+            "village": c.village or "Unknown",
+            "joined_date": "N/A", # Optional: fetch first bill date
+            "bills": blls or 0,
+            "revenue": _money(rev or 0),
+            "outstanding": _money(outst or 0),
+            "last_purchase": str(last_p) if last_p else "N/A",
+            "customer_type": c.customer_type
+        })
+        
+    # Sort by revenue descending
+    customers_data.sort(key=lambda x: float(str(x["revenue"]).replace(",", "")) if x["revenue"] else 0, reverse=True)
+
+    return jsonify({
+        "period": {"key": period, "start": start_date.isoformat(), "end": end_date.isoformat()},
+        "header": header,
+        "customers": customers_data
+    })
+
 @analytics_bp.route("/api/outstanding/detail")
 @admin_required
 def outstanding_detail():
