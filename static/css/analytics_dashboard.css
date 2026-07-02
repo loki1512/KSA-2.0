@@ -1115,3 +1115,110 @@ body {
     min-width: 0;
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+   OUTSTANDING MODE TOGGLE
+   ───────────────────────────────────────────────────────── */
+
+/* Override the mini-kpis grid for the outstanding panel so the
+   main KPI card gets more room and the toggle sits inside it. */
+.outstanding-kpis {
+  grid-template-columns: 2fr 1fr 1fr;
+  align-items: stretch;
+}
+
+@media (max-width: 640px) {
+  .outstanding-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Main KPI card – taller with extra content */
+.outstanding-kpi-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--ad-border);
+  border-radius: 8px;
+  padding: 14px 14px 12px;
+  background: #fbfcfe;
+}
+
+.outstanding-toggle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.outstanding-kpi-label {
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The pill toggle button */
+.outstanding-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid var(--ad-border);
+  border-radius: 999px;
+  background: #f1f5f9;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.outstanding-mode-toggle:hover {
+  border-color: var(--ad-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.toggle-pill {
+  display: flex;
+  gap: 0;
+}
+
+.toggle-option {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ad-muted);
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+}
+
+.toggle-option.active {
+  background: var(--ad-blue);
+  color: #fff;
+}
+
+/* KPI value */
+.outstanding-kpi-value {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  margin-top: 2px;
+}
+
+/* Sub-label below value */
+.outstanding-kpi-sub {
+  display: block;
+  color: var(--ad-muted);
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Animate the value change */
+.outstanding-kpi-value {
+  transition: opacity 0.15s;
+}
+

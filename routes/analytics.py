@@ -706,15 +706,28 @@ def customer_profile(customer_id):
 @analytics_bp.route("/api/outstanding/detail")
 @admin_required
 def outstanding_detail():
-    end_date = _period_bounds()[1]
+    start_date, end_date, period = _period_bounds()
+    bill_range    = _range_filter(Bill.timestamp,    start_date, end_date)
+    payment_range = _range_filter(Payment.timestamp, start_date, end_date)
+
     payload = _aging_payload(end_date)
+
+    # Period-scoped outstanding: revenue billed in the period minus payments received in the period
+    period_revenue  = _money(db.session.query(func.sum(Bill.final_amount)).filter(bill_range).scalar())
+    period_payments = _money(db.session.query(func.sum(Payment.amount)).filter(payment_range).scalar())
+    period_outstanding = _money(period_revenue - period_payments)
 
     return jsonify({
         "total_outstanding": _money(sum(bucket["total"] for bucket in payload)),
+        "period_outstanding": period_outstanding,
+        "period_revenue": period_revenue,
+        "period_payments": period_payments,
+        "period": {"key": period, "start": start_date.isoformat(), "end": end_date.isoformat()},
         "aging_buckets": payload,
         "recent_payments": _recent_payments_heatmap(end_date),
         "note": "Aging is based on oldest open ledger activity because bill-level due dates are not in the schema.",
     })
+
 
 
 @analytics_bp.route("/api/items/slow-moving")

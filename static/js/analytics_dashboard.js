@@ -530,7 +530,7 @@ function _outstandingLoaded(data, activeTab) {
   ], activeTab, (tab) => _outstandingLoaded(data, tab));
 
   if (activeTab === "aging") {
-    renderOutstandingBody(data, "age_oldest");
+    renderOutstandingBody(data, "age_oldest", "total");
   } else {
     renderPaymentHeatmap(data.recent_payments);
   }
@@ -773,11 +773,41 @@ function sortAgingBuckets(buckets, sortKey) {
   return rows.sort((a, b) => agingBucketRank(b.bucket) - agingBucketRank(a.bucket));
 }
 
-function renderOutstandingBody(data, sortKey = "age_oldest") {
+function renderOutstandingBody(data, sortKey = "age_oldest", outstandingMode = "total") {
   const sortedBuckets = sortAgingBuckets(data.aging_buckets || [], sortKey);
+
+  const isTotal  = outstandingMode === "total";
+  const kpiValue = isTotal ? data.total_outstanding : data.period_outstanding;
+  const kpiLabel = isTotal ? "Total Outstanding" : "Period Outstanding";
+  const kpiSub   = isTotal
+    ? "All-time ledger balance"
+    : `${formatMoney(data.period_revenue)} revenue − ${formatMoney(data.period_payments)} payments`;
+
+  const periodLabel = data.period
+    ? `${data.period.start} to ${data.period.end}`
+    : "Selected period";
+
   qs("#modalBody").innerHTML = `
-    <div class="mini-kpis">
-      <div><span>Total Outstanding</span><strong>${formatMoney(data.total_outstanding)}</strong></div>
+    <div class="mini-kpis outstanding-kpis">
+      <div class="outstanding-kpi-main">
+        <div class="outstanding-toggle-wrap">
+          <span class="outstanding-kpi-label">${kpiLabel}</span>
+          <button
+            id="outstandingModeBtn"
+            class="outstanding-mode-toggle ${isTotal ? "mode-total" : "mode-period"}"
+            title="Switch between all-time and period outstanding"
+            aria-pressed="${!isTotal}"
+          >
+            <span class="toggle-pill">
+              <span class="toggle-option ${isTotal ? "active" : ""}">All-time</span>
+              <span class="toggle-option ${!isTotal ? "active" : ""}">Period</span>
+            </span>
+          </button>
+        </div>
+        <strong class="outstanding-kpi-value">${formatMoney(kpiValue)}</strong>
+        <small class="outstanding-kpi-sub">${escapeHtml(kpiSub)}</small>
+      </div>
+      <div><span>Period</span><strong>${escapeHtml(periodLabel)}</strong></div>
       <div><span>Aging Basis</span><strong>Ledger</strong></div>
     </div>
     <div class="modal-tools">
@@ -809,8 +839,13 @@ function renderOutstandingBody(data, sortKey = "age_oldest") {
     `).join("")}
     <p class="muted">${escapeHtml(data.note)}</p>
   `;
+
+  qs("#outstandingModeBtn").addEventListener("click", () => {
+    const nextMode = outstandingMode === "total" ? "period" : "total";
+    renderOutstandingBody(data, sortKey, nextMode);
+  });
   qs("#agingSort").addEventListener("change", (event) => {
-    renderOutstandingBody(data, event.target.value);
+    renderOutstandingBody(data, event.target.value, outstandingMode);
   });
   bindCustomerRows();
 }
