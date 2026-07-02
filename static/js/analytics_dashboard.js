@@ -1104,9 +1104,19 @@ function handleModalRequest(type) {
 function bindEvents() {
   const tileToggle = qs("#outstandingTileToggle");
   if (tileToggle) {
+    tileToggle.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();   // prevent bubble to card → modal handler
+    });
     tileToggle.addEventListener("click", (e) => {
-      e.stopPropagation();   // don't bubble up to the card → modal handler
-      _outstandingMode = _outstandingMode === "total" ? "period" : "total";
+      e.stopPropagation();
+      // Read the mode from the pill that was clicked (or its parent toggle span)
+      const opt = e.target.closest(".tile-toggle-opt");
+      if (opt && opt.dataset.mode) {
+        _outstandingMode = opt.dataset.mode;
+      } else {
+        // Clicked the toggle container itself — flip
+        _outstandingMode = _outstandingMode === "total" ? "period" : "total";
+      }
       _renderOutstandingTile();
     });
   }
