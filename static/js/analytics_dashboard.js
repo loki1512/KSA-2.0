@@ -1,5 +1,5 @@
 const state = {
-  period: "this_month",
+  period: "last_30",
   startDate: "",
   endDate: "",
   summary: null,
@@ -176,19 +176,34 @@ function renderSummary(data) {
 }
 
 function _renderOutstandingTile() {
-  const tileEl = qs("[data-modal='outstanding']");
+  const tileEl = qs("[data-modal='outstanding']:has(#kpiOutstanding)");
   if (!tileEl || tileEl.dataset.totalOutstanding == null) return;
 
   const isTotal = _outstandingMode === "total";
   const val     = isTotal ? tileEl.dataset.totalOutstanding : tileEl.dataset.periodOutstanding;
-  const pct     = isTotal
-    ? `${tileEl.dataset.totalOutstandingPct}% of revenue`
-    : `${tileEl.dataset.periodOutstandingPct}% of period revenue`;
-  const label   = isTotal ? "Outstanding" : "Period Outstanding";
+  const periodPct = Number(tileEl.dataset.periodOutstandingPct || 0);
+
+  // Only show % label in period mode (all-time % vs revenue is misleading)
+  const pct = isTotal
+    ? ""
+    : `${periodPct}% of period revenue`;
+  const label = isTotal ? "Outstanding" : "Period Outstanding";
 
   setText("#kpiOutstanding",     formatMoney(Number(val || 0)));
   setText("#kpiOutstandingPct",  pct);
   setText("#kpiOutstandingLabel", label);
+
+  // Color-code the tile based on period outstanding as % of period revenue
+  tileEl.classList.remove("outstanding-green", "outstanding-yellow", "outstanding-red");
+  if (!isTotal) {
+    if (periodPct < 10) {
+      tileEl.classList.add("outstanding-green");
+    } else if (periodPct < 30) {
+      tileEl.classList.add("outstanding-yellow");
+    } else {
+      tileEl.classList.add("outstanding-red");
+    }
+  }
 
   // Sync the pill active state
   qsa("#outstandingTileToggle .tile-toggle-opt").forEach((opt) => {

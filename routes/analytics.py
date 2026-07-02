@@ -1,6 +1,8 @@
 from datetime import date, datetime, timedelta
 
+# pyrefly: ignore [missing-import]
 from flask import Blueprint, jsonify, render_template, request
+# pyrefly: ignore [missing-import]
 from sqlalchemy import Date, and_, case, cast, distinct, func, or_
 
 from auth_helpers import admin_required
@@ -802,3 +804,4 @@ def slow_items_detail():
             for row in rows
         ],
     })
+

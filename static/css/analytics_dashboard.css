@@ -1266,3 +1266,35 @@ body {
   transition: opacity 0.15s;
 }
 
+/* ─────────────────────────────────────────────────────────
+   OUTSTANDING TILE – PERIOD HEALTH COLOUR CODING
+   Green  <10% | Yellow 10–30% | Red 30%+
+   ───────────────────────────────────────────────────────── */
+.metric-card.outstanding-green,
+.metric-card.outstanding-yellow,
+.metric-card.outstanding-red {
+  transition: border-left-color 0.3s ease, background 0.3s ease;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.metric-card.outstanding-green {
+  border-left-color: #11845b;
+  background: linear-gradient(135deg, #f0fdf7 0%, #ffffff 60%);
+}
+
+.metric-card.outstanding-yellow {
+  border-left-color: #d97706;
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 60%);
+}
+
+.metric-card.outstanding-red {
+  border-left-color: #d92d20;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 60%);
+}
+
+/* colour the value number to match the health state */
+.metric-card.outstanding-green #kpiOutstanding { color: #11845b; }
+.metric-card.outstanding-yellow #kpiOutstanding { color: #d97706; }
+.metric-card.outstanding-red    #kpiOutstanding { color: #d92d20; }
+
