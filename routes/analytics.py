@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, jsonify, render_template, request
 # pyrefly: ignore [missing-import]
 from sqlalchemy import Date, and_, case, cast, distinct, func, or_
+from sqlalchemy.orm import aliased
 
 from auth_helpers import admin_required
 from extensions import db
