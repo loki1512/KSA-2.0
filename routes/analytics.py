@@ -724,6 +724,20 @@ def slow_items_detail():
     cutoff_days = request.args.get("days", 30, type=int)
     cutoff_date = end_date - timedelta(days=cutoff_days)
 
+    def _to_date(val):
+        """Normalise last_sale_date to a Python date regardless of what the DB driver returns."""
+        if val is None:
+            return None
+        if isinstance(val, datetime):
+            return val.date()
+        if isinstance(val, date):
+            return val
+        # string fallback – take first 10 chars to strip any time component
+        try:
+            return datetime.strptime(str(val)[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+
     sales = (
         db.session.query(
             BillItem.item_name.label("item_name"),
@@ -748,10 +762,10 @@ def slow_items_detail():
             sales.c.units_sold,
             sales.c.revenue,
         )
-        .outerjoin(sales, func.lower(sales.c.item_name) == func.lower(Item.name))
-        .filter(or_(sales.c.last_sale_date.is_(None), sales.c.last_sale_date < cutoff_date))
+        .outerjoin(sales, func.lower(func.trim(sales.c.item_name)) == func.lower(func.trim(Item.name)))
+        .filter(or_(sales.c.last_sale_date.is_(None), sales.c.last_sale_date < cast(cutoff_date, Date)))
         .order_by(sales.c.last_sale_date.asc().nullsfirst() if _is_postgres() else sales.c.last_sale_date.asc(), Item.name.asc())
-        .limit(100)
+        .limit(500)
         .all()
     )
 
@@ -766,8 +780,8 @@ def slow_items_detail():
                 "category": row.category or "Uncategorized",
                 "default_price": _money(row.default_price),
                 "cost_price": _money(row.cost_price) if row.cost_price and float(row.cost_price) > 0 else None,
-                "last_sale_date": str(row.last_sale_date) if row.last_sale_date else None,
-                "days_since_sale": (end_date - (datetime.strptime(row.last_sale_date, "%Y-%m-%d").date() if isinstance(row.last_sale_date, str) else row.last_sale_date)).days if row.last_sale_date else None,
+                "last_sale_date": str(_to_date(row.last_sale_date)) if row.last_sale_date else None,
+                "days_since_sale": (end_date - _to_date(row.last_sale_date)).days if _to_date(row.last_sale_date) else None,
                 "sales_to_date": _money(row.revenue),
                 "units_to_date": _money(row.units_sold),
             }
